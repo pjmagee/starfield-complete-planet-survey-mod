@@ -1,0 +1,3 @@
+[submodule "extern/CommonLibSF"]
+	path = extern/CommonLibSF
+	url = https://github.com/libxse/commonlibsf.git

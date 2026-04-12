@@ -1,0 +1,23 @@
+# Build
+build/
+.xmake/
+Data/sfse/
+
+# Packaging
+dist/
+*.zip
+
+# Papyrus compilation temp
+temp_scripts/
+tools/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE
+.vs/
+.vscode/settings.json
+.idea/
+*.user
