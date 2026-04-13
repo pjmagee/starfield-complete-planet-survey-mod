@@ -21,7 +21,7 @@ jobs:
           submodules: recursive
 
       - name: Install XMake
-        uses: xmake-io/xmake-action@v1
+        uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: latest
 
