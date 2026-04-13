@@ -1,0 +1,142 @@
+=== ID_97857 / ID_97857 @ 1417db6a0 ===
+
+ulonglong ID_97857(longlong param_1,longlong *param_2,undefined8 param_3,undefined8 param_4)
+
+{
+  uint *puVar1;
+  uint uVar2;
+  undefined8 *puVar3;
+  int *piVar4;
+  ulonglong uVar5;
+  ulonglong uVar6;
+  longlong lVar7;
+  longlong local_res8;
+  longlong local_res10;
+  undefined8 *puVar8;
+  int *piVar9;
+  undefined1 local_58 [8];
+  undefined1 local_50 [16];
+  longlong local_40;
+  longlong local_38;
+  ulonglong local_30;
+  ulonglong local_28;
+  
+  puVar3 = *(undefined8 **)(param_1 + 0x238);
+  lVar7 = 0;
+  if (puVar3 != (undefined8 *)0x0) {
+    LOCK();
+    *(int *)(puVar3 + 1) = *(int *)(puVar3 + 1) + 1;
+    UNLOCK();
+    lVar7 = *(longlong *)(param_1 + 0x238);
+  }
+  puVar8 = puVar3;
+  piVar4 = (int *)ID_126655(lVar7 + 0x10);
+  local_res8 = param_1;
+  piVar9 = piVar4;
+  uVar5 = ID_58987(&local_res8,*(undefined4 *)(*param_2 + 0x1c8));
+  *(ulonglong *)(*param_2 + 0x1b8) = uVar5;
+  local_res10 = *param_2;
+  if ((*(int *)(local_res10 + 0x1c8) != 0) &&
+     ((ID_47749(local_58,&local_res8,*(int *)(local_res10 + 0x1c8),param_4,puVar8,piVar9),
+      local_38 != 0xfe0 || (uVar5 = 0xfe0, local_40 != 0)))) {
+    uVar6 = (ulonglong)*(ushort *)(local_40 + 0x12 + local_38 * 4) + local_40;
+    uVar5 = uVar6;
+    if ((*(ulonglong *)(uVar6 + 0x10) <= local_30) &&
+       ((local_30 != *(ulonglong *)(uVar6 + 0x10) ||
+        (uVar5 = *(ulonglong *)(uVar6 + 0x18), *(ulonglong *)(uVar6 + 0x18) <= local_28)))) {
+      while ((uVar5 = ID_97849(&local_res10,
+                               (ulonglong)*(ushort *)(local_40 + 0x12 + local_38 * 4) +
+                               local_40 + 0x20), (int)uVar5 == 1 &&
+             ((uVar5 = ID_39319(local_50), local_38 != 0xfe0 || (local_40 != 0))))) {
+        lVar7 = (ulonglong)*(ushort *)(local_40 + 0x12 + local_38 * 4) + local_40;
+        uVar6 = *(ulonglong *)(lVar7 + 0x10);
+        uVar5 = local_30;
+        if ((local_30 < uVar6) ||
+           ((local_30 == uVar6 && (uVar5 = *(ulonglong *)(lVar7 + 0x18), local_28 < uVar5)))) break;
+      }
+    }
+  }
+  *piVar4 = *piVar4 + -1;
+  if (*piVar4 == 0) {
+    LOCK();
+    puVar1 = (uint *)((longlong)puVar3 + 0x21c);
+    uVar5 = (ulonglong)*puVar1;
+    *puVar1 = *puVar1 + 4;
+    UNLOCK();
+  }
+  if (puVar3 != (undefined8 *)0x0) {
+    LOCK();
+    puVar1 = (uint *)(puVar3 + 1);
+    uVar2 = *puVar1;
+    uVar5 = (ulonglong)uVar2;
+    *puVar1 = *puVar1 - 1;
+    UNLOCK();
+    if (uVar2 == 1) {
+      uVar5 = (**(code **)*puVar3)(puVar3,1);
+    }
+  }
+  return uVar5;
+}
+
+
+
+=== ID_97853 / ID_97853 @ 1417daca0 ===
+
+void ID_97853(undefined4 *param_1)
+
+{
+  char cVar1;
+  undefined4 uVar2;
+  bool bVar3;
+  float fVar4;
+  undefined4 local_res8 [2];
+  undefined **local_2b8;
+  undefined4 *local_2b0;
+  undefined8 local_2a8;
+  undefined4 local_2a0;
+  char local_29c;
+  float local_298;
+  undefined1 local_288 [448];
+  int local_c8;
+  int local_c4;
+  float local_bc;
+  
+  if (*(char *)((longlong)param_1 + 9) == '\0') {
+    ID_1016657(local_288,*param_1);
+    fVar4 = local_bc * ID_500678 - (float)param_1[1];
+    cVar1 = *(char *)(param_1 + 2);
+    if ((cVar1 == '\0') || (cVar1 == '\x0f')) {
+      bVar3 = false;
+    }
+    else {
+      bVar3 = true;
+    }
+    if ((0.0 < fVar4) && (bVar3)) {
+      uVar2 = *param_1;
+      local_2a8 = ID_64214();
+      local_2b8 = stl::local_function_detail::
+                  LocalFunctionImpl<class_<lambda_9fb9de836e0f0e9e55c22d0fa9f0e382>,enum_BSEventNotifyControl,class_BSTEventDetail::SinkBase*___ptr64>
+                  ::vftable;
+      local_2b0 = &local_2a0;
+      local_2a0 = uVar2;
+      local_29c = cVar1;
+      local_298 = fVar4;
+      ID_123824(local_2a8,&local_2b8);
+    }
+    if (local_c8 == local_c4) {
+      uVar2 = *param_1;
+      local_2a8 = ID_64213();
+      local_2b8 = stl::local_function_detail::
+                  LocalFunctionImpl<class_<lambda_65241248264111058e73b4b4862f3dac>,enum_BSEventNotifyControl,class_BSTEventDetail::SinkBase*___ptr64>
+                  ::vftable;
+      local_2b0 = local_res8;
+      local_res8[0] = uVar2;
+      ID_123824(local_2a8,&local_2b8);
+    }
+    ID_65318(local_288);
+  }
+  return;
+}
+
+
+

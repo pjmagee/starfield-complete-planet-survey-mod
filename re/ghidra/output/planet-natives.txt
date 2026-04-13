@@ -1,0 +1,386 @@
+=== ID_114893 / ID_114893 @ 141f1ba70 ===
+
+void ID_114893(undefined8 *param_1)
+
+{
+  int *piVar1;
+  int iVar2;
+  undefined4 uVar3;
+  undefined4 uVar4;
+  longlong *plVar5;
+  code *pcVar6;
+  longlong lVar7;
+  char cVar8;
+  longlong lVar9;
+  undefined8 *puVar10;
+  longlong *plVar11;
+  longlong lVar12;
+  undefined8 *puVar13;
+  undefined8 *puVar14;
+  undefined8 *in_stack_ffffffffffffff38;
+  longlong local_b8;
+  undefined8 *local_b0;
+  undefined8 *local_a8;
+  undefined8 local_a0;
+  undefined8 local_98;
+  undefined8 local_90;
+  undefined8 *local_88;
+  longlong local_80;
+  undefined8 local_78;
+  longlong local_70;
+  undefined4 local_68;
+  undefined4 uStack_64;
+  longlong local_60;
+  longlong local_58;
+  undefined8 local_50 [2];
+  
+  lVar9 = *(longlong *)ThreadLocalStoragePointer;
+  cVar8 = *(char *)(lVar9 + 0xbc);
+  local_b8 = lVar9;
+  if (cVar8 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar8 = *(char *)(lVar9 + 0xbc);
+  }
+  uVar3 = *(undefined4 *)(lVar9 + 0x1d4);
+  if (cVar8 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar9 + 0x1d4) = 0x18;
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  lVar9 = ID_123785(0x58);
+  puVar14 = (undefined8 *)0x0;
+  puVar10 = puVar14;
+  if (lVar9 != 0) {
+    in_stack_ffffffffffffff38 = param_1;
+    puVar10 = (undefined8 *)ID_114902(lVar9,"GetAtmosphereType");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  lVar9 = ID_123785(0x58);
+  puVar10 = puVar14;
+  if (lVar9 != 0) {
+    puVar10 = (undefined8 *)ID_114900(lVar9,"GetDayLength");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  lVar9 = ID_123785(0x58);
+  puVar10 = puVar14;
+  if (lVar9 != 0) {
+    puVar10 = (undefined8 *)ID_114900(lVar9,"GetGravity");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  puVar10 = (undefined8 *)ID_123785(0x58);
+  if (puVar10 != (undefined8 *)0x0) {
+    *(undefined4 *)(puVar10 + 1) = 0;
+    *puVar10 = BSScript::NF_util::NativeFunctionBase::vftable;
+    puVar10[2] = 0;
+    ID_139352(puVar10 + 2,"GetKeywordTypeList",0);
+    puVar10[3] = 0;
+    ID_139352(puVar10 + 3,"Planet",0);
+    lVar9 = ID_932764;
+    if (ID_932764 != 0) {
+      LOCK();
+      *(int *)(ID_932764 + 0x10) = *(int *)(ID_932764 + 0x10) + 1;
+      UNLOCK();
+    }
+    puVar10[4] = lVar9;
+    puVar10[5] = 0;
+    ID_139162(puVar10 + 6,1,0);
+    *(undefined2 *)(puVar10 + 8) = 0;
+    *(undefined1 *)((longlong)puVar10 + 0x42) = 0;
+    *(undefined4 *)((longlong)puVar10 + 0x44) = 0;
+    plVar11 = (longlong *)ID_35720();
+    lVar9 = *plVar11;
+    if (lVar9 != 0) {
+      LOCK();
+      *(int *)(lVar9 + 0x10) = *(int *)(lVar9 + 0x10) + 1;
+      UNLOCK();
+    }
+    puVar10[9] = lVar9;
+    lVar12 = ID_932769;
+    plVar11 = (longlong *)puVar10[6];
+    lVar9 = *plVar11;
+    if (ID_932769 != lVar9) {
+      if (ID_932769 != 0) {
+        LOCK();
+        *(int *)(ID_932769 + 0x10) = *(int *)(ID_932769 + 0x10) + 1;
+        UNLOCK();
+        lVar9 = *plVar11;
+      }
+      *plVar11 = lVar12;
+      local_80 = lVar9;
+      ID_139340(&local_80);
+    }
+    lVar9 = local_b8;
+    *puVar10 = BSScript::
+               NativeFunction1<class_BGSPlanet::PlanetData,class_BSScript::ArrayWrapper<class_BGSKeyword*___ptr64>,int>
+               ::vftable;
+    puVar10[10] = ID_114885;
+    cVar8 = *(char *)(local_b8 + 0xbc);
+    if (cVar8 == '\0') {
+      __dyn_tls_on_demand_init();
+      cVar8 = *(char *)(lVar9 + 0xbc);
+    }
+    uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+    if (cVar8 == '\0') {
+      __dyn_tls_on_demand_init();
+    }
+    *(undefined4 *)(local_b8 + 0x1d4) = 0x13;
+    ID_114906(&local_78,*param_1);
+    lVar9 = local_b8;
+    puVar10[5] = local_78;
+    local_a0 = 3;
+    *(undefined8 *)(puVar10[6] + 8) = 3;
+    if (*(char *)(local_b8 + 0xbc) == '\0') {
+      __dyn_tls_on_demand_init();
+    }
+    *(undefined4 *)(lVar9 + 0x1d4) = uVar4;
+    puVar14 = puVar10;
+  }
+  puVar13 = (undefined8 *)0x0;
+  (*pcVar6)(plVar5,puVar14);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  local_b0 = (undefined8 *)ID_123785(0x58);
+  puVar10 = puVar13;
+  if (local_b0 != (undefined8 *)0x0) {
+    puVar10 = (undefined8 *)ID_114900(local_b0,"GetPressure");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  local_b0 = (undefined8 *)ID_123785(0x58);
+  puVar10 = puVar13;
+  if (local_b0 != (undefined8 *)0x0) {
+    puVar10 = (undefined8 *)ID_114900(local_b0,"GetSurveyPercent");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  local_b0 = (undefined8 *)ID_123785(0x58);
+  puVar10 = puVar13;
+  if (local_b0 != (undefined8 *)0x0) {
+    puVar10 = (undefined8 *)ID_114900(local_b0,"GetTemperature");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  local_b0 = (undefined8 *)ID_123785(0x58);
+  puVar10 = puVar13;
+  if (local_b0 != (undefined8 *)0x0) {
+    in_stack_ffffffffffffff38 = param_1;
+    puVar10 = (undefined8 *)ID_114902(local_b0,"GetType");
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  puVar10 = (undefined8 *)ID_123785(0x58);
+  local_b0 = puVar10;
+  if (puVar10 != (undefined8 *)0x0) {
+    *(undefined4 *)(puVar10 + 1) = 0;
+    *puVar10 = BSScript::NF_util::NativeFunctionBase::vftable;
+    local_88 = puVar10 + 2;
+    *local_88 = 0;
+    ID_139352(local_88,"IsTraitKnown",0);
+    local_88 = puVar10 + 3;
+    *local_88 = 0;
+    ID_139352(local_88,"Planet",0);
+    lVar9 = ID_932764;
+    if (ID_932764 != 0) {
+      LOCK();
+      *(int *)(ID_932764 + 0x10) = *(int *)(ID_932764 + 0x10) + 1;
+      UNLOCK();
+    }
+    puVar10[4] = lVar9;
+    puVar10[5] = 0;
+    ID_139162(puVar10 + 6,1,0);
+    *(undefined2 *)(puVar10 + 8) = 0;
+    *(undefined1 *)((longlong)puVar10 + 0x42) = 0;
+    *(undefined4 *)((longlong)puVar10 + 0x44) = 0;
+    plVar11 = (longlong *)ID_35720();
+    lVar9 = *plVar11;
+    if (lVar9 != 0) {
+      LOCK();
+      *(int *)(lVar9 + 0x10) = *(int *)(lVar9 + 0x10) + 1;
+      UNLOCK();
+    }
+    puVar10[9] = lVar9;
+    lVar12 = ID_932769;
+    plVar11 = (longlong *)puVar10[6];
+    lVar9 = *plVar11;
+    if (ID_932769 != lVar9) {
+      if (ID_932769 != 0) {
+        LOCK();
+        *(int *)(ID_932769 + 0x10) = *(int *)(ID_932769 + 0x10) + 1;
+        UNLOCK();
+        lVar9 = *plVar11;
+      }
+      *plVar11 = lVar12;
+      local_70 = lVar9;
+      ID_139340(&local_70);
+    }
+    lVar9 = local_b8;
+    *puVar10 = BSScript::NativeFunction1<class_BGSPlanet::PlanetData,bool,class_BGSKeyword*___ptr64>
+               ::vftable;
+    puVar10[10] = ID_114890;
+    cVar8 = *(char *)(local_b8 + 0xbc);
+    if (cVar8 == '\0') {
+      __dyn_tls_on_demand_init();
+      cVar8 = *(char *)(lVar9 + 0xbc);
+    }
+    uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+    if (cVar8 == '\0') {
+      __dyn_tls_on_demand_init();
+    }
+    *(undefined4 *)(lVar9 + 0x1d4) = 0x13;
+    local_98 = 5;
+    puVar10[5] = 5;
+    local_a8 = (undefined8 *)0x0;
+    cVar8 = (**(code **)(*(longlong *)*param_1 + 0x60))((longlong *)*param_1,4,&local_a8);
+    puVar14 = local_a8;
+    if (cVar8 == '\0') {
+      local_90 = 1;
+      puVar13 = (undefined8 *)0x1;
+    }
+    else {
+      puVar13 = local_a8;
+      if (local_a8 == (undefined8 *)0x0) {
+        local_68 = 1;
+        puVar13 = (undefined8 *)CONCAT44(uStack_64,1);
+      }
+    }
+    local_a8 = (undefined8 *)0x0;
+    if (puVar14 != (undefined8 *)0x0) {
+      LOCK();
+      piVar1 = (int *)(puVar14 + 1);
+      iVar2 = *piVar1;
+      *piVar1 = *piVar1 + -1;
+      UNLOCK();
+      if (iVar2 == 1) {
+        (**(code **)*puVar14)(puVar14,1);
+      }
+    }
+    lVar9 = local_b8;
+    *(undefined8 **)(puVar10[6] + 8) = puVar13;
+    if (*(char *)(local_b8 + 0xbc) == '\0') {
+      __dyn_tls_on_demand_init();
+    }
+    *(undefined4 *)(lVar9 + 0x1d4) = uVar4;
+    puVar13 = puVar10;
+  }
+  (*pcVar6)(plVar5,puVar13);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  puVar10 = (undefined8 *)ID_123785(0x58);
+  local_88 = puVar10;
+  if (puVar10 == (undefined8 *)0x0) {
+    puVar10 = (undefined8 *)0x0;
+  }
+  else {
+    *(undefined4 *)(puVar10 + 1) = 0;
+    *puVar10 = BSScript::NF_util::NativeFunctionBase::vftable;
+    local_b0 = puVar10 + 2;
+    *local_b0 = 0;
+    ID_139352(local_b0,"SetTraitKnown",0);
+    local_b0 = puVar10 + 3;
+    *local_b0 = 0;
+    ID_139352(local_b0,"Planet",0);
+    lVar9 = ID_932764;
+    if (ID_932764 != 0) {
+      LOCK();
+      *(int *)(ID_932764 + 0x10) = *(int *)(ID_932764 + 0x10) + 1;
+      UNLOCK();
+    }
+    puVar10[4] = lVar9;
+    puVar10[5] = 0;
+    ID_139162(puVar10 + 6,2);
+    *(undefined2 *)(puVar10 + 8) = 0;
+    *(undefined1 *)((longlong)puVar10 + 0x42) = 0;
+    *(undefined4 *)((longlong)puVar10 + 0x44) = 0;
+    plVar11 = (longlong *)ID_35720();
+    lVar9 = *plVar11;
+    if (lVar9 != 0) {
+      LOCK();
+      *(int *)(lVar9 + 0x10) = *(int *)(lVar9 + 0x10) + 1;
+      UNLOCK();
+    }
+    puVar10[9] = lVar9;
+    lVar12 = ID_932769;
+    plVar11 = (longlong *)puVar10[6];
+    lVar9 = *plVar11;
+    if (ID_932769 != lVar9) {
+      if (ID_932769 != 0) {
+        LOCK();
+        *(int *)(ID_932769 + 0x10) = *(int *)(ID_932769 + 0x10) + 1;
+        UNLOCK();
+        lVar9 = *plVar11;
+      }
+      *plVar11 = lVar12;
+      local_60 = lVar9;
+      ID_139340(&local_60);
+    }
+    lVar7 = ID_932770;
+    lVar9 = puVar10[6];
+    lVar12 = *(longlong *)(lVar9 + 0x10);
+    if (ID_932770 != lVar12) {
+      if (ID_932770 != 0) {
+        LOCK();
+        *(int *)(ID_932770 + 0x10) = *(int *)(ID_932770 + 0x10) + 1;
+        UNLOCK();
+        lVar12 = *(longlong *)(lVar9 + 0x10);
+      }
+      *(longlong *)(lVar9 + 0x10) = lVar7;
+      local_58 = lVar12;
+      ID_139340(&local_58);
+    }
+    lVar9 = local_b8;
+    *puVar10 = BSScript::
+               NativeFunction2<class_BGSPlanet::PlanetData,void,class_BGSKeyword*___ptr64,bool>::
+               vftable;
+    puVar10[10] = ID_114891;
+    if (*(char *)(local_b8 + 0xbc) == '\0') {
+      __dyn_tls_on_demand_init();
+    }
+    uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+    ID_36179(0x13);
+    puVar10[5] = 0;
+    ID_114909(local_50,*param_1);
+    *(undefined8 *)(puVar10[6] + 8) = local_50[0];
+    *(undefined8 *)(puVar10[6] + 0x18) = 5;
+    ID_36179(uVar4);
+  }
+  (*pcVar6)(plVar5,puVar10);
+  plVar5 = (longlong *)*param_1;
+  pcVar6 = *(code **)(*plVar5 + 0xf0);
+  puVar10 = (undefined8 *)ID_123785(0x58);
+  if (puVar10 == (undefined8 *)0x0) {
+    puVar10 = (undefined8 *)0x0;
+  }
+  else {
+    ID_138071(puVar10,"GetLocation","Planet",0,
+              (ulonglong)in_stack_ffffffffffffff38 & 0xffffffff00000000);
+    lVar9 = local_b8;
+    *puVar10 = BSScript::NativeFunction0<class_BGSPlanet::PlanetData,class_BGSLocation*___ptr64>::
+               vftable;
+    puVar10[10] = ID_114892;
+    if (*(char *)(local_b8 + 0xbc) == '\0') {
+      __dyn_tls_on_demand_init();
+    }
+    uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+    ID_36179(0x13);
+    ID_114910(&local_b8,*param_1);
+    puVar10[5] = local_b8;
+    ID_36179(uVar4);
+  }
+  (*pcVar6)(plVar5,puVar10);
+  ID_36179(uVar3);
+  return;
+}
+
+
+

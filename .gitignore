@@ -9,7 +9,13 @@ dist/
 
 # Papyrus compilation temp
 temp_scripts/
-tools/
+
+# Local RE workspace (Ghidra project DB, champollion binary — use re/ for checked-in artifacts)
+/tools/
+/ghidra-project/
+
+# Large reference file — download separately from the Address Library release
+offsets-*.txt
 
 # OS
 Thumbs.db
@@ -21,7 +27,6 @@ Desktop.ini
 .vscode/settings.json
 .idea/
 *.user
-ghidra-project/
 
 # Claude Code transient state (keep skills/ committed)
 .claude/scheduled_tasks.lock

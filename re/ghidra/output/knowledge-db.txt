@@ -1,0 +1,350 @@
+=== ID_52154 / ID_52154 @ 1407b7730 ===
+
+bool ID_52154(undefined4 param_1,longlong param_2)
+
+{
+  uint uVar1;
+  undefined8 *puVar2;
+  int *piVar3;
+  int *piVar4;
+  longlong lVar5;
+  ulonglong uVar6;
+  int *piVar7;
+  longlong *plVar8;
+  longlong lVar9;
+  int iVar10;
+  bool bVar11;
+  longlong local_res10;
+  undefined1 local_38 [32];
+  
+  bVar11 = false;
+  if (ID_896785 != 0) {
+    for (plVar8 = ID_896786; plVar8 != ID_896786 + ID_896785; plVar8 = plVar8 + 1) {
+      if (*plVar8 == param_2) {
+        lVar9 = (longlong)plVar8 - (longlong)ID_896786 >> 3;
+        if (0xfffe < (uint)lVar9) {
+          return false;
+        }
+        if ((short)lVar9 == -1) {
+          return false;
+        }
+        lVar9 = ID_126578();
+        lVar9 = *(longlong *)(lVar9 + 0x8b0);
+        puVar2 = *(undefined8 **)(lVar9 + 0x238);
+        lVar5 = 0;
+        if (puVar2 != (undefined8 *)0x0) {
+          LOCK();
+          *(int *)(puVar2 + 1) = *(int *)(puVar2 + 1) + 1;
+          UNLOCK();
+          lVar5 = *(longlong *)(lVar9 + 0x238);
+        }
+        piVar4 = (int *)ID_126655(lVar5 + 0x10);
+        local_res10 = (ulonglong)CONCAT24(ID_938333,param_1) << 0x10;
+        lVar5 = ID_126806(lVar9 + 0x268,local_38,&local_res10);
+        lVar9 = *(longlong *)(lVar5 + 0x10);
+        if ((*(longlong *)(lVar5 + 0x18) == 0xfe0) && (lVar9 == 0)) goto LAB_1407b7879;
+        uVar6 = (ulonglong)*(ushort *)(lVar9 + 0x12 + *(longlong *)(lVar5 + 0x18) * 4);
+        iVar10 = -1;
+        uVar1 = *(uint *)(uVar6 + 0x28 + lVar9);
+        if (uVar1 == 0) goto LAB_1407b7871;
+        piVar3 = *(int **)(uVar6 + 0x30 + lVar9);
+        piVar7 = piVar3;
+        goto joined_r0x0001407b7856;
+      }
+    }
+  }
+  return false;
+joined_r0x0001407b7856:
+  if (piVar7 == piVar3 + uVar1) {
+LAB_1407b7871:
+    bVar11 = iVar10 != -1;
+LAB_1407b7879:
+    *piVar4 = *piVar4 + -1;
+    if (*piVar4 == 0) {
+      LOCK();
+      *(int *)((longlong)puVar2 + 0x21c) = *(int *)((longlong)puVar2 + 0x21c) + 4;
+      UNLOCK();
+    }
+    if (puVar2 == (undefined8 *)0x0) {
+      return bVar11;
+    }
+    LOCK();
+    piVar4 = (int *)(puVar2 + 1);
+    iVar10 = *piVar4;
+    *piVar4 = *piVar4 + -1;
+    UNLOCK();
+    if (iVar10 != 1) {
+      return bVar11;
+    }
+    (**(code **)*puVar2)(puVar2,1);
+    return bVar11;
+  }
+  if (*piVar7 == *(int *)(param_2 + 0x28)) {
+    iVar10 = (int)((longlong)piVar7 - (longlong)piVar3 >> 2);
+    goto LAB_1407b7871;
+  }
+  piVar7 = piVar7 + 1;
+  goto joined_r0x0001407b7856;
+}
+
+
+
+=== ID_52155 / ID_52155 @ 1407b78d0 ===
+
+void ID_52155(undefined4 param_1,longlong param_2,undefined1 param_3)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  uint uVar3;
+  undefined8 *puVar4;
+  longlong *plVar5;
+  longlong lVar6;
+  int *piVar7;
+  char local_res10 [8];
+  undefined1 local_res18;
+  undefined1 local_res20 [8];
+  undefined4 local_338 [2];
+  undefined4 local_330;
+  float local_32c;
+  undefined1 local_328;
+  undefined1 local_327;
+  undefined4 local_320;
+  undefined4 local_31c;
+  undefined1 local_318;
+  longlong local_310;
+  longlong local_308;
+  char *local_300;
+  undefined4 local_2f8;
+  undefined4 *local_2f0;
+  undefined1 local_2e8;
+  undefined8 *local_2e0;
+  int *local_2d8;
+  uint local_2d0;
+  undefined **local_2c8;
+  undefined1 *local_2c0;
+  undefined8 local_2b8;
+  undefined8 *local_2b0;
+  int *local_2a8;
+  undefined1 local_298 [448];
+  int local_d8;
+  int local_d4;
+  float local_cc;
+  
+  if (ID_896785 != 0) {
+    for (plVar5 = ID_896786; plVar5 != ID_896786 + ID_896785; plVar5 = plVar5 + 1) {
+      if (*plVar5 == param_2) {
+        lVar6 = (longlong)plVar5 - (longlong)ID_896786 >> 3;
+        if (0xfffe < (uint)lVar6) {
+          return;
+        }
+        if ((short)lVar6 == -1) {
+          return;
+        }
+        local_328 = 5;
+        local_res18 = param_3;
+        local_330 = param_1;
+        ID_1016657(local_298,param_1);
+        local_327 = local_d8 == local_d4;
+        local_32c = local_cc * ID_500678;
+        ID_65318(local_298);
+        local_res10[0] = '\0';
+        uVar2 = *(undefined4 *)(param_2 + 0x28);
+        local_300 = local_res10;
+        local_338[0] = 1;
+        local_2f0 = local_338;
+        local_2e8 = 0;
+        local_2f8 = uVar2;
+        lVar6 = ID_126578();
+        local_310 = *(longlong *)(lVar6 + 0x8b0);
+        puVar4 = *(undefined8 **)(local_310 + 0x238);
+        lVar6 = 0;
+        if (puVar4 != (undefined8 *)0x0) {
+          LOCK();
+          *(int *)(puVar4 + 1) = *(int *)(puVar4 + 1) + 1;
+          UNLOCK();
+          lVar6 = *(longlong *)(local_310 + 0x238);
+        }
+        local_2b0 = puVar4;
+        piVar7 = (int *)ID_126655(lVar6 + 0x10);
+        local_2a8 = piVar7;
+        ID_52205(&local_2f0,&local_310,param_1,&local_300);
+        *piVar7 = *piVar7 + -1;
+        if (*piVar7 == 0) {
+          LOCK();
+          *(int *)((longlong)puVar4 + 0x21c) = *(int *)((longlong)puVar4 + 0x21c) + 4;
+          UNLOCK();
+        }
+        if (puVar4 != (undefined8 *)0x0) {
+          LOCK();
+          piVar7 = (int *)(puVar4 + 1);
+          iVar1 = *piVar7;
+          *piVar7 = *piVar7 + -1;
+          UNLOCK();
+          if (iVar1 == 1) {
+            (**(code **)*puVar4)(puVar4,1);
+          }
+        }
+        if (local_res10[0] != '\0') {
+          local_318 = local_res18;
+          local_320 = param_1;
+          local_31c = uVar2;
+          lVar6 = ID_126578();
+          local_308 = *(longlong *)(lVar6 + 0x8b0);
+          puVar4 = *(undefined8 **)(local_308 + 0x238);
+          lVar6 = 0;
+          if (puVar4 != (undefined8 *)0x0) {
+            LOCK();
+            *(int *)(puVar4 + 1) = *(int *)(puVar4 + 1) + 1;
+            UNLOCK();
+            lVar6 = *(longlong *)(local_308 + 0x238);
+          }
+          local_2e0 = puVar4;
+          piVar7 = (int *)ID_126655(lVar6 + 0x10);
+          uVar3 = piVar7[1];
+          local_2d8 = piVar7;
+          local_2d0 = uVar3;
+          ID_52156(&local_320,&local_308);
+          if ((uVar3 < (uint)piVar7[1]) && (piVar7[1] = uVar3, uVar3 == 0)) {
+            LOCK();
+            *(uint *)(puVar4 + 0x43) =
+                 *(int *)(puVar4 + 0x43) - (*(int *)(puVar4 + 0x47) - 1U & 1 | 2);
+            UNLOCK();
+            piVar7 = local_2d8;
+          }
+          *piVar7 = *piVar7 + -1;
+          if (*piVar7 == 0) {
+            LOCK();
+            *(int *)((longlong)puVar4 + 0x21c) = *(int *)((longlong)puVar4 + 0x21c) + 4;
+            UNLOCK();
+          }
+          if (puVar4 != (undefined8 *)0x0) {
+            LOCK();
+            piVar7 = (int *)(puVar4 + 1);
+            iVar1 = *piVar7;
+            *piVar7 = *piVar7 + -1;
+            UNLOCK();
+            if (iVar1 == 1) {
+              (**(code **)*puVar4)(puVar4,1);
+            }
+          }
+          local_2b8 = ID_52210();
+          local_2c8 = stl::local_function_detail::
+                      LocalFunctionImpl<class_<lambda_68546df18378f3175a6bf7fcc4fd14da>,enum_BSEventNotifyControl,class_BSTEventDetail::SinkBase*___ptr64>
+                      ::vftable;
+          local_2c0 = local_res20;
+          ID_123824(local_2b8,&local_2c8);
+        }
+        ID_97853(&local_330);
+        return;
+      }
+    }
+  }
+  return;
+}
+
+
+
+=== ID_114889 / ID_114889 @ 141f1b7b0 ===
+
+char ID_114889(longlong param_1,longlong param_2,undefined8 param_3,ulonglong param_4)
+
+{
+  int iVar1;
+  undefined4 uVar2;
+  undefined8 *puVar3;
+  longlong *plVar4;
+  longlong lVar5;
+  int *piVar6;
+  undefined8 uVar7;
+  undefined8 uVar8;
+  char *pcVar9;
+  char local_res8 [8];
+  longlong local_res10;
+  undefined4 local_478 [2];
+  longlong local_470;
+  char *local_468;
+  undefined4 local_460;
+  undefined4 *local_458;
+  undefined1 local_450;
+  undefined8 *local_448;
+  int *local_440;
+  wchar_t local_438 [512];
+  
+  local_res8[0] = '\0';
+  local_res10 = param_2;
+  if (param_1 == 0) {
+    pcVar9 = "Invalid planet trait keyword None";
+    param_1 = param_2;
+  }
+  else {
+    if (ID_896785 != 0) {
+      for (plVar4 = ID_896786; plVar4 != ID_896786 + ID_896785; plVar4 = plVar4 + 1) {
+        if (*plVar4 == param_1) {
+          lVar5 = (longlong)plVar4 - (longlong)ID_896786 >> 3;
+          if (((uint)lVar5 < 0xffff) && ((short)lVar5 != -1)) {
+            local_460 = *(undefined4 *)(param_1 + 0x28);
+            local_468 = local_res8;
+            uVar2 = *(undefined4 *)(param_2 + 0x54);
+            local_478[0] = 1;
+            local_458 = local_478;
+            local_450 = 0;
+            lVar5 = ID_126578();
+            local_470 = *(longlong *)(lVar5 + 0x8b0);
+            puVar3 = *(undefined8 **)(local_470 + 0x238);
+            lVar5 = 0;
+            if (puVar3 != (undefined8 *)0x0) {
+              LOCK();
+              *(int *)(puVar3 + 1) = *(int *)(puVar3 + 1) + 1;
+              UNLOCK();
+              lVar5 = *(longlong *)(local_470 + 0x238);
+            }
+            local_448 = puVar3;
+            piVar6 = (int *)ID_126655(lVar5 + 0x10);
+            local_440 = piVar6;
+            ID_114908(&local_458,&local_470,uVar2,&local_468);
+            *piVar6 = *piVar6 + -1;
+            if (*piVar6 == 0) {
+              LOCK();
+              *(int *)((longlong)puVar3 + 0x21c) = *(int *)((longlong)puVar3 + 0x21c) + 4;
+              UNLOCK();
+            }
+            if (puVar3 != (undefined8 *)0x0) {
+              LOCK();
+              piVar6 = (int *)(puVar3 + 1);
+              iVar1 = *piVar6;
+              *piVar6 = *piVar6 + -1;
+              UNLOCK();
+              if (iVar1 == 1) {
+                (**(code **)*puVar3)(puVar3,1);
+              }
+            }
+            if (local_res8[0] != '\0') {
+              return local_res8[0];
+            }
+            uVar2 = *(undefined4 *)(param_1 + 0x28);
+            uVar7 = ID_47496(param_1);
+            uVar8 = ID_37303(param_1);
+            FID_conflict_sprintf_s
+                      (local_438,0x400,
+                       (wchar_t *)"Planet Trait Keyword %s \'%s\' (%08X) is not present on planet",
+                       uVar8,uVar7,uVar2);
+            pcVar9 = (char *)local_438;
+            param_1 = local_res10;
+            param_4 = param_4 & 0xffffffff;
+            goto LAB_141f1b964;
+          }
+          break;
+        }
+      }
+    }
+    pcVar9 = "Keyword is not of Planet Trait type";
+    param_4 = param_4 & 0xffffffff;
+  }
+LAB_141f1b964:
+  ID_116258(param_1,pcVar9,param_3,param_4,2);
+  return local_res8[0];
+}
+
+
+
