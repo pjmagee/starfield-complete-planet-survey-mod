@@ -1,0 +1,995 @@
+=== "SetTraitKnown" @ 144d13f88 (1 refs) ===
+  ref @ 141f1c096 in ID_114893@141f1ba70
+    --- decomp ---
+    
+    void ID_114893(undefined8 *param_1)
+    
+    {
+      int *piVar1;
+      int iVar2;
+      undefined4 uVar3;
+      undefined4 uVar4;
+      longlong *plVar5;
+      code *pcVar6;
+      longlong lVar7;
+      char cVar8;
+      longlong lVar9;
+      undefined8 *puVar10;
+      longlong *plVar11;
+      longlong lVar12;
+      undefined8 *puVar13;
+      undefined8 *puVar14;
+      undefined8 *in_stack_ffffffffffffff38;
+      longlong local_b8;
+      undefined8 *local_b0;
+      undefined8 *local_a8;
+      undefined8 local_a0;
+      undefined8 local_98;
+      undefined8 local_90;
+      undefined8 *local_88;
+      longlong local_80;
+      undefined8 local_78;
+      longlong local_70;
+      undefined4 local_68;
+      undefined4 uStack_64;
+      longlong local_60;
+      longlong local_58;
+      undefined8 local_50 [2];
+      
+      lVar9 = *(longlong *)ThreadLocalStoragePointer;
+      cVar8 = *(char *)(lVar9 + 0xbc);
+      local_b8 = lVar9;
+      if (cVar8 == '\0') {
+        __dyn_tls_on_demand_init();
+        cVar8 = *(char *)(lVar9 + 0xbc);
+      }
+      uVar3 = *(undefined4 *)(lVar9 + 0x1d4);
+      if (cVar8 == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar9 + 0x1d4) = 0x18;
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar14 = (undefined8 *)0x0;
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        in_stack_ffffffffffffff38 = param_1;
+        puVar10 = (undefined8 *)ID_114902(lVar9,"GetAtmosphereType");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        puVar10 = (undefined8 *)ID_114900(lVar9,"GetDayLength");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        puVar10 = (undefined8 *)ID_114900(lVar9,"GetGravity");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      puVar10 = (undefined8 *)ID_123785(0x58);
+      if (puVar10 != (undefined8 *)0x0) {
+        *(undefined4 *)(puVar10 + 1) = 0;
+        *puVar10 = BSScript::NF_util::NativeFunctionBase::vftable;
+        puVar10[2] = 0;
+        ID_139352(puVar10 + 2,"GetKeywordTypeList",0);
+        puVar10[3] = 0;
+        ID_139352(puVar10 + 3,"Planet",0);
+        lVar9 = ID_932764;
+        if (ID_932764 != 0) {
+          LOCK();
+          *(int *)(ID_932764 + 0x10) = *(int *)(ID_932764 + 0x10) + 1;
+          UNLOCK();
+        }
+        puVar10[4] = lVar9;
+        puVar10[5] = 0;
+        ID_139162(puVar10 + 6,1,0);
+        *(undefined2 *)(puVar10 + 8) = 0;
+        *(undefined1 *)((longlong)puVar10 + 0x42) = 0;
+        *(undefined4 *)((longlong)puVar10 + 0x44) = 0;
+        plVar11 = (longlong *)ID_35720();
+        lVar9 = *plVar11;
+        if (lVar9 != 0) {
+          LOCK();
+          *(int *)(lVar9 + 0x10) = *(int *)(lVar9 + 0x10) + 1;
+          UNLOCK();
+        }
+        puVar10[9] = lVar9;
+        lVar12 = ID_932769;
+        plVar11 = (longlong *)puVar10[6];
+        lVar9 = *plVar11;
+        if (ID_932769 != lVar9) {
+          if (ID_932769 != 0) {
+            LOCK();
+            *(int *)(ID_932769 + 0x10) = *(int *)(ID_932769 + 0x10) + 1;
+            UNLOCK();
+            lVar9 = *plVar11;
+          }
+          *plVar11 = lVar12;
+          local_80 = lVar9;
+          ID_139340(&local_80);
+        }
+        lVar9 = local_b8;
+        *puVar10 = BSScript::
+                   NativeFunction1<class_BGSPlanet::PlanetData,class_BSScript::ArrayWrapper<class_BGSKeyword*___ptr64>,int>
+                   ::vftable;
+        puVar10[10] = ID_114885;
+        cVar8 = *(char *)(local_b8 + 0xbc);
+        if (cVar8 == '\0') {
+          __dyn_tls_on_demand_init();
+          cVar8 = *(char *)(lVar9 + 0xbc);
+        }
+        uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+        if (cVar8 == '\0') {
+          __dyn_tls_on_demand_init();
+        }
+        *(undefined4 *)(local_b8 + 0x1d4) = 0x13;
+        ID_114906(&local_78,*param_1);
+        lVar9 = local_b8;
+        puVar10[5] = local_78;
+        local_a0 = 3;
+        *(undefined8 *)(puVar10[6] + 8) = 3;
+        if (*(char *)(local_b8 + 0xbc) == '\0') {
+          __dyn_tls_on_demand_
+    ...[truncated]
+    --- /decomp ---
+
+=== "IsTraitKnown" @ 144d13fb0 (1 refs) ===
+  ref @ 141f1bea4 in ID_114893@141f1ba70
+    --- decomp ---
+    
+    void ID_114893(undefined8 *param_1)
+    
+    {
+      int *piVar1;
+      int iVar2;
+      undefined4 uVar3;
+      undefined4 uVar4;
+      longlong *plVar5;
+      code *pcVar6;
+      longlong lVar7;
+      char cVar8;
+      longlong lVar9;
+      undefined8 *puVar10;
+      longlong *plVar11;
+      longlong lVar12;
+      undefined8 *puVar13;
+      undefined8 *puVar14;
+      undefined8 *in_stack_ffffffffffffff38;
+      longlong local_b8;
+      undefined8 *local_b0;
+      undefined8 *local_a8;
+      undefined8 local_a0;
+      undefined8 local_98;
+      undefined8 local_90;
+      undefined8 *local_88;
+      longlong local_80;
+      undefined8 local_78;
+      longlong local_70;
+      undefined4 local_68;
+      undefined4 uStack_64;
+      longlong local_60;
+      longlong local_58;
+      undefined8 local_50 [2];
+      
+      lVar9 = *(longlong *)ThreadLocalStoragePointer;
+      cVar8 = *(char *)(lVar9 + 0xbc);
+      local_b8 = lVar9;
+      if (cVar8 == '\0') {
+        __dyn_tls_on_demand_init();
+        cVar8 = *(char *)(lVar9 + 0xbc);
+      }
+      uVar3 = *(undefined4 *)(lVar9 + 0x1d4);
+      if (cVar8 == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar9 + 0x1d4) = 0x18;
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar14 = (undefined8 *)0x0;
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        in_stack_ffffffffffffff38 = param_1;
+        puVar10 = (undefined8 *)ID_114902(lVar9,"GetAtmosphereType");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        puVar10 = (undefined8 *)ID_114900(lVar9,"GetDayLength");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        puVar10 = (undefined8 *)ID_114900(lVar9,"GetGravity");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      puVar10 = (undefined8 *)ID_123785(0x58);
+      if (puVar10 != (undefined8 *)0x0) {
+        *(undefined4 *)(puVar10 + 1) = 0;
+        *puVar10 = BSScript::NF_util::NativeFunctionBase::vftable;
+        puVar10[2] = 0;
+        ID_139352(puVar10 + 2,"GetKeywordTypeList",0);
+        puVar10[3] = 0;
+        ID_139352(puVar10 + 3,"Planet",0);
+        lVar9 = ID_932764;
+        if (ID_932764 != 0) {
+          LOCK();
+          *(int *)(ID_932764 + 0x10) = *(int *)(ID_932764 + 0x10) + 1;
+          UNLOCK();
+        }
+        puVar10[4] = lVar9;
+        puVar10[5] = 0;
+        ID_139162(puVar10 + 6,1,0);
+        *(undefined2 *)(puVar10 + 8) = 0;
+        *(undefined1 *)((longlong)puVar10 + 0x42) = 0;
+        *(undefined4 *)((longlong)puVar10 + 0x44) = 0;
+        plVar11 = (longlong *)ID_35720();
+        lVar9 = *plVar11;
+        if (lVar9 != 0) {
+          LOCK();
+          *(int *)(lVar9 + 0x10) = *(int *)(lVar9 + 0x10) + 1;
+          UNLOCK();
+        }
+        puVar10[9] = lVar9;
+        lVar12 = ID_932769;
+        plVar11 = (longlong *)puVar10[6];
+        lVar9 = *plVar11;
+        if (ID_932769 != lVar9) {
+          if (ID_932769 != 0) {
+            LOCK();
+            *(int *)(ID_932769 + 0x10) = *(int *)(ID_932769 + 0x10) + 1;
+            UNLOCK();
+            lVar9 = *plVar11;
+          }
+          *plVar11 = lVar12;
+          local_80 = lVar9;
+          ID_139340(&local_80);
+        }
+        lVar9 = local_b8;
+        *puVar10 = BSScript::
+                   NativeFunction1<class_BGSPlanet::PlanetData,class_BSScript::ArrayWrapper<class_BGSKeyword*___ptr64>,int>
+                   ::vftable;
+        puVar10[10] = ID_114885;
+        cVar8 = *(char *)(local_b8 + 0xbc);
+        if (cVar8 == '\0') {
+          __dyn_tls_on_demand_init();
+          cVar8 = *(char *)(lVar9 + 0xbc);
+        }
+        uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+        if (cVar8 == '\0') {
+          __dyn_tls_on_demand_init();
+        }
+        *(undefined4 *)(local_b8 + 0x1d4) = 0x13;
+        ID_114906(&local_78,*param_1);
+        lVar9 = local_b8;
+        puVar10[5] = local_78;
+        local_a0 = 3;
+        *(undefined8 *)(puVar10[6] + 8) = 3;
+        if (*(char *)(local_b8 + 0xbc) == '\0') {
+          __dyn_tls_on_demand_
+    ...[truncated]
+    --- /decomp ---
+
+=== "GetSurveyPercent" @ 144d13fc0 (1 refs) ===
+  ref @ 141f1bdb9 in ID_114893@141f1ba70
+    --- decomp ---
+    
+    void ID_114893(undefined8 *param_1)
+    
+    {
+      int *piVar1;
+      int iVar2;
+      undefined4 uVar3;
+      undefined4 uVar4;
+      longlong *plVar5;
+      code *pcVar6;
+      longlong lVar7;
+      char cVar8;
+      longlong lVar9;
+      undefined8 *puVar10;
+      longlong *plVar11;
+      longlong lVar12;
+      undefined8 *puVar13;
+      undefined8 *puVar14;
+      undefined8 *in_stack_ffffffffffffff38;
+      longlong local_b8;
+      undefined8 *local_b0;
+      undefined8 *local_a8;
+      undefined8 local_a0;
+      undefined8 local_98;
+      undefined8 local_90;
+      undefined8 *local_88;
+      longlong local_80;
+      undefined8 local_78;
+      longlong local_70;
+      undefined4 local_68;
+      undefined4 uStack_64;
+      longlong local_60;
+      longlong local_58;
+      undefined8 local_50 [2];
+      
+      lVar9 = *(longlong *)ThreadLocalStoragePointer;
+      cVar8 = *(char *)(lVar9 + 0xbc);
+      local_b8 = lVar9;
+      if (cVar8 == '\0') {
+        __dyn_tls_on_demand_init();
+        cVar8 = *(char *)(lVar9 + 0xbc);
+      }
+      uVar3 = *(undefined4 *)(lVar9 + 0x1d4);
+      if (cVar8 == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar9 + 0x1d4) = 0x18;
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar14 = (undefined8 *)0x0;
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        in_stack_ffffffffffffff38 = param_1;
+        puVar10 = (undefined8 *)ID_114902(lVar9,"GetAtmosphereType");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        puVar10 = (undefined8 *)ID_114900(lVar9,"GetDayLength");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      lVar9 = ID_123785(0x58);
+      puVar10 = puVar14;
+      if (lVar9 != 0) {
+        puVar10 = (undefined8 *)ID_114900(lVar9,"GetGravity");
+      }
+      (*pcVar6)(plVar5,puVar10);
+      plVar5 = (longlong *)*param_1;
+      pcVar6 = *(code **)(*plVar5 + 0xf0);
+      puVar10 = (undefined8 *)ID_123785(0x58);
+      if (puVar10 != (undefined8 *)0x0) {
+        *(undefined4 *)(puVar10 + 1) = 0;
+        *puVar10 = BSScript::NF_util::NativeFunctionBase::vftable;
+        puVar10[2] = 0;
+        ID_139352(puVar10 + 2,"GetKeywordTypeList",0);
+        puVar10[3] = 0;
+        ID_139352(puVar10 + 3,"Planet",0);
+        lVar9 = ID_932764;
+        if (ID_932764 != 0) {
+          LOCK();
+          *(int *)(ID_932764 + 0x10) = *(int *)(ID_932764 + 0x10) + 1;
+          UNLOCK();
+        }
+        puVar10[4] = lVar9;
+        puVar10[5] = 0;
+        ID_139162(puVar10 + 6,1,0);
+        *(undefined2 *)(puVar10 + 8) = 0;
+        *(undefined1 *)((longlong)puVar10 + 0x42) = 0;
+        *(undefined4 *)((longlong)puVar10 + 0x44) = 0;
+        plVar11 = (longlong *)ID_35720();
+        lVar9 = *plVar11;
+        if (lVar9 != 0) {
+          LOCK();
+          *(int *)(lVar9 + 0x10) = *(int *)(lVar9 + 0x10) + 1;
+          UNLOCK();
+        }
+        puVar10[9] = lVar9;
+        lVar12 = ID_932769;
+        plVar11 = (longlong *)puVar10[6];
+        lVar9 = *plVar11;
+        if (ID_932769 != lVar9) {
+          if (ID_932769 != 0) {
+            LOCK();
+            *(int *)(ID_932769 + 0x10) = *(int *)(ID_932769 + 0x10) + 1;
+            UNLOCK();
+            lVar9 = *plVar11;
+          }
+          *plVar11 = lVar12;
+          local_80 = lVar9;
+          ID_139340(&local_80);
+        }
+        lVar9 = local_b8;
+        *puVar10 = BSScript::
+                   NativeFunction1<class_BGSPlanet::PlanetData,class_BSScript::ArrayWrapper<class_BGSKeyword*___ptr64>,int>
+                   ::vftable;
+        puVar10[10] = ID_114885;
+        cVar8 = *(char *)(local_b8 + 0xbc);
+        if (cVar8 == '\0') {
+          __dyn_tls_on_demand_init();
+          cVar8 = *(char *)(lVar9 + 0xbc);
+        }
+        uVar4 = *(undefined4 *)(lVar9 + 0x1d4);
+        if (cVar8 == '\0') {
+          __dyn_tls_on_demand_init();
+        }
+        *(undefined4 *)(local_b8 + 0x1d4) = 0x13;
+        ID_114906(&local_78,*param_1);
+        lVar9 = local_b8;
+        puVar10[5] = local_78;
+        local_a0 = 3;
+        *(undefined8 *)(puVar10[6] + 8) = 3;
+        if (*(char *)(local_b8 + 0xbc) == '\0') {
+          __dyn_tls_on_demand_
+    ...[truncated]
+    --- /decomp ---
+
+=== "GetBiomeActors" @ 144d36940 (2 refs) ===
+  ref @ 1420a22ff in ID_118736@1420a22d0
+    --- decomp ---
+    
+    undefined8 *
+    ID_118736(undefined8 *param_1,undefined8 param_2,undefined8 param_3,undefined8 param_4,
+             undefined8 *param_5)
+    
+    {
+      undefined4 uVar1;
+      longlong lVar2;
+      char cVar3;
+      undefined8 local_res18;
+      undefined8 local_res20;
+      
+      local_res18 = param_3;
+      local_res20 = param_4;
+      ID_138071(param_1,"GetBiomeActors","ObjectReference",0,1);
+      *param_1 = BSScript::
+                 NativeFunction1<class_TESObjectREFR,class_BSScript::ArrayWrapper<class_TESNPC*___ptr64>,float>
+                 ::vftable;
+      param_1[10] = ID_118493;
+      lVar2 = *(longlong *)ThreadLocalStoragePointer;
+      cVar3 = *(char *)(lVar2 + 0xbc);
+      if (cVar3 == '\0') {
+        __dyn_tls_on_demand_init();
+        cVar3 = *(char *)(lVar2 + 0xbc);
+      }
+      uVar1 = *(undefined4 *)(lVar2 + 0x1d4);
+      local_res20 = CONCAT44(local_res20._4_4_,uVar1);
+      if (cVar3 == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar2 + 0x1d4) = 0x13;
+      ID_118939(&local_res18,*param_5);
+      param_1[5] = local_res18;
+      local_res20 = 4;
+      *(undefined8 *)(param_1[6] + 8) = 4;
+      if (*(char *)(lVar2 + 0xbc) == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar2 + 0x1d4) = uVar1;
+      return param_1;
+    }
+    
+    --- /decomp ---
+  ref @ 142089d78 in ID_118497@1420881f0
+    --- decomp ---
+    
+    void ID_118497(undefined8 *param_1)
+    
+    {
+      code *pcVar1;
+      undefined8 *puVar2;
+      undefined8 *puVar3;
+      longlong *plVar4;
+      undefined8 *puVar5;
+      undefined4 local_res8 [2];
+      undefined8 *local_res10;
+      
+      local_res8[0] = ID_36178();
+      ID_36179(0x18);
+      if (ID_940265 == 0) {
+        ID_940265 = ID_118147(&ID_951651);
+      }
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar5 = (undefined8 *)0x0;
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118826(local_res10,"Activate","ObjectReference",ID_118219,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118824(local_res10,"AddDependentAnimatedObjectReference","ObjectReference",ID_118220
+                           ,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118822(local_res10,"AddDynamicTerminalMenuItem","ObjectReference",ID_118221,param_1)
+        ;
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      puVar3 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      local_res10 = puVar3;
+      if (puVar3 != (undefined8 *)0x0) {
+        ID_118937(puVar3,"AddItem","ObjectReference",ID_118224,param_1);
+        *puVar3 = BSScript::
+                  NativeLatentFunction3<class_TESObjectREFR,void,class_GameScript::FormOrInventoryObj,unsigned_int,bool>
+                  ::vftable;
+        puVar3[5] = 0;
+        *(undefined1 *)((longlong)puVar3 + 0x42) = 1;
+        puVar2 = puVar3;
+      }
+      (*pcVar1)(plVar4,puVar2);
+      (**(code **)(*(longlong *)*param_1 + 0x100))((longlong *)*param_1,"ObjectReference","AddItem",1);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118819(local_res10,"AddKeyword","ObjectReference",ID_118225,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      (**(code **)(*(longlong *)*param_1 + 0x100))
+                ((longlong *)*param_1,"ObjectReference","AddKeyword",1);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118817(local_res10,"AddKeyIfNeeded","ObjectReference",ID_118226,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118815(local_res10,"AddSpell","ObjectReference",ID_118216,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res
+    ...[truncated]
+    --- /decomp ---
+
+=== "GetBiomeFlora" @ 144d36950 (2 refs) ===
+  ref @ 1420a211f in ID_118734@1420a20f0
+    --- decomp ---
+    
+    undefined8 *
+    ID_118734(undefined8 *param_1,undefined8 param_2,undefined8 param_3,undefined8 param_4,
+             undefined8 *param_5)
+    
+    {
+      undefined4 uVar1;
+      longlong lVar2;
+      char cVar3;
+      undefined8 local_res18;
+      undefined8 local_res20;
+      
+      local_res18 = param_3;
+      local_res20 = param_4;
+      ID_138071(param_1,"GetBiomeFlora","ObjectReference",0,1);
+      *param_1 = BSScript::
+                 NativeFunction1<class_TESObjectREFR,class_BSScript::ArrayWrapper<class_TESFlora*___ptr64>,float>
+                 ::vftable;
+      param_1[10] = ID_118494;
+      lVar2 = *(longlong *)ThreadLocalStoragePointer;
+      cVar3 = *(char *)(lVar2 + 0xbc);
+      if (cVar3 == '\0') {
+        __dyn_tls_on_demand_init();
+        cVar3 = *(char *)(lVar2 + 0xbc);
+      }
+      uVar1 = *(undefined4 *)(lVar2 + 0x1d4);
+      local_res20 = CONCAT44(local_res20._4_4_,uVar1);
+      if (cVar3 == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar2 + 0x1d4) = 0x13;
+      ID_118938(&local_res18,*param_5);
+      param_1[5] = local_res18;
+      local_res20 = 4;
+      *(undefined8 *)(param_1[6] + 8) = 4;
+      if (*(char *)(lVar2 + 0xbc) == '\0') {
+        __dyn_tls_on_demand_init();
+      }
+      *(undefined4 *)(lVar2 + 0x1d4) = uVar1;
+      return param_1;
+    }
+    
+    --- /decomp ---
+  ref @ 142089dd0 in ID_118497@1420881f0
+    --- decomp ---
+    
+    void ID_118497(undefined8 *param_1)
+    
+    {
+      code *pcVar1;
+      undefined8 *puVar2;
+      undefined8 *puVar3;
+      longlong *plVar4;
+      undefined8 *puVar5;
+      undefined4 local_res8 [2];
+      undefined8 *local_res10;
+      
+      local_res8[0] = ID_36178();
+      ID_36179(0x18);
+      if (ID_940265 == 0) {
+        ID_940265 = ID_118147(&ID_951651);
+      }
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar5 = (undefined8 *)0x0;
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118826(local_res10,"Activate","ObjectReference",ID_118219,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118824(local_res10,"AddDependentAnimatedObjectReference","ObjectReference",ID_118220
+                           ,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118822(local_res10,"AddDynamicTerminalMenuItem","ObjectReference",ID_118221,param_1)
+        ;
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      puVar3 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      local_res10 = puVar3;
+      if (puVar3 != (undefined8 *)0x0) {
+        ID_118937(puVar3,"AddItem","ObjectReference",ID_118224,param_1);
+        *puVar3 = BSScript::
+                  NativeLatentFunction3<class_TESObjectREFR,void,class_GameScript::FormOrInventoryObj,unsigned_int,bool>
+                  ::vftable;
+        puVar3[5] = 0;
+        *(undefined1 *)((longlong)puVar3 + 0x42) = 1;
+        puVar2 = puVar3;
+      }
+      (*pcVar1)(plVar4,puVar2);
+      (**(code **)(*(longlong *)*param_1 + 0x100))((longlong *)*param_1,"ObjectReference","AddItem",1);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118819(local_res10,"AddKeyword","ObjectReference",ID_118225,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      (**(code **)(*(longlong *)*param_1 + 0x100))
+                ((longlong *)*param_1,"ObjectReference","AddKeyword",1);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118817(local_res10,"AddKeyIfNeeded","ObjectReference",ID_118226,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118815(local_res10,"AddSpell","ObjectReference",ID_118216,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res
+    ...[truncated]
+    --- /decomp ---
+
+=== "SetScanned" @ 144d38e48 (1 refs) ===
+  ref @ 14208e3cc in ID_118497@1420881f0
+    --- decomp ---
+    
+    void ID_118497(undefined8 *param_1)
+    
+    {
+      code *pcVar1;
+      undefined8 *puVar2;
+      undefined8 *puVar3;
+      longlong *plVar4;
+      undefined8 *puVar5;
+      undefined4 local_res8 [2];
+      undefined8 *local_res10;
+      
+      local_res8[0] = ID_36178();
+      ID_36179(0x18);
+      if (ID_940265 == 0) {
+        ID_940265 = ID_118147(&ID_951651);
+      }
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar5 = (undefined8 *)0x0;
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118826(local_res10,"Activate","ObjectReference",ID_118219,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118824(local_res10,"AddDependentAnimatedObjectReference","ObjectReference",ID_118220
+                           ,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118822(local_res10,"AddDynamicTerminalMenuItem","ObjectReference",ID_118221,param_1)
+        ;
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      puVar3 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      local_res10 = puVar3;
+      if (puVar3 != (undefined8 *)0x0) {
+        ID_118937(puVar3,"AddItem","ObjectReference",ID_118224,param_1);
+        *puVar3 = BSScript::
+                  NativeLatentFunction3<class_TESObjectREFR,void,class_GameScript::FormOrInventoryObj,unsigned_int,bool>
+                  ::vftable;
+        puVar3[5] = 0;
+        *(undefined1 *)((longlong)puVar3 + 0x42) = 1;
+        puVar2 = puVar3;
+      }
+      (*pcVar1)(plVar4,puVar2);
+      (**(code **)(*(longlong *)*param_1 + 0x100))((longlong *)*param_1,"ObjectReference","AddItem",1);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118819(local_res10,"AddKeyword","ObjectReference",ID_118225,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      (**(code **)(*(longlong *)*param_1 + 0x100))
+                ((longlong *)*param_1,"ObjectReference","AddKeyword",1);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)
+                 ID_118817(local_res10,"AddKeyIfNeeded","ObjectReference",ID_118226,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res10 != (undefined8 *)0x0) {
+        puVar2 = (undefined8 *)ID_118815(local_res10,"AddSpell","ObjectReference",ID_118216,param_1);
+      }
+      (*pcVar1)(plVar4,puVar2);
+      plVar4 = (longlong *)*param_1;
+      pcVar1 = *(code **)(*plVar4 + 0xf0);
+      if (ID_883288 != 2) {
+        ID_123789(&ID_883289,&ID_883288);
+      }
+      local_res10 = (undefined8 *)ID_123792(&ID_883289,0x58,0);
+      puVar2 = puVar5;
+      if (local_res
+    ...[truncated]
+    --- /decomp ---
+
+=== "PlayerKnowledge" @ 144d63040 (1 refs) ===
+  ref @ 142320004 in ID_124590@14231f630
+    --- decomp ---
+    
+    undefined8 * ID_124590(undefined8 *param_1)
+    
+    {
+      longlong lVar1;
+      int *piVar2;
+      undefined2 uVar3;
+      DWORD DVar4;
+      int iVar5;
+      longlong lVar6;
+      undefined8 uVar7;
+      uint uVar8;
+      bool bVar9;
+      undefined8 local_res18;
+      longlong local_res20;
+      undefined8 *local_c0;
+      undefined8 local_b8;
+      undefined8 *local_b0;
+      undefined8 local_a8;
+      undefined8 *local_a0;
+      undefined8 local_98;
+      undefined8 *local_90;
+      undefined8 local_88;
+      undefined8 *local_80;
+      undefined8 local_78;
+      undefined8 *local_70;
+      undefined8 local_68;
+      undefined8 *local_60;
+      undefined8 local_58 [3];
+      
+      ID_944202 = param_1;
+      if (param_1 == (undefined8 *)0xfffffffffffffff8) {
+        ID_944202 = (undefined8 *)0x0;
+      }
+      *(undefined1 (*) [16])(param_1 + 3) = (undefined1  [16])0x0;
+      *(undefined4 *)((longlong)param_1 + 0x1c) = 0;
+      param_1[4] = 0;
+      param_1[5] = 0;
+      *(undefined4 *)(param_1 + 6) = 0;
+      *(undefined1 (*) [16])(param_1 + 8) = (undefined1  [16])0x0;
+      *(undefined4 *)((longlong)param_1 + 0x44) = 0;
+      param_1[9] = 0;
+      param_1[10] = 0;
+      *(undefined4 *)(param_1 + 0xb) = 0;
+      *param_1 = BSGalaxy::ModuleState::vftable;
+      param_1[2] = BSGalaxy::ModuleState::vftable;
+      param_1[7] = BSGalaxy::ModuleState::vftable;
+      param_1[0xc] = BSComponentDB::ComponentFactory<class_BSGalaxy::BodyDrawData>::vftable;
+      param_1[0xd] = BSComponentDB::ComponentFactory<class_BSGalaxy::OrbitState>::vftable;
+      param_1[0xe] = BSComponentDB2::Detail::ComponentFactoryImpl<class_BSGalaxy::OrbitState>::vftable;
+      param_1[0xf] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::OrbitalData>::vftable
+      ;
+      param_1[0x10] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::OrbitedData>::vftable;
+      param_1[0x11] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::SatelliteCSVData>::vftable;
+      param_1[0x12] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::UnusedGalaxyCSVData>::vftable;
+      param_1[0x13] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::UnusedStarsCSVData>::vftable;
+      param_1[0x14] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::StarData>::vftable;
+      param_1[0x15] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTColorModifier>::vftable;
+      param_1[0x16] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTAtmosphereModifier>::vftable;
+      param_1[0x17] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTDatabaseID>::vftable;
+      param_1[0x18] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTSystemParsecLocation>::
+           vftable;
+      param_1[0x19] = BSComponentDB::ComponentFactory<struct_BSGalaxy::CTHighDetailInfo>::vftable;
+      param_1[0x1a] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTBodyType>::vftable
+      ;
+      param_1[0x1b] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTBrightnessModifier>::vftable;
+      param_1[0x1c] = BSComponentDB2::Detail::ComponentFactoryImpl<class_BSGalaxy::DynamicData>::vftable
+      ;
+      param_1[0x1d] = BSComponentDB::ComponentFactory<class_BSGalaxy::DynamicState>::vftable;
+      param_1[0x1e] = BSComponentDB::ComponentFactory<class_BSGalaxy::BodyPhysicsData>::vftable;
+      param_1[0x1f] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTBiomeData>::vftable;
+      param_1[0x20] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPerBiomeData>::vftable;
+      param_1[0x21] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTEditorBiomeData>::vftable;
+      param_1[0x22] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTAtmosphereData>::vftable;
+      param_1[0x23] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTCellData>::vftable
+      ;
+      param_1[0x24] =
+           BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTResourceData>::vftable;
+      param_1[
+    ...[truncated]
+    --- /decomp ---
+

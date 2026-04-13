@@ -1,0 +1,105 @@
+=== ID_114900 / ID_114900 @ 141f1c770 ===
+
+undefined8 * ID_114900(undefined8 *param_1,undefined8 param_2,undefined8 param_3,undefined8 param_4)
+
+{
+  undefined4 uVar1;
+  longlong lVar2;
+  void *pvVar3;
+  char cVar4;
+  
+  ID_138071(param_1,param_2,"Planet",0,0);
+  *param_1 = BSScript::NativeFunction0<class_BGSPlanet::PlanetData,float>::vftable;
+  pvVar3 = ThreadLocalStoragePointer;
+  param_1[10] = param_4;
+  lVar2 = *(longlong *)pvVar3;
+  cVar4 = *(char *)(lVar2 + 0xbc);
+  if (cVar4 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar4 = *(char *)(lVar2 + 0xbc);
+  }
+  uVar1 = *(undefined4 *)(lVar2 + 0x1d4);
+  if (cVar4 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar4 = *(char *)(lVar2 + 0xbc);
+  }
+  *(undefined4 *)(lVar2 + 0x1d4) = 0x13;
+  param_1[5] = 4;
+  if (cVar4 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar2 + 0x1d4) = uVar1;
+  return param_1;
+}
+
+
+
+=== ID_114902 / ID_114902 @ 141f1c8e0 ===
+
+undefined8 *
+ID_114902(undefined8 *param_1,undefined8 param_2,undefined8 param_3,undefined8 param_4,
+         undefined8 *param_5)
+
+{
+  int *piVar1;
+  int iVar2;
+  undefined4 uVar3;
+  longlong lVar4;
+  longlong *plVar5;
+  undefined8 *puVar6;
+  undefined8 *puVar7;
+  char cVar8;
+  undefined8 *local_res8;
+  
+  ID_138071(param_1,param_2,"Planet",0,0);
+  *param_1 = BSScript::NativeFunction0<class_BGSPlanet::PlanetData,class_BGSKeyword*___ptr64>::
+             vftable;
+  param_1[10] = param_4;
+  lVar4 = *(longlong *)ThreadLocalStoragePointer;
+  cVar8 = *(char *)(lVar4 + 0xbc);
+  if (cVar8 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar8 = *(char *)(lVar4 + 0xbc);
+  }
+  uVar3 = *(undefined4 *)(lVar4 + 0x1d4);
+  if (cVar8 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar4 + 0x1d4) = 0x13;
+  plVar5 = (longlong *)*param_5;
+  param_5 = (undefined8 *)0x0;
+  cVar8 = (**(code **)(*plVar5 + 0x60))(plVar5,4,&param_5);
+  puVar6 = param_5;
+  if (cVar8 == '\0') {
+    local_res8 = (undefined8 *)0x0;
+    puVar7 = local_res8;
+  }
+  else {
+    local_res8 = param_5;
+    puVar7 = param_1;
+    if (param_5 != (undefined8 *)0x0) goto LAB_141f1c9b6;
+  }
+  local_res8 = puVar7;
+  local_res8 = (undefined8 *)CONCAT44(local_res8._4_4_,1);
+LAB_141f1c9b6:
+  param_5 = (undefined8 *)0x0;
+  if (puVar6 != (undefined8 *)0x0) {
+    LOCK();
+    piVar1 = (int *)(puVar6 + 1);
+    iVar2 = *piVar1;
+    *piVar1 = *piVar1 + -1;
+    UNLOCK();
+    if (iVar2 == 1) {
+      (**(code **)*puVar6)(puVar6,1);
+    }
+  }
+  param_1[5] = local_res8;
+  if (*(char *)(lVar4 + 0xbc) == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar4 + 0x1d4) = uVar3;
+  return param_1;
+}
+
+
+
