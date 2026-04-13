@@ -76,9 +76,13 @@ custom scripts are picked up):
 
 ```bash
 analyzeHeadless.bat <project-dir> Starfield -process Starfield.exe \
-    -noanalysis -scriptPath <ghidra-project> \
+    -noanalysis -scriptPath re/ghidra/scripts \
     -postScript ImportAddressLibrary.java offsets-1-16-236-0.txt
 ```
+
+Scripts live in `re/ghidra/scripts/`; outputs default to `re/ghidra/output/`
+via `getSourceFile()`-relative paths. Add `re/ghidra/scripts/` in Ghidra's
+Script Manager → Script Directories for interactive use.
 
 Patterns observed:
 
