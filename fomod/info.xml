@@ -2,7 +2,7 @@
 <fomod>
   <Name>Complete Planet Survey</Name>
   <Author>pjmagee</Author>
-  <Version>1.0.0</Version>
+  <Version MachineVersion="1.0.0">1.0.0</Version>
   <Description>Instantly complete the planet survey on your current planet. Completes traits, flora, fauna, and resources.</Description>
   <Website>https://github.com/pjmagee/starfield-complete-planet-survey-mod</Website>
   <Groups>
