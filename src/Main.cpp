@@ -74,7 +74,25 @@ namespace Engine
     using fn_survey_notify_t = void(*)(void* ctx);
     inline REL::Relocation<fn_survey_notify_t> SurveyCheckNotify { REL::ID(97853) };
 
-    constexpr std::size_t kPlanetIdOffset = 0x54;
+    // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0, Ghidra-derived).
+    constexpr std::size_t  kPlanetIdOffset       = 0x54;   // uint32 knowledge key at planetForm+0x54
+    constexpr std::size_t  kManagerDbOffset      = 0x8B0;  // knowledge DB ptr at manager+0x8B0 (ID_126578 result)
+    constexpr std::size_t  kDbContainerOffset    = 0x268;  // BSTHashMap<> start within the DB object
+    constexpr std::size_t  kBucketOffsetTableOff = 0x12;   // uint16[] offset table start within a bucket base
+    constexpr std::size_t  kEntrySubobjOffset    = 0x20;   // species subobj relative to the resolved entry ptr
+    constexpr std::size_t  kFormPtrFormIdOffset  = 0x28;   // formID field in a TESForm* (aggregator ptr-arrays)
+    constexpr std::uint8_t kBiomeScanCategory    = 0x0d;   // category byte for ScanRefNative / PlanetProgressNative
+
+    // Aggregator buffer (ID_1016657) layout — four {begin*, end*} span descriptors.
+    // Two uint32[] spans (inline form IDs: traits / flora) and two TESForm*[] spans.
+    constexpr std::size_t kAggUintSpan0Begin = 0x218;
+    constexpr std::size_t kAggUintSpan0End   = 0x220;
+    constexpr std::size_t kAggUintSpan1Begin = 0x230;
+    constexpr std::size_t kAggUintSpan1End   = 0x238;
+    constexpr std::size_t kAggPtrSpan0Begin  = 0x1e8;
+    constexpr std::size_t kAggPtrSpan0End    = 0x1f0;
+    constexpr std::size_t kAggPtrSpan1Begin  = 0x200;
+    constexpr std::size_t kAggPtrSpan1End    = 0x208;
 
     struct AddKnownArgs
     {
@@ -88,7 +106,7 @@ namespace Engine
     {
         const auto manager = GetKnowledgeManager();
         if (!manager) return 0;
-        return *reinterpret_cast<std::uintptr_t*>(manager + 0x8B0);
+        return *reinterpret_cast<std::uintptr_t*>(manager + kManagerDbOffset);
     }
 
     std::uint32_t ReadPlanetId(const RE::TESForm* planetForm)
@@ -142,7 +160,7 @@ namespace Engine
     void ScanRef(void* ref)
     {
         if (!ref) return;
-        ScanRefNative(ref, 1 /*scanned*/, 0x0d /*byte3*/, 0 /*byte4*/);
+        ScanRefNative(ref, 1 /*scanned*/, kBiomeScanCategory, 0);
     }
 
     // Skip ID_83038 (which no-ops for un-registered refs) and go straight to the
@@ -150,7 +168,7 @@ namespace Engine
     void UpdatePlanetProgress(void* ref, std::uint32_t speciesFormId)
     {
         if (!ref || !speciesFormId) return;
-        PlanetProgressNative(ref, static_cast<std::int32_t>(speciesFormId), 0x0d, 0, 0);
+        PlanetProgressNative(ref, static_cast<std::int32_t>(speciesFormId), kBiomeScanCategory, 0, 0);
     }
 
     // Directly increment the scan-flag byte at per-planet component value's
@@ -171,15 +189,15 @@ namespace Engine
 
         // Look up per-planet entry.
         std::uintptr_t out[4] = { 0, 0, 0, 0xfe0 };
-        auto container = reinterpret_cast<std::uintptr_t*>(db + 0x268);
+        auto container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
         DbLookup(container, out, &key);
         if (out[3] == 0xfe0 && out[2] == 0) return 0;
 
         // Compute subobj pointer: base = out[2] + *(uint16*)(out[2] + 0x12 + out[3] * 4); subobj = base + 0x20.
         const auto base = reinterpret_cast<std::uint8_t*>(out[2]);
-        const auto ushortOffsetPtr = reinterpret_cast<std::uint16_t*>(base + 0x12 + out[3] * 4);
+        const auto ushortOffsetPtr = reinterpret_cast<std::uint16_t*>(base + kBucketOffsetTableOff + out[3] * 4);
         const auto entryPtr        = base + *ushortOffsetPtr;
-        auto subobj                = entryPtr + 0x20;
+        auto subobj                = entryPtr + kEntrySubobjOffset;
 
         IncrementScanFlag(subobj, speciesFormId, delta, 0);
         return 1;
@@ -222,14 +240,14 @@ namespace Engine
             const auto* end   = *reinterpret_cast<std::uintptr_t* const*>(buf + endOff);
             for (auto p = begin; p && p != end; ++p) {
                 if (*p == 0) continue;
-                mark(*reinterpret_cast<const std::uint32_t*>(*p + 0x28));
+                mark(*reinterpret_cast<const std::uint32_t*>(*p + kFormPtrFormIdOffset));
             }
         };
 
-        scanUintRange(0x218, 0x220);
-        scanUintRange(0x230, 0x238);
-        scanPtrRange (0x1e8, 0x1f0);
-        scanPtrRange (0x200, 0x208);
+        scanUintRange(kAggUintSpan0Begin, kAggUintSpan0End);
+        scanUintRange(kAggUintSpan1Begin, kAggUintSpan1End);
+        scanPtrRange (kAggPtrSpan0Begin,  kAggPtrSpan0End);
+        scanPtrRange (kAggPtrSpan1Begin,  kAggPtrSpan1End);
 
         SurveyBufferFree(buf);
         return marked;
@@ -281,7 +299,7 @@ namespace Engine
             spdlog::info("    IsBiomeRef -> {}", static_cast<int>(biome));
             if (biome == 0) return RE::BSContainer::ForEachResult::kContinue;
             spdlog::info("    calling ScanRefNative");
-            ScanRefNative(ref.get(), 1, 0x0d, 0);
+            ScanRefNative(ref.get(), 1, kBiomeScanCategory, 0);
             ++scanned;
             spdlog::info("    done");
             return RE::BSContainer::ForEachResult::kContinue;

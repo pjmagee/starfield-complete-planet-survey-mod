@@ -6,6 +6,6 @@
   <moduleName>Complete Planet Survey</moduleName>
   <requiredInstallFiles>
     <folder source="Scripts" destination="Scripts" priority="0" />
-    <folder source="sfse" destination="sfse" priority="0" />
+    <folder source="SFSE" destination="SFSE" priority="0" />
   </requiredInstallFiles>
 </config>
