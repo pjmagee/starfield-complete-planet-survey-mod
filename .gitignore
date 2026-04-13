@@ -21,3 +21,10 @@ Desktop.ini
 .vscode/settings.json
 .idea/
 *.user
+ghidra-project/
+
+# Claude Code transient state (keep skills/ committed)
+.claude/scheduled_tasks.lock
+.claude/*.json
+
+.fake
