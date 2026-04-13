@@ -157,6 +157,26 @@ placed instances), so ID_83008's path through ID_83038 succeeds.
 types are incomplete — dereferencing their `.get()` was observed to crash.
 Stick to `player->parentCell` for now.
 
+## Named constexpr offsets in src/Main.cpp
+
+All Ghidra-derived struct field offsets are promoted to named constants in the
+`Engine` namespace so raw hex never appears in logic. Current set:
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `kPlanetIdOffset` | `0x54` | uint32 knowledge key at `planetForm + 0x54` |
+| `kManagerDbOffset` | `0x8B0` | DB ptr field within the manager singleton |
+| `kDbContainerOffset` | `0x268` | `BSTHashMap<>` start inside the DB object |
+| `kBucketOffsetTableOff` | `0x12` | `uint16[]` offset table start in a bucket base |
+| `kEntrySubobjOffset` | `0x20` | Species subobj relative to the resolved entry ptr |
+| `kFormPtrFormIdOffset` | `0x28` | `formID` field in a `TESForm*` (aggregator ptr arrays) |
+| `kBiomeScanCategory` | `0x0d` | Category byte for `ScanRefNative` / `PlanetProgressNative` |
+| `kAggUintSpan{0,1}{Begin,End}` | `0x218–0x238` | Aggregator buffer `uint32[]` span descriptors |
+| `kAggPtrSpan{0,1}{Begin,End}` | `0x1e8–0x208` | Aggregator buffer `TESForm*[]` span descriptors |
+
+If a future patch shifts any of these, update the constant and its comment — the
+logic itself stays unchanged.
+
 ## Signatures worth locking in
 
 ```cpp

@@ -80,9 +80,10 @@ Do not speculate about offsets or function signatures — verify with Address Li
 This repo (`starfield-complete-planet-survey-mod`) is a concrete example of the hybrid pattern:
 - Native DLL in [src/Main.cpp](../../../src/Main.cpp) registering Papyrus functions via CommonLibSF
 - Papyrus caller in [Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc](../../../Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc)
-- Address library offsets pinned in [offsets-1-16-236-0.txt](../../../offsets-1-16-236-0.txt)
-- Ghidra project under [ghidra-project/](../../../ghidra-project/)
-- Champollion vendored in [tools/champollion/](../../../tools/champollion/)
+- Address library offsets file (`offsets-1-16-236-0.txt`) is **not checked in** (19 MB) — download from Address Library (Nexus 3256) and place at repo root
+- Ghidra analysis artifacts in [re/](../../../re/) — scripts under `re/ghidra/scripts/`, decompile dumps under `re/ghidra/output/`, Python helpers under `re/tools/`
+- Ghidra project DB (`ghidra-project/Starfield.gpr` + `Starfield.rep`) is local-only (gitignored). In Ghidra's Script Manager add `re/ghidra/scripts/` as a script directory so the canonical scripts run from there.
+- Champollion decompiler binary in `tools/champollion/` (local-only, gitignored)
 - FOMOD installer staged in [fomod/](../../../fomod/)
 
 Use these as the first place to ground any concrete suggestion before looking elsewhere.
