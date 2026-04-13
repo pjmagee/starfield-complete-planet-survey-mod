@@ -1,114 +1,72 @@
 ScriptName CompletePlanetSurveyQuest
 
-; Complete the planet survey for the planet the player is currently on.
-; Call via console: cgf "CompletePlanetSurveyQuest.CompleteSurvey"
-; No SFSE plugin required - pure Papyrus.
+; Complete the planet survey for the biome the player is currently in.
+; Invoke via console:  cgf "CompletePlanetSurveyQuest.CompleteSurvey"
+;
+; Writes the scan-flag byte directly in the per-planet knowledge DB entry
+; for each flora/fauna species in the biome — the exact byte GetSurveyPercent's
+; aggregator reads. No spawning, no refs, no harvest.
 
 Function CompleteSurvey() global
     Actor playerRef = Game.GetPlayer()
     Planet currentPlanet = playerRef.GetCurrentPlanet()
 
     If currentPlanet == None
-        Debug.Notification("Survey: Not on a planet")
+        Debug.Notification("Survey: not on a planet")
         Return
     EndIf
 
     float surveyBefore = currentPlanet.GetSurveyPercent()
-    Debug.Notification("Survey: Completing planet survey...")
 
-    CompleteTraits(currentPlanet)
-    CompleteBiomeFlora(playerRef)
-    CompleteBiomeFauna(playerRef)
-    CompleteResources(playerRef)
+    ObjectReference playerRef_OR = playerRef as ObjectReference
+    Flora[]     biomeFlora  = playerRef_OR.GetBiomeFlora(1.0)
+    ActorBase[] biomeActors = playerRef_OR.GetBiomeActors(1.0)
+    Keyword[]   traitKw     = currentPlanet.GetKeywordTypeList(44)
+    Form        planetForm  = currentPlanet as Form
+
+    CompletePlanetSurveyNative.DebugLog("biome flora=" + biomeFlora.Length + " fauna=" + biomeActors.Length + " traits=" + traitKw.Length)
+
+    int floraCount = MarkSpecies(planetForm, biomeFlora as Form[])
+    int faunaCount = MarkSpecies(planetForm, biomeActors as Form[])
+    int traitCount = MarkTraits(currentPlanet, traitKw)
+    ; Sweep everything the planet tracks (resources + anything missed): one-shot.
+    int everything = CompletePlanetSurveyNative.MarkEverythingForPlanet(planetForm, 100)
+    ; ScanNearbyRefs is disabled until the procgen-cell iteration crash is fixed.
+    int refsScanned = 0
+    ; Mark child locations (e.g. "Frozen Mountains") as explored so the planet map
+    ; stops showing partial exploration.
+    int locations = CompletePlanetSurveyNative.MarkLocationsExplored()
 
     float surveyAfter = currentPlanet.GetSurveyPercent()
-    Debug.Notification("Survey: " + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%)")
+    CompletePlanetSurveyNative.DebugLog("marked flora=" + floraCount + " fauna=" + faunaCount + " traits=" + traitCount + " all=" + everything + " refs=" + refsScanned + " survey=" + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%)")
+    Debug.Notification("Survey: " + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%) all=" + everything + " refs=" + refsScanned)
 EndFunction
 
-Function CompleteTraits(Planet akPlanet) global
-    Keyword[] traitKeywords = akPlanet.GetKeywordTypeList(44)
+int Function MarkSpecies(Form planetForm, Form[] speciesList) global
+    int marked = 0
+    int i = 0
+    While i < speciesList.Length
+        If speciesList[i] != None
+            If CompletePlanetSurveyNative.MarkSpeciesScannedForPlanet(planetForm, speciesList[i], 100)
+                marked += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    Return marked
+EndFunction
 
-    If traitKeywords.Length == 0
-        Return
-    EndIf
-
-    int discovered = 0
+int Function MarkTraits(Planet akPlanet, Keyword[] traitKeywords) global
+    Form planetForm = akPlanet as Form
+    int marked = 0
     int i = 0
     While i < traitKeywords.Length
         If !akPlanet.IsTraitKnown(traitKeywords[i])
-            akPlanet.SetTraitKnown(traitKeywords[i], true)
-            discovered += 1
-        EndIf
-        i += 1
-    EndWhile
-
-    If discovered > 0
-        Debug.Notification("Survey: " + discovered + " traits discovered")
-    EndIf
-EndFunction
-
-Function CompleteBiomeFlora(Actor playerRef) global
-    ObjectReference playerRef_OR = playerRef as ObjectReference
-    Flora[] biomeFlora = playerRef_OR.GetBiomeFlora(0.99)
-
-    If biomeFlora.Length == 0
-        Return
-    EndIf
-
-    int scanned = 0
-    int i = 0
-    While i < biomeFlora.Length
-        If biomeFlora[i] != None
-            ObjectReference floraRef = Game.FindRandomReferenceOfType(biomeFlora[i] as Form, playerRef.X, playerRef.Y, playerRef.Z, 100000.0)
-            If floraRef != None
-                floraRef.SetScanned(true)
-                scanned += 1
+            If CompletePlanetSurveyNative.MarkTraitKnownForPlanet(planetForm, traitKeywords[i])
+                marked += 1
             EndIf
         EndIf
         i += 1
     EndWhile
-
-    If scanned > 0
-        Debug.Notification("Survey: " + scanned + " flora scanned")
-    EndIf
-EndFunction
-
-Function CompleteBiomeFauna(Actor playerRef) global
-    ObjectReference playerRef_OR = playerRef as ObjectReference
-    ActorBase[] biomeActors = playerRef_OR.GetBiomeActors(0.99)
-
-    If biomeActors.Length == 0
-        Return
-    EndIf
-
-    int scanned = 0
-    int i = 0
-    While i < biomeActors.Length
-        If biomeActors[i] != None
-            ObjectReference actorRef = Game.FindRandomReferenceOfType(biomeActors[i] as Form, playerRef.X, playerRef.Y, playerRef.Z, 100000.0)
-            If actorRef != None
-                actorRef.SetScanned(true)
-                scanned += 1
-            EndIf
-        EndIf
-        i += 1
-    EndWhile
-
-    If scanned > 0
-        Debug.Notification("Survey: " + scanned + " fauna scanned")
-    EndIf
-EndFunction
-
-Function CompleteResources(Actor playerRef) global
-    ; Scan all flora references near the player.
-    ; Resource deposits are Flora objects - scanning them registers the resource.
-    ; We search a large radius to catch deposits in the area.
-    ; Also scan the player's reference which can help register nearby resources.
-    ObjectReference playerRef_OR = playerRef as ObjectReference
-    Resource[] localResources = playerRef_OR.GetValueResources()
-
-    ; Mark the player reference as scanned to trigger area resource discovery
-    playerRef_OR.SetScanned(true)
-
-    Debug.Notification("Survey: " + localResources.Length + " resources in current area")
+    Return marked
 EndFunction
