@@ -1,5 +1,7 @@
 # Complete Planet Survey
 
+**Nexus:** <https://www.nexusmods.com/starfield/mods/16493>
+
 A Starfield mod that completes a planet's survey instantly when you scan any
 single fauna, flora, or resource. Toggleable from **Settings → Gameplay**.
 
@@ -36,7 +38,7 @@ script. Targets Starfield 1.16.236.0 with SFSE 0.2.19.
 
 Three layers, each doing one thing:
 
-```
+```text
 ESM (CompletePlanetSurvey.esm) ─── tells the game engine to render the
                                    "Auto-Complete Survey on Scan" toggle in
                                    Settings → Gameplay
@@ -132,7 +134,7 @@ The knowledge manager singleton is `ID_126578()`. From there:
 
 The component value at `(disc=938333, key=planet_id)`:
 
-```
+```text
 +0x00  uint64   header (slot count, etc.)
 +0x18  ptr      slot array → 0x10-byte entries
    each entry:
@@ -164,7 +166,7 @@ all four to feed `MarkEverythingForPlanet`.
 
 ### Hook path: from E-key to our code
 
-```
+```text
 Player presses E to scan
   └─ Engine: scan dispatch
        └─ ID_83008 (SetScanned inner)
@@ -185,7 +187,7 @@ at `ID_52157 → ID_97853`.
 
 ## Repo layout
 
-```
+```text
 src/Main.cpp                                      # SFSE plugin
 Data/CompletePlanetSurvey.esm                     # CK-authored toggle
 Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc   # Papyrus glue
