@@ -405,7 +405,8 @@ namespace Papyrus
             auto* loc = formPtr->As<RE::BGSLocation>();
             if (!loc || loc->explored) continue;
             auto* parent = loc->parentLocation.get();
-            while (parent) {
+            int depth = 0;
+            while (parent && depth < 64) {
                 if (parent == rootLoc) {
                     loc->explored = true;
                     loc->everExplored = true;
@@ -413,6 +414,7 @@ namespace Papyrus
                     break;
                 }
                 parent = parent->parentLocation.get();
+                ++depth;
             }
         }
         spdlog::info("MarkLocationsExplored: marked {} locations under 0x{:08X}",
@@ -559,12 +561,97 @@ namespace Papyrus
     }
 }
 
+namespace Hook
+{
+    // Intercept the survey-completion check (ID_97853) when called from within
+    // the species-scan progress updater (ID_52157).
+    //
+    // ID_52157 is reached for every successful biome species scan regardless of path:
+    //   flora:  ID_83008 → ID_83038 → (local_res8[0] != 0) → ID_52157
+    //   fauna:  ID_83008 → ID_52160 → ID_52157
+    // Hooking the CALL site of ID_97853 inside ID_52157 therefore covers the
+    // player's E-key scan, Papyrus SetScanned, and any other caller.
+    //
+    // We use write_call<5> at the CALL SITE (not write_jmp at a function start).
+    // write_call5 reads the existing E8 rel32 instruction to decode the original
+    // function address as `func` — correct and non-crashing, unlike write_jmp5
+    // which would read garbage prologue bytes as a fake JMP target.
+    struct ScanHook
+    {
+        using fn_t = void(*)(void*);   // ID_97853: void(undefined4* ctx)
+
+        static void thunk(void* ctx)
+        {
+            func(ctx);   // call original SurveyCheckNotify (ID_97853)
+
+            auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+            if (!vm) return;
+            auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
+
+            using VarArray = RE::BSScrapArray<RE::BSScript::Variable>;
+            std::function<bool(VarArray&)> noArgs = [](VarArray&) -> bool { return true; };
+            RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> noCallback;
+            ivm->DispatchStaticCall(
+                RE::BSFixedString{ "CompletePlanetSurveyQuest" },
+                RE::BSFixedString{ "CompleteSurveyIfEnabled" },
+                noArgs,
+                noCallback,
+                0
+            );
+        }
+
+        static inline fn_t func = nullptr;
+    };
+
+    // Scan the first `scan_limit` bytes of `outer` for an E8 rel32 CALL whose
+    // resolved absolute target equals `inner`.  Returns the address of that CALL
+    // instruction, or 0 if not found.
+    static std::uintptr_t FindCallSite(std::uintptr_t outer,
+                                       std::uintptr_t inner,
+                                       std::size_t    scan_limit = 0x400)
+    {
+        for (std::size_t i = 0; i < scan_limit; ++i) {
+            const auto* p = reinterpret_cast<const std::uint8_t*>(outer + i);
+            if (*p == 0xE8) {
+                const auto disp        = *reinterpret_cast<const std::int32_t*>(p + 1);
+                const auto call_target = static_cast<std::uintptr_t>(
+                    static_cast<std::int64_t>(outer + i + 5) + disp);
+                if (call_target == inner) {
+                    return outer + i;
+                }
+            }
+        }
+        return 0;
+    }
+
+    void Install()
+    {
+        REL::Relocation<std::uintptr_t> outer{ REL::ID(52157) };   // planet-progress updater
+        REL::Relocation<std::uintptr_t> inner{ REL::ID(97853) };   // survey check/notify
+
+        const auto call_site = FindCallSite(outer.address(), inner.address());
+        if (!call_site) {
+            spdlog::error("ScanHook: CALL to ID_97853 not found inside ID_52157 — hook skipped");
+            return;
+        }
+
+        ScanHook::func = reinterpret_cast<ScanHook::fn_t>(
+            REL::GetTrampoline().write_call<5>(
+                call_site,
+                reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
+
+        spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)",
+                     call_site);
+    }
+}
+
 namespace
 {
     void MessageCallback(SFSE::MessagingInterface::Message* a_msg) noexcept
     {
         if (a_msg->type == SFSE::MessagingInterface::kPostDataLoad) {
             Papyrus::Register();
+            Hook::Install();
             spdlog::info("CompletePlanetSurvey initialized");
         }
     }
@@ -572,7 +659,7 @@ namespace
 
 SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
 {
-    SFSE::Init(a_sfse);
+    SFSE::Init(a_sfse, { .trampoline = true, .trampolineSize = 64 });
     spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
 
     const auto* messaging = SFSE::GetMessagingInterface();
