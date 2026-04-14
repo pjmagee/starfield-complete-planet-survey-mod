@@ -41,38 +41,14 @@ jobs:
       - name: Build
         run: xmake -y
 
-      - name: Install DLL to dist/
-        run: xmake install -o dist
-
-      - name: Add ESM, Papyrus scripts and FOMOD metadata
+      - name: Build release ZIP
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "dist/Scripts/Source/User" | Out-Null
-          New-Item -ItemType Directory -Force -Path "dist/fomod"               | Out-Null
-
-          Copy-Item "fomod/info.xml"         "dist/fomod/"
-          Copy-Item "fomod/ModuleConfig.xml" "dist/fomod/"
-
-          # Settings > Gameplay toggle (GPOG + GPOF)
-          Copy-Item "Data/CompletePlanetSurvey.esm" "dist/"
-
-          Copy-Item "Data/Scripts/CompletePlanetSurveyQuest.pex"  "dist/Scripts/"
-          Copy-Item "Data/Scripts/CompletePlanetSurveyNative.pex" "dist/Scripts/"
-
-          Copy-Item "Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc"  "dist/Scripts/Source/User/"
-          Copy-Item "Data/Scripts/Source/User/CompletePlanetSurveyNative.psc" "dist/Scripts/Source/User/"
-
-      - name: Create release ZIP
-        shell: pwsh
-        run: |
-          # Use the git tag when on a tag push, otherwise 'dev'
           $version = if ($env:GITHUB_REF_TYPE -eq 'tag') {
             $env:GITHUB_REF_NAME -replace '^v', ''
           } else { 'dev' }
-
-          $zipName = "Complete-Planet-Survey-$version.zip"
-          Compress-Archive -Path "dist/*" -DestinationPath $zipName
-          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          python package.py --version $version
+          "ZIP_NAME=Complete-Planet-Survey-$version.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
