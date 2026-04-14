@@ -1,11 +1,17 @@
 ScriptName CompletePlanetSurveyQuest
 
-; Complete the planet survey for the biome the player is currently in.
+; Complete the planet survey for the WHOLE planet (all biomes), not just the
+; biome the player is standing in.
 ; Invoke via console:  cgf "CompletePlanetSurveyQuest.CompleteSurvey"
 ;
-; Writes the scan-flag byte directly in the per-planet knowledge DB entry
-; for each flora/fauna species in the biome — the exact byte GetSurveyPercent's
-; aggregator reads. No spawning, no refs, no harvest.
+; Two passes on purpose:
+;   1. Per-biome flora/fauna marked via MarkSpeciesScannedForPlanet — flips the
+;      per-species scan-flag byte at subobj+0x21 (engine ID_124898 path).
+;   2. Planet-wide aggregator sweep via MarkEverythingForPlanet — enumerates
+;      every tracked form (all biomes' flora/fauna, resources, misc) via
+;      ID_1016657 and marks each "known" in the knowledge DB slot array.
+; Both layers are needed to hit 100% + trigger the Survey Data slate.
+; No spawning, no refs, no harvest.
 
 Function CompleteSurvey() global
     Actor playerRef = Game.GetPlayer()
@@ -33,10 +39,13 @@ Function CompleteSurvey() global
 
     CompletePlanetSurveyNative.DebugLog("biome flora=" + biomeFlora.Length + " fauna=" + biomeActors.Length + " traits=" + traitKw.Length)
 
+    ; Pass 1: per-species flag bytes for the current biome's flora/fauna +
+    ; any planet-level traits. Needed because the aggregator sweep doesn't
+    ; touch the per-species +0x21 byte.
     int floraCount = MarkSpecies(planetForm, biomeFlora as Form[])
     int faunaCount = MarkSpecies(planetForm, biomeActors as Form[])
     int traitCount = MarkTraits(currentPlanet, traitKw)
-    ; Sweep everything the planet tracks (resources + anything missed): one-shot.
+    ; Pass 2: planet-wide sweep — every tracked form across every biome.
     int everything = CompletePlanetSurveyNative.MarkEverythingForPlanet(planetForm, 100)
     ; ScanNearbyRefs is disabled until the procgen-cell iteration crash is fixed.
     int refsScanned = 0
