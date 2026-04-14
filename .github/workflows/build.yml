@@ -44,7 +44,7 @@ jobs:
       - name: Install DLL to dist/
         run: xmake install -o dist
 
-      - name: Add Papyrus scripts and FOMOD metadata
+      - name: Add ESM, Papyrus scripts and FOMOD metadata
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "dist/Scripts/Source/User" | Out-Null
@@ -52,6 +52,9 @@ jobs:
 
           Copy-Item "fomod/info.xml"         "dist/fomod/"
           Copy-Item "fomod/ModuleConfig.xml" "dist/fomod/"
+
+          # Settings > Gameplay toggle (GPOG + GPOF)
+          Copy-Item "Data/CompletePlanetSurvey.esm" "dist/"
 
           Copy-Item "Data/Scripts/CompletePlanetSurveyQuest.pex"  "dist/Scripts/"
           Copy-Item "Data/Scripts/CompletePlanetSurveyNative.pex" "dist/Scripts/"
