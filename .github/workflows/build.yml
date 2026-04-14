@@ -48,7 +48,8 @@ jobs:
             $env:GITHUB_REF_NAME -replace '^v', ''
           } else { 'dev' }
           python package.py --version $version
-          "ZIP_NAME=Complete-Planet-Survey-$version.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "VERSION=$version"                                 | Out-File -FilePath $env:GITHUB_ENV -Append
+          "ZIP_NAME=Complete-Planet-Survey-$version.zip"     | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -62,3 +63,15 @@ jobs:
         with:
           files: Complete-Planet-Survey-*.zip
           generate_release_notes: true
+
+      # Nexus upload uses a beta API (v1.0.0-beta.4). Pin to a known tag —
+      # when the action stabilises, move to v1 or a commit SHA.
+      - name: Upload to Nexus Mods
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.4
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_group_id: ${{ vars.NEXUS_FILE_GROUP_ID }}
+          filename: ${{ env.ZIP_NAME }}
+          version: ${{ env.VERSION }}
+          file_category: main
