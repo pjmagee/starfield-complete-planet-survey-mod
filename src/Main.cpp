@@ -400,13 +400,18 @@ namespace Papyrus
             ++marked;
         }
 
+        // Starfield's deepest observed location hierarchy is ~6 levels
+        // (galaxy → system → body → biome → region → area); 64 is a generous
+        // cycle-safety bound, not a real depth limit.
+        constexpr int kMaxLocationParentDepth = 64;
+
         for (auto& formPtr : locForms.formArray) {
             if (!formPtr) continue;
             auto* loc = formPtr->As<RE::BGSLocation>();
             if (!loc || loc->explored) continue;
             auto* parent = loc->parentLocation.get();
             int depth = 0;
-            while (parent && depth < 64) {
+            while (parent && depth < kMaxLocationParentDepth) {
                 if (parent == rootLoc) {
                     loc->explored = true;
                     loc->everExplored = true;
@@ -588,27 +593,32 @@ namespace Hook
             if (!vm) return;
             auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
 
+            // All per-scan constants hoisted out of the hot path: firing on
+            // every species scan, we don't want to reconstruct the lambda,
+            // both BSFixedStrings (atomized), and the empty smart pointer each time.
             using VarArray = RE::BSScrapArray<RE::BSScript::Variable>;
-            std::function<bool(VarArray&)> noArgs = [](VarArray&) -> bool { return true; };
-            RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> noCallback;
-            ivm->DispatchStaticCall(
-                RE::BSFixedString{ "CompletePlanetSurveyQuest" },
-                RE::BSFixedString{ "CompleteSurveyIfEnabled" },
-                noArgs,
-                noCallback,
-                0
-            );
+            static const std::function<bool(VarArray&)> kNoArgs =
+                [](VarArray&) -> bool { return true; };
+            static const RE::BSFixedString kScriptName{ "CompletePlanetSurveyQuest" };
+            static const RE::BSFixedString kFnName{ "CompleteSurveyIfEnabled" };
+            static const RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> kNoCallback;
+
+            ivm->DispatchStaticCall(kScriptName, kFnName, kNoArgs, kNoCallback, 0);
         }
 
         static inline fn_t func = nullptr;
     };
+
+    // 1 KiB is larger than ID_52157's body; bigger than any real function we'd
+    // ever want to hook a single CALL within.
+    constexpr std::size_t kScanHookSearchWindow = 0x400;
 
     // Scan the first `scan_limit` bytes of `outer` for an E8 rel32 CALL whose
     // resolved absolute target equals `inner`.  Returns the address of that CALL
     // instruction, or 0 if not found.
     static std::uintptr_t FindCallSite(std::uintptr_t outer,
                                        std::uintptr_t inner,
-                                       std::size_t    scan_limit = 0x400)
+                                       std::size_t    scan_limit = kScanHookSearchWindow)
     {
         for (std::size_t i = 0; i < scan_limit; ++i) {
             const auto* p = reinterpret_cast<const std::uint8_t*>(outer + i);
