@@ -10,5 +10,7 @@ bool Function ScanRef(ObjectReference akRef) global native
 bool Function UpdatePlanetProgressForSpecies(ObjectReference akRef, Form akSpecies) global native
 bool Function MarkSpeciesScannedForPlanet(Form akPlanet, Form akSpecies, int aiDelta) global native
 int  Function MarkEverythingForPlanet(Form akPlanet, int aiDelta) global native
+Function DumpPlanetLayout(Form akPlanet) global native
+int  Function MarkAllBiomeSpecies(Form akPlanet, int aiDelta) global native
 int  Function ScanNearbyRefs() global native
 int  Function MarkLocationsExplored() global native

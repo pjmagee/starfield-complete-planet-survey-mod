@@ -1,4 +1,5 @@
 #include "PCH.h"
+#include <windows.h>
 
 // Address Library IDs for Starfield 1.16.236.0 — discovered via Ghidra.
 // See memory/re_progress.md for the derivation and the knowledge-DB architecture.
@@ -49,6 +50,24 @@ namespace Engine
     inline REL::Relocation<fn_db_lookup_t>       DbLookup           { REL::ID(126806) };
     inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag  { REL::ID(124898) };
     inline REL::Relocation<std::uint16_t*>       TraitDiscriminator { REL::ID(938333) };
+
+    // ID_83010 / ID_83012: biome-scoped species enumeration dispatchers.
+    // Called by Papyrus GetBiomeActors / GetBiomeFlora after ID_52188 resolves
+    // (ref -> planet_id, biome_id). The decompiled call shape:
+    //   ID_83010(planet_id, biome_id, &out_array, CONCAT44(hi, int(weight * ID_500678)))
+    // Array layout in out_array: [0..3]=count (uint32), [8..15]=uint32* (form IDs).
+    using fn_biome_enum_t = void(*)(std::uint32_t planet_id,
+                                    std::uint32_t biome_id,
+                                    void*         out_array,
+                                    std::uint64_t weight);
+
+    inline REL::Relocation<fn_biome_enum_t> BiomeFaunaEnum { REL::ID(83010) };
+    inline REL::Relocation<fn_biome_enum_t> BiomeFloraEnum { REL::ID(83012) };
+    inline REL::Relocation<float*>          BiomeWeightScale { REL::ID(500678) };
+
+    // Surface tree offsets (empirically verified 2026-04-15 — see re/findings-surfacetree.md).
+    constexpr std::size_t kPlanetSurfaceTreeOffset = 0x38;   // BGSPlanet::PlanetData.surfaceTree
+    constexpr std::size_t kTreeBiomeCountOffset    = 0x44;   // uint32 biome count in BGSSurface::Tree
 
     // ID_1016657: per-planet survey aggregator constructor.
     //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
@@ -253,6 +272,234 @@ namespace Engine
         return marked;
     }
 
+    // Forward declaration (defined lower down with the diagnostic helpers).
+    bool IsReadable(std::uintptr_t p, std::size_t bytes);
+
+    // Enumerate every biome on a planet (via tree+0x44 biome count) and call
+    // the engine's BiomeFaunaEnum/BiomeFloraEnum dispatchers per biome_id, then
+    // pipe each returned form id through MarkSpeciesScannedForPlanet — which
+    // uses ID_124898's find-or-create path to materialize the slot even if it
+    // wasn't in the per-planet knowledge DB yet.
+    //
+    // This is the fix for the 97% cap on remote-scanned biome-heavy planets.
+    //
+    // Returns the number of species/forms marked. Logs detailed branch/loop state.
+    int MarkAllBiomeSpeciesForPlanet(std::uint32_t planet_id,
+                                     const RE::TESForm* planetForm,
+                                     std::uint8_t delta)
+    {
+        if (!planet_id || !planetForm) {
+            spdlog::info("MarkAllBiomeSpecies: invalid input (planet_id={} form={})",
+                         planet_id, static_cast<const void*>(planetForm));
+            return 0;
+        }
+        const auto* base = reinterpret_cast<const std::uint8_t*>(planetForm);
+        const auto  tree = *reinterpret_cast<const std::uint8_t* const*>(base + kPlanetSurfaceTreeOffset);
+        if (!tree) {
+            spdlog::info("MarkAllBiomeSpecies: planet 0x{:08X} has null surfaceTree — skipping",
+                         planet_id);
+            return 0;
+        }
+        const auto biomeCount = *reinterpret_cast<const std::uint32_t*>(tree + kTreeBiomeCountOffset);
+        spdlog::info("MarkAllBiomeSpecies: planet=0x{:08X} tree=0x{:016X} biomeCount={}",
+                     planet_id, reinterpret_cast<std::uintptr_t>(tree), biomeCount);
+        if (biomeCount == 0 || biomeCount > 64) {
+            spdlog::info("MarkAllBiomeSpecies: biomeCount out of sane range, aborting");
+            return 0;
+        }
+
+        // Build the weight parameter. Papyrus GetBiomeActors(1.0) passes
+        //   CONCAT44(uVar19, (int)(1.0 * ID_500678))
+        // uVar19 is almost certainly the float's raw bits (param_5 passed
+        // through), so the full 64-bit packs {float_bits, scaled_int}.
+        const float fPct = 1.0f;
+        const float scale = *BiomeWeightScale.get();
+        const auto  weight_lo = static_cast<std::uint32_t>(static_cast<std::int32_t>(fPct * scale));
+        std::uint32_t weight_hi;
+        std::memcpy(&weight_hi, &fPct, sizeof(weight_hi));
+        const auto weight = (static_cast<std::uint64_t>(weight_hi) << 32) | weight_lo;
+        spdlog::info("MarkAllBiomeSpecies: scale={} weight_lo=0x{:08X} weight_hi=0x{:08X}",
+                     scale, weight_lo, weight_hi);
+
+        int totalMarked = 0;
+        for (std::uint32_t biome_id = 0; biome_id < biomeCount; ++biome_id) {
+            alignas(16) std::uint8_t faunaBuf[0x40]{};
+            alignas(16) std::uint8_t floraBuf[0x40]{};
+
+            BiomeFaunaEnum(planet_id, biome_id, faunaBuf, weight);
+            BiomeFloraEnum(planet_id, biome_id, floraBuf, weight);
+
+            auto walk = [&](const char* label, const std::uint8_t* buf) {
+                const auto count = *reinterpret_cast<const std::uint32_t*>(buf);
+                const auto* data = *reinterpret_cast<const std::uint32_t* const*>(buf + 8);
+                spdlog::info("  biome={} {} count={} data=0x{:016X}",
+                             biome_id, label, count,
+                             reinterpret_cast<std::uintptr_t>(data));
+                if (!data || count == 0 || count > 1024) return;
+                if (!IsReadable(reinterpret_cast<std::uintptr_t>(data), count * sizeof(std::uint32_t))) {
+                    spdlog::info("    data unreadable, skipping");
+                    return;
+                }
+                for (std::uint32_t i = 0; i < count; ++i) {
+                    const auto fid = data[i];
+                    if (!fid || fid == 0xFFFFFFFFu) continue;
+                    const auto rc = MarkSpeciesScannedForPlanet(planet_id, fid, delta);
+                    if (rc == 1) ++totalMarked;
+                }
+            };
+
+            walk("fauna", faunaBuf);
+            walk("flora", floraBuf);
+        }
+
+        spdlog::info("MarkAllBiomeSpecies: totalMarked={} across {} biomes",
+                     totalMarked, biomeCount);
+        return totalMarked;
+    }
+
+    // Diagnostic: hex-dump a range of bytes starting at `base` to the log.
+    // Used to probe unknown struct layouts without committing to specific offsets.
+    void HexDump(const char* label, const std::uint8_t* base, std::size_t bytes)
+    {
+        if (!base) {
+            spdlog::info("{}: null", label);
+            return;
+        }
+        spdlog::info("{} @ 0x{:016X} ({} bytes):", label, reinterpret_cast<std::uintptr_t>(base), bytes);
+        for (std::size_t i = 0; i < bytes; i += 16) {
+            std::string line;
+            for (std::size_t j = 0; j < 16 && (i + j) < bytes; ++j) {
+                char buf[4];
+                std::snprintf(buf, sizeof(buf), "%02X ", base[i + j]);
+                line += buf;
+            }
+            spdlog::info("  +0x{:03X}: {}", i, line);
+        }
+    }
+
+    // Diagnostic: probe the planet's static structure. Dumps:
+    //   - First 0x100 bytes of the planet form (TESForm + BGSPlanet::PlanetData)
+    //   - The surfaceTree* pointer at +0x30
+    //   - First 0x100 bytes of the surface tree, if non-null
+    // The user runs this on a known planet (e.g. Skink with 7/8 resources) and we read
+    // the log offline to figure out where the biome list lives.
+    // Check whether `p` points to at least `bytes` of readable committed memory.
+    // Uses VirtualQuery so we never dereference an invalid pointer (which crashes).
+    bool IsReadable(std::uintptr_t p, std::size_t bytes)
+    {
+        if (p == 0) return false;
+        if (p & 0x3) return false;
+        if ((p >> 48) != 0) return false;
+        MEMORY_BASIC_INFORMATION mbi{};
+        if (::VirtualQuery(reinterpret_cast<LPCVOID>(p), &mbi, sizeof(mbi)) == 0) return false;
+        if (mbi.State != MEM_COMMIT) return false;
+        constexpr DWORD kReadable = PAGE_READONLY | PAGE_READWRITE
+                                  | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE
+                                  | PAGE_WRITECOPY   | PAGE_EXECUTE_WRITECOPY;
+        if (!(mbi.Protect & kReadable)) return false;
+        if (mbi.Protect & PAGE_GUARD) return false;
+        // Ensure full span fits within this page region.
+        const auto regionEnd = reinterpret_cast<std::uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+        if (p + bytes > regionEnd) return false;
+        return true;
+    }
+
+    // Backwards-compat alias used below; now wraps the real check with a small default.
+    bool LooksLikeHeapPtr(std::uintptr_t p) { return IsReadable(p, 8); }
+
+    void ProbePointer(const char* label, std::uintptr_t candidate, std::size_t bytes)
+    {
+        spdlog::info("{} = 0x{:016X}", label, candidate);
+        if (IsReadable(candidate, bytes)) {
+            HexDump(label, reinterpret_cast<const std::uint8_t*>(candidate), bytes);
+        } else {
+            spdlog::info("{}: unreadable — skipping dump", label);
+        }
+    }
+
+    void DumpPlanetLayout(const RE::TESForm* planetForm)
+    {
+        if (!planetForm) {
+            spdlog::info("DumpPlanetLayout: null planetForm");
+            return;
+        }
+        const auto* base = reinterpret_cast<const std::uint8_t*>(planetForm);
+        spdlog::info("=== DumpPlanetLayout: planet=0x{:08X} formType={} ===",
+                     planetForm->GetFormID(), static_cast<int>(planetForm->GetFormType()));
+
+        // Empirically verified for 1.16.236.0:
+        //   PlanetData (kPNDT, 0xBA)
+        //     +0x38: BGSSurface::Tree* surfaceTree  (kSFTR, 0xB6) — NOT +0x30 as CommonLibSF claims
+        //     +0x58..+0xA8: BSTArray<BGSKeyword*> (keywords — traits live here)
+        const auto surfaceTree = *reinterpret_cast<const std::uint8_t* const*>(base + 0x38);
+        spdlog::info("surfaceTree* @ (form+0x38) = 0x{:016X}", reinterpret_cast<std::uintptr_t>(surfaceTree));
+        if (!LooksLikeHeapPtr(reinterpret_cast<std::uintptr_t>(surfaceTree))) {
+            spdlog::info("surfaceTree: invalid — aborting tree dump");
+            return;
+        }
+
+        if (!IsReadable(reinterpret_cast<std::uintptr_t>(surfaceTree), 0x200)) {
+            spdlog::info("surfaceTree: pointer set but region not fully readable");
+            return;
+        }
+        HexDump("SurfaceTree", surfaceTree, 0x200);
+
+        // Safely probe 8-byte-aligned slots in the tree for readable sub-pointers.
+        // IsReadable uses VirtualQuery, so garbage values won't crash us.
+        for (std::size_t off = 0x38; off < 0x200; off += 8) {
+            const auto p = *reinterpret_cast<const std::uintptr_t*>(surfaceTree + off);
+            if (p == 0) continue;
+            if (!IsReadable(p, 0x80)) continue;
+            char buf[40];
+            std::snprintf(buf, sizeof(buf), "tree+0x%02zX->", off);
+            HexDump(buf, reinterpret_cast<const std::uint8_t*>(p), 0x80);
+        }
+    }
+
+    // Diagnostic: walk the aggregator for a planet and log every form id + span label.
+    // Returns total count of form ids found across all four spans. Safe to call from
+    // orbit or landed context (aggregator is planet-scoped, not player-scoped).
+    int DumpAggregator(std::uint32_t planetId)
+    {
+        if (!planetId) return 0;
+        alignas(16) std::uint8_t buf[0x400]{};
+        SurveyAggregator(buf, planetId);
+
+        int total = 0;
+        auto dumpUint = [&](const char* label, std::size_t beginOff, std::size_t endOff) {
+            const auto* begin = *reinterpret_cast<std::uint32_t* const*>(buf + beginOff);
+            const auto* end   = *reinterpret_cast<std::uint32_t* const*>(buf + endOff);
+            int n = 0;
+            for (auto p = begin; p && p != end; ++p) {
+                spdlog::info("  [{}] fid=0x{:08X}", label, *p);
+                ++n; ++total;
+            }
+            spdlog::info("  {}: count={}", label, n);
+        };
+        auto dumpPtr = [&](const char* label, std::size_t beginOff, std::size_t endOff) {
+            const auto* begin = *reinterpret_cast<std::uintptr_t* const*>(buf + beginOff);
+            const auto* end   = *reinterpret_cast<std::uintptr_t* const*>(buf + endOff);
+            int n = 0;
+            for (auto p = begin; p && p != end; ++p) {
+                if (*p == 0) continue;
+                const auto fid = *reinterpret_cast<const std::uint32_t*>(*p + kFormPtrFormIdOffset);
+                spdlog::info("  [{}] ptr=0x{:016X} fid=0x{:08X}", label, *p, fid);
+                ++n; ++total;
+            }
+            spdlog::info("  {}: count={}", label, n);
+        };
+
+        spdlog::info("=== Aggregator dump for planetId=0x{:08X} ===", planetId);
+        dumpUint("uint0@0x218", kAggUintSpan0Begin, kAggUintSpan0End);
+        dumpUint("uint1@0x230", kAggUintSpan1Begin, kAggUintSpan1End);
+        dumpPtr ("ptr0@0x1E8",  kAggPtrSpan0Begin,  kAggPtrSpan0End);
+        dumpPtr ("ptr1@0x200",  kAggPtrSpan1Begin,  kAggPtrSpan1End);
+        spdlog::info("=== Aggregator total={} ===", total);
+
+        SurveyBufferFree(buf);
+        return total;
+    }
+
     // Fire the survey check/notify routine. Triggers the completion event that
     // generates the "<Planet> Survey Data" slate when the survey hits 100%.
     //
@@ -444,6 +691,37 @@ namespace Papyrus
         return total;
     }
 
+    // Diagnostic: hex-dump the planet form + its surface tree to the log.
+    void DumpPlanetLayout(std::monostate, RE::TESForm* planetForm)
+    {
+        Engine::DumpPlanetLayout(planetForm);
+    }
+
+    // Enumerate every biome on the planet via the engine's own biome-species
+    // dispatchers and mark all returned flora/fauna as scanned. Closes the
+    // 97% remote-scan cap by materializing biome slots that weren't in the
+    // per-planet knowledge DB before landing.
+    std::int32_t MarkAllBiomeSpecies(std::monostate, RE::TESForm* planetForm, std::int32_t delta)
+    {
+        if (!planetForm) return 0;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        const auto d        = static_cast<std::uint8_t>(delta <= 0 ? 100 : (delta > 255 ? 255 : delta));
+        const auto n = Engine::MarkAllBiomeSpeciesForPlanet(planetId, planetForm, d);
+        spdlog::info("MarkAllBiomeSpecies (Papyrus): planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
+                     planetForm->GetFormID(), planetId, d, n);
+        return n;
+    }
+
+    // Diagnostic: dump the aggregator contents for a planet to the SFSE log. Returns total count.
+    std::int32_t DumpAggregator(std::monostate, RE::TESForm* planetForm)
+    {
+        if (!planetForm) return 0;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        spdlog::info("DumpAggregator: planetForm=0x{:08X} planetId=0x{:08X}",
+                     planetForm->GetFormID(), planetId);
+        return Engine::DumpAggregator(planetId);
+    }
+
     std::int32_t MarkEverythingForPlanet(std::monostate, RE::TESForm* planetForm, std::int32_t delta)
     {
         if (!planetForm) return 0;
@@ -545,6 +823,27 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv,
             "MarkEverythingForPlanet"sv,
             &MarkEverythingForPlanet,
+            std::optional<bool>{ true },
+            false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv,
+            "DumpAggregator"sv,
+            &DumpAggregator,
+            std::optional<bool>{ true },
+            false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv,
+            "DumpPlanetLayout"sv,
+            &DumpPlanetLayout,
+            std::optional<bool>{ true },
+            false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv,
+            "MarkAllBiomeSpecies"sv,
+            &MarkAllBiomeSpecies,
             std::optional<bool>{ true },
             false);
 
@@ -653,6 +952,50 @@ namespace Hook
         spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)",
                      call_site);
     }
+
+    // Diagnostic call-site hook: ID_52153 (trait writer / per-planet knowledge writer)
+    // is the path that remote starmap scans flow through to dispatch survey progress
+    // events. Hooking its CALL site to ID_97853 lets us log every trait-driven
+    // survey update with the planet_id that was affected.
+    //
+    // This is a read-only diagnostic — the thunk calls the original ID_97853
+    // unchanged, then logs the planet_id for RE.
+    struct TraitTraceHook
+    {
+        using fn_t = void(*)(void*);
+
+        static void thunk(void* ctx)
+        {
+            std::uint32_t planet_id = 0;
+            if (ctx) {
+                planet_id = *reinterpret_cast<std::uint32_t*>(ctx);
+            }
+            spdlog::info("TraitTrace: ID_52153 -> ID_97853 fired, planet=0x{:08X}", planet_id);
+            func(ctx);
+        }
+
+        static inline fn_t func = nullptr;
+    };
+
+    void InstallTraitTrace()
+    {
+        REL::Relocation<std::uintptr_t> outer{ REL::ID(52153) };   // per-planet knowledge writer
+        REL::Relocation<std::uintptr_t> inner{ REL::ID(97853) };   // survey check/notify
+
+        // 0x800 window — ID_52153 may be longer than the 0x400 species path.
+        const auto call_site = FindCallSite(outer.address(), inner.address(), 0x800);
+        if (!call_site) {
+            spdlog::error("TraitTrace: CALL to ID_97853 not found inside ID_52153 — hook skipped");
+            return;
+        }
+
+        TraitTraceHook::func = reinterpret_cast<TraitTraceHook::fn_t>(
+            REL::GetTrampoline().write_call<5>(
+                call_site,
+                reinterpret_cast<std::uintptr_t>(TraitTraceHook::thunk)));
+
+        spdlog::info("TraitTrace: installed at call-site 0x{:016X} (ID_52153 -> ID_97853)", call_site);
+    }
 }
 
 namespace
@@ -662,6 +1005,7 @@ namespace
         if (a_msg->type == SFSE::MessagingInterface::kPostDataLoad) {
             Papyrus::Register();
             Hook::Install();
+            Hook::InstallTraitTrace();
             spdlog::info("CompletePlanetSurvey initialized");
         }
     }
@@ -669,7 +1013,7 @@ namespace
 
 SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
 {
-    SFSE::Init(a_sfse, { .trampoline = true, .trampolineSize = 64 });
+    SFSE::Init(a_sfse, { .trampoline = true, .trampolineSize = 128 });
     spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
 
     const auto* messaging = SFSE::GetMessagingInterface();

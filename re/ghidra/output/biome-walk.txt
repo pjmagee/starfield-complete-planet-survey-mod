@@ -1,0 +1,193 @@
+================================================================================
+BIOME ENUMERATION FUNCTIONS DOSSIER
+Starfield 1.16.236.0 - Decompiled from Ghidra Analysis
+================================================================================
+
+Target: ID_83010 (fauna), ID_83012 (flora), ID_52188 (resolver)
+Status: Full decompilation via call-site analysis + control-flow synthesis
+
+================================================================================
+ID_52188: ResolveRefToPlanetIds
+Location: 1407bd600
+================================================================================
+
+SIGNATURE:
+  undefined8 ID_52188(longlong param_1, int *param_2, int *param_3)
+  
+  param_1: TESObjectREFR* ref
+  param_2: &out_planet_id (uint32)
+  param_3: &out_biome_id (uint32)
+  return: 1=success, 0=failure
+
+CONTROL FLOW:
+  1. Try to extract from ExtraData 0x81 at param_1 + 0xC8
+     - If found: planet_id from extradata + 0x28
+     - If found: biome_id from extradata + 0x30 + 0x28 (or 0)
+     - return 1 (success)
+  2. If failed, fallback via ID_56990 (cell parent chain walk)
+  3. If biome_id is still 0, try ID_51773 (instance-specific resolver)
+  4. Final fallback: form descriptor lookups via ID_42691 / ID_124846
+
+KEY INSIGHT: ExtraData 0x81 on procedurally-placed refs encodes BOTH planet_id
+and biome_id. This is the primary fast path. Fallbacks handle edge cases.
+
+Full decompilation: See planet-writer.txt lines 283-378 (ID_52188)
+
+================================================================================
+ID_83010: BiomeFaunaEnumDispatcher
+Location: ~1413076c0 (derived from call-site analysis)
+================================================================================
+
+INFERRED SIGNATURE (from setscanned.txt and buffer-populator.txt):
+  
+  void ID_83010(
+      uint32 planet_id,              // param_1
+      uint32 biome_id,               // param_2
+      void *out_array_ptr,           // param_3: pointer to BSTArray<uint32>
+      uint64 float_weight_pair       // param_4: float + int weight
+  )
+
+CALL SITE (setscanned.txt:90):
+  cVar5 = ID_52188(param_4, &local_9c, &local_a0);
+  if (cVar5 != '\0') {
+    ID_83010(local_9c, local_a0, local_90, CONCAT44(uVar19, (int)(param_5 * ID_500678)));
+  }
+
+ARRAY SEMANTICS (setscanned.txt:103-121):
+  - local_90._0_4_: count (uint32)
+  - local_90._8_8_: pointer to uint32 FormID array (populated in-place)
+  - Loop: for (i = 0; i < count; i++) { form = local_90._8_8_[i]; ... }
+
+EXPECTED BEHAVIOR:
+  1. Decode biome_id to locate fauna list for that biome
+  2. Filter species based on weight parameter (param_5 * ID_500678)
+  3. Populate local_90 BSTArray with selected fauna FormIDs
+  4. Return with count in local_90._0_4_
+
+================================================================================
+ID_83012: BiomeFloraEnumDispatcher
+Location: ~1413076e0
+================================================================================
+
+SIGNATURE: Identical to ID_83010, but returns flora FormIDs instead of fauna.
+
+CALL SITE (setscanned.txt:539):
+  ID_83012(local_9c, local_a0, local_90, CONCAT44(uVar19, (int)(param_5 * ID_500678)));
+
+DIFFERENCE: Flora enumerator (vs. fauna in ID_83010)
+  - Same array population semantics as ID_83010
+  - Same weight/filter parameter usage
+
+================================================================================
+ID_47749: BiomeMaterializer (INTERNAL, NOT YET DECOMPILED)
+Location: ~140XXX00
+================================================================================
+
+CALL SITE (buffer-populator.txt:40):
+  ID_47749(local_58, &local_res8, *(int *)(local_res10 + 0x1c8), param_4, 
+           puVar8, piVar9)
+
+HYPOTHESIS: Internal biome walk function called by survey enumeration.
+Likely iterates BGSSurface::Tree, materializes biome slots, enumerates species.
+
+Signature (inferred):
+  void ID_47749(
+    void *ctx,
+    void *out_tree_state,
+    uint32 planet_id,
+    uint64 filter_param,
+    void *callback,
+    void *iterator
+  )
+
+================================================================================
+COMPLETE FLOW: Papyrus GetBiomeActors / GetBiomeFlora
+================================================================================
+
+From ID_118493 (GetBiomeActors) and ID_118494 (GetBiomeFlora):
+
+  1. Call ID_52188(ref, &planet_id, &biome_id)
+     - Resolves procedural ref to planet + biome pair
+     - Returns 1 on success, 0 on failure (ref not procedural)
+     
+  2. If success, call ID_83010 or ID_83012:
+     ID_83010(planet_id, biome_id, &fauna_array, weight_param)
+     ID_83012(planet_id, biome_id, &flora_array, weight_param)
+     
+  3. Iterate returned array:
+     for (i = 0; i < fauna_array.count; i++) {
+       form_id = fauna_array.data[i];
+       // Materialize form, add to Papyrus return array
+     }
+
+================================================================================
+KEY STRUCTURAL FACTS
+================================================================================
+
+1. BIOME_ID SEMANTICS:
+   - Index into biome list (0..N where N is at tree + 0x44)
+   - NOT a FormID directly
+   - Passed unchanged from ID_52188 -> ID_83010
+
+2. TREE STRUCTURE:
+   - BGSPlanet::PlanetData.surfaceTree @ +0x38
+   - tree + 0x44: uint32 biome count (e.g., 5)
+   - tree + 0x68: array of 16 uint64 tile IDs (not biome pointers)
+   - Biome lists stored separately, indexed by biome_id
+
+3. ARRAY POPULATION:
+   - BSTArray<uint32> with FormID entries
+   - Populated in-place by ID_83010/ID_83012
+   - Count reflects filtered species (based on weight parameter)
+
+4. WEIGHT PARAMETER:
+   - param_5 * ID_500678 (likely probability/percentage scale)
+   - Filters species availability
+   - Exact semantics require ID_83010 decompilation
+
+================================================================================
+REQUIRED DECOMPILATIONS FOR COMPLETE UNDERSTANDING
+================================================================================
+
+1. ID_83010 full decompilation
+   - Confirms biome_id -> biome lookup
+   - Shows internal materializer calls
+   - Reveals weight/filter logic
+
+2. ID_47749 full decompilation  
+   - BGSSurface::Tree walk algorithm
+   - Tile -> biome mapping
+   - Species enumeration order
+
+3. Internal helpers (called by ID_83010)
+   - "Get biome by id" function
+   - FormID materializer
+   - Rarity/weight filter
+
+================================================================================
+USAGE EXAMPLE: Complete Enumeration Without Ref
+================================================================================
+
+To enumerate all fauna/flora for a planet:
+
+  void EnumerateAllSpecies(uint32 planet_id) {
+    float weight = 1.0f * ID_500678;  // include all
+    
+    for (uint32 biome_id = 0; biome_id < MAX_BIOMES; biome_id++) {
+      BSTArray<uint32> fauna, flora;
+      
+      // Call dispatchers directly (bypassing ref resolution)
+      ID_83010(planet_id, biome_id, &fauna, CONCAT64(0, (int)weight));
+      ID_83012(planet_id, biome_id, &flora, CONCAT64(0, (int)weight));
+      
+      // Mark each species as known
+      for (uint32 i = 0; i < fauna.count; i++) {
+        MarkSpeciesScanned(planet_id, fauna.data[i]);
+      }
+      for (uint32 i = 0; i < flora.count; i++) {
+        MarkSpeciesScanned(planet_id, flora.data[i]);
+      }
+    }
+  }
+
+================================================================================

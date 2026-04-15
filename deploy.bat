@@ -6,7 +6,7 @@ set "PROJECT_DIR=%~dp0"
 
 :: Compile Papyrus
 set "COMPILER=E:\SteamLibrary\steamapps\common\Starfield 2722710\Tools\Papyrus Compiler\PapyrusCompiler.exe"
-set "INC=%PROJECT_DIR%temp_scripts\source;%PROJECT_DIR%Data\Scripts\Source\User"
+set "INC=%PROJECT_DIR%temp_scripts\source;%PROJECT_DIR%Data\Scripts\Source\User;%GAME_DIR%\Data\Scripts\Source"
 set "FLG=%PROJECT_DIR%temp_scripts\Starfield_Papyrus_Flags.flg"
 set "OUT=%PROJECT_DIR%Data\Scripts"
 
@@ -16,6 +16,9 @@ if errorlevel 1 ( echo Native compile failed & exit /b 1 )
 "%COMPILER%" "CompletePlanetSurveyQuest" -i="%INC%" -f="%FLG%" -o="%OUT%"
 if errorlevel 1 ( echo Quest compile failed & exit /b 1 )
 
+"%COMPILER%" "CPSRemoteScanQuestScript" -i="%INC%" -f="%FLG%" -o="%OUT%"
+if errorlevel 1 ( echo RemoteScan compile failed & exit /b 1 )
+
 :: ESM is authored in Creation Kit and lives at Data\CompletePlanetSurvey.esm.
 :: To pull a fresh CK save back into the repo, run import-esm.bat first.
 
@@ -23,6 +26,7 @@ if errorlevel 1 ( echo Quest compile failed & exit /b 1 )
 if not exist "%GAME_DIR%\Data\Scripts" mkdir "%GAME_DIR%\Data\Scripts"
 copy /Y "%PROJECT_DIR%Data\Scripts\CompletePlanetSurveyNative.pex" "%GAME_DIR%\Data\Scripts\" >nul
 copy /Y "%PROJECT_DIR%Data\Scripts\CompletePlanetSurveyQuest.pex"  "%GAME_DIR%\Data\Scripts\" >nul
+copy /Y "%PROJECT_DIR%Data\Scripts\CPSRemoteScanQuestScript.pex"   "%GAME_DIR%\Data\Scripts\" >nul
 
 :: Remove old .esp if present (replaced by .esm)
 if exist "%GAME_DIR%\Data\CompletePlanetSurvey.esp" (
