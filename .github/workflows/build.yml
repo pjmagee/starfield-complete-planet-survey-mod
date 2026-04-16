@@ -50,7 +50,6 @@ jobs:
           python package.py --version $version
           "VERSION=$version"                                 | Out-File -FilePath $env:GITHUB_ENV -Append
           "ZIP_NAME=Complete-Planet-Survey-$version.zip"     | Out-File -FilePath $env:GITHUB_ENV -Append
-          "DISPLAY_NAME=Complete-Planet-Survey-$version"     | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -74,6 +73,5 @@ jobs:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
           file_group_id: ${{ vars.NEXUS_FILE_GROUP_ID }}
           filename: ${{ env.ZIP_NAME }}
-          display_name: ${{ env.DISPLAY_NAME }}
           version: ${{ env.VERSION }}
           file_category: main
