@@ -73,5 +73,6 @@ jobs:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
           file_group_id: ${{ vars.NEXUS_FILE_GROUP_ID }}
           filename: ${{ env.ZIP_NAME }}
+          display_name: Complete Planet Survey
           version: ${{ env.VERSION }}
           file_category: main
