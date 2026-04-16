@@ -26,7 +26,7 @@ script. Targets Starfield 1.16.236.0 with SFSE 0.2.19.
 
 1. Install [SFSE](https://www.nexusmods.com/starfield/mods/7589) and
    [Address Library](https://www.nexusmods.com/starfield/mods/3256)
-2. Install the FOMOD via Vortex / Mod Organizer 2:
+2. Install via Vortex / Mod Organizer 2:
    `Mods → Install From File → CompletePlanetSurvey.zip`
 3. Launch via `sfse_loader.exe`
 4. In game: `Settings → Gameplay → Complete Planet Survey → Auto-Complete Survey
@@ -192,7 +192,6 @@ src/Main.cpp                                      # SFSE plugin
 Data/CompletePlanetSurvey.esm                     # CK-authored toggle
 Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc   # Papyrus glue
 Data/Scripts/*.pex                                # Compiled scripts
-fomod/                                            # FOMOD installer
 extern/CommonLibSF/                               # SFSE/CommonLibSF (GPL-3.0)
 re/                                               # Ghidra scripts + dumps
 build.bat / deploy.bat / import-esm.bat / package.py     # Workflow scripts
@@ -209,7 +208,7 @@ if editing the ESM), and Papyrus Compiler from the CK install.
 build.bat        :: compile DLL via xmake
 deploy.bat       :: compile Papyrus, copy DLL+ESM+PEX to game, manage plugins.txt
 import-esm.bat   :: copy game ESM back into the repo (run after editing in CK)
-package.py       :: build the FOMOD-compatible CompletePlanetSurvey.zip for Vortex
+package.py       :: build the distributable CompletePlanetSurvey.zip for mod managers
 ```
 
 Address Library (`offsets-1-16-236-0.txt`) is **not** checked in (19 MB) —
