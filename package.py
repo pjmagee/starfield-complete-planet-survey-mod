@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 """
-Build the Vortex/FOMOD-compatible distributable zip for Complete Planet Survey.
+Build the distributable zip for Complete Planet Survey.
 
 Single source of truth for the ZIP layout — CI (`.github/workflows/build.yml`)
 invokes this script instead of duplicating the file-copy manifest.
 
-Expected ZIP layout (matches ModuleConfig.xml):
-  fomod/
-    ModuleConfig.xml
-    info.xml
-  CompletePlanetSurvey.esm          -> Data/CompletePlanetSurvey.esm
-  Scripts/
-    CompletePlanetSurveyNative.pex  -> Data/Scripts/
-    CompletePlanetSurveyQuest.pex   -> Data/Scripts/
-    Source/User/
-      CompletePlanetSurveyNative.psc
-      CompletePlanetSurveyQuest.psc
-  SFSE/
-    Plugins/
-      CompletePlanetSurvey.dll      -> Data/SFSE/Plugins/
+Layout is a flat Data/ tree (matches the in-game path), so mod managers
+(MO2, Vortex) install it as-is without a FOMOD wizard.
+
+Expected ZIP layout:
+  Data/
+    CompletePlanetSurvey.esm
+    Scripts/
+      CompletePlanetSurveyNative.pex
+      CompletePlanetSurveyQuest.pex
+      Source/User/
+        CompletePlanetSurveyNative.psc
+        CompletePlanetSurveyQuest.psc
+    SFSE/
+      Plugins/
+        CompletePlanetSurvey.dll
 """
 import argparse
 import os
@@ -29,17 +30,15 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 SOURCES = [
     # (source path relative to ROOT, zip entry path)
-    ("fomod/ModuleConfig.xml",                              "fomod/ModuleConfig.xml"),
-    ("fomod/info.xml",                                      "fomod/info.xml"),
-    ("Data/CompletePlanetSurvey.esm",                       "CompletePlanetSurvey.esm"),
-    ("Data/Scripts/CompletePlanetSurveyNative.pex",         "Scripts/CompletePlanetSurveyNative.pex"),
-    ("Data/Scripts/CompletePlanetSurveyQuest.pex",          "Scripts/CompletePlanetSurveyQuest.pex"),
+    ("Data/CompletePlanetSurvey.esm",                       "Data/CompletePlanetSurvey.esm"),
+    ("Data/Scripts/CompletePlanetSurveyNative.pex",         "Data/Scripts/CompletePlanetSurveyNative.pex"),
+    ("Data/Scripts/CompletePlanetSurveyQuest.pex",          "Data/Scripts/CompletePlanetSurveyQuest.pex"),
     ("Data/Scripts/Source/User/CompletePlanetSurveyNative.psc",
-                                                            "Scripts/Source/User/CompletePlanetSurveyNative.psc"),
+                                                            "Data/Scripts/Source/User/CompletePlanetSurveyNative.psc"),
     ("Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc",
-                                                            "Scripts/Source/User/CompletePlanetSurveyQuest.psc"),
+                                                            "Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc"),
     ("build/windows/x64/releasedbg/CompletePlanetSurvey.dll",
-                                                            "SFSE/Plugins/CompletePlanetSurvey.dll"),
+                                                            "Data/SFSE/Plugins/CompletePlanetSurvey.dll"),
 ]
 
 
@@ -58,7 +57,7 @@ def build(output: str) -> None:
 
     size_kb = os.path.getsize(output) / 1024
     print(f"\n[OK] {output}  ({size_kb:.1f} KB)")
-    print("     Install via Vortex: Mods -> Install From File")
+    print("     Install via MO2 / Vortex: drop the zip on the mod manager.")
 
 
 if __name__ == "__main__":
