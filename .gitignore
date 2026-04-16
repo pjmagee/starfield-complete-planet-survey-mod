@@ -28,6 +28,9 @@ Desktop.ini
 .idea/
 *.user
 
+# IntelliSense — paths are machine-specific, regenerate via `xmake project -k compile_commands .`
+compile_commands.json
+
 # Claude Code transient state (keep skills/ committed)
 .claude/scheduled_tasks.lock
 .claude/*.json

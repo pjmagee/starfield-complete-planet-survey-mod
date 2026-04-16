@@ -7,72 +7,63 @@
 //            The knowledge DB pointer lives at manager+0x8B0.
 // ID_52155 : SetTraitKnown inner impl. (uint32 planet_id, BGSKeyword*, bool known).
 //            Internally calls ID_52156 + fires a progress event. Safe for trait forms.
-// ID_52156 : Generic AddOrRemoveKnownFormID. (uint32_t* args, longlong* db)
-//            where args = { planet_id, form_id, insert_bool, ... }.
-//            Appends/removes form_id in the per-planet known-forms list.
 //
 // Planet form's knowledge key is a uint32 at offset 0x54 on the planet form.
 namespace Engine
 {
-    using fn_get_manager_t     = std::uintptr_t(*)();
-    using fn_set_trait_known_t = void(*)(std::uint32_t planetId, std::uintptr_t keyword, bool known);
-    using fn_add_known_form_t  = void(*)(void* args, std::uintptr_t* db);
-    // ID_83038: flora scan writer.
-    //   (db, struct{ char* flagPtr; int* outCountPtr; }, uint32_t* formId)
-    //   Flips per-species "scanned" byte at component+0x28 and writes count from +0x24 into *outCountPtr.
-    //   No-op if component for formId doesn't exist yet.
-    using fn_flora_scan_t      = void(*)(std::uintptr_t db, void* args, const std::uint32_t* formId);
+    using fn_get_manager_t     = std::uintptr_t (*)();
+    using fn_set_trait_known_t = void (*)(std::uint32_t planetId, std::uintptr_t keyword, bool known);
     // ID_83008: SetScanned inner, dispatches to flora (ID_83038+52157) or actor (ID_52160).
     //   (ObjectReference* ref, bool scannedFlag, byte=0xd, byte=0)
     //   The ref must be a real in-world reference placed in the current biome so its
     //   (ID_939118, ref->formID) component exists.
-    using fn_scan_ref_t        = void(*)(void* ref, char scannedFlag, std::uint8_t a, std::uint8_t b);
+    using fn_scan_ref_t = void (*)(void* ref, char scannedFlag, std::uint8_t a, std::uint8_t b);
     // ID_52157: per-planet progress updater. Called by ID_83008 only when ID_83038 found
     //   the ref-component. Signature: (ref, int count, byte=0xd, byte, byte).
-    //   Calls ID_52188(ref, &out1, &out2) to derive planet id, then ID_52158 to write.
-    using fn_planet_progress_t = void(*)(void* ref, std::int32_t count, std::uint8_t b3, std::uint8_t b4, std::uint8_t b5);
+    //   We call this DIRECTLY after SetScanned on spawn-and-scan'd flora refs so the
+    //   biome progress ticks even though ID_83038 no-ops on PlaceAtMe'd refs.
+    using fn_planet_progress_t =
+        void (*)(void* ref, std::int32_t count, std::uint8_t b3, std::uint8_t b4, std::uint8_t b5);
     // ID_126806: BSTHashMap lookup. Signature (container, out_buf[4 ulongs], &key_u64)
     //   out_buf layout on success: out[2] = entry base ptr, out[3] = entry index.
     //   Failure sentinel: out[3] == 0xfe0 and out[2] == 0.
-    using fn_db_lookup_t       = void*(*)(std::uintptr_t* container, std::uintptr_t out[4], const std::uint64_t* key);
+    using fn_db_lookup_t = void* (*)(std::uintptr_t* container, std::uintptr_t out[4], const std::uint64_t* key);
     // ID_124898: per-species flag increment on a "subobj" (value + 0x20).
     //   Signature (subobj*, species_id, delta_byte, ?).
     //   Finds/creates entry for species_id and increments the scan-flag byte at entry+0x21.
-    using fn_incr_flag_t       = void(*)(void* subobj, std::uint32_t species_id, std::uint8_t delta, std::uint64_t zero);
+    using fn_incr_flag_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t delta, std::uint64_t zero);
 
-    inline REL::Relocation<fn_get_manager_t>     GetKnowledgeManager{ REL::ID(126578) };
-    inline REL::Relocation<fn_set_trait_known_t> SetTraitKnownNative{ REL::ID(52155)  };
-    inline REL::Relocation<fn_add_known_form_t>  AddKnownFormNative { REL::ID(52156)  };
-    inline REL::Relocation<fn_flora_scan_t>      FloraScanNative    { REL::ID(83038)  };
-    inline REL::Relocation<fn_scan_ref_t>        ScanRefNative      { REL::ID(83008)  };
-    inline REL::Relocation<fn_planet_progress_t> PlanetProgressNative{ REL::ID(52157) };
-    inline REL::Relocation<fn_db_lookup_t>       DbLookup           { REL::ID(126806) };
-    inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag  { REL::ID(124898) };
-    inline REL::Relocation<std::uint16_t*>       TraitDiscriminator { REL::ID(938333) };
+    inline REL::Relocation<fn_get_manager_t>     GetKnowledgeManager {REL::ID(126578)};
+    inline REL::Relocation<fn_set_trait_known_t> SetTraitKnownNative {REL::ID(52155)};
+    inline REL::Relocation<fn_scan_ref_t>        ScanRefNative {REL::ID(83008)};
+    inline REL::Relocation<fn_planet_progress_t> PlanetProgressNative {REL::ID(52157)};
+    inline REL::Relocation<fn_db_lookup_t>       DbLookup {REL::ID(126806)};
+    inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
+    inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
 
     // ID_1016657: per-planet survey aggregator constructor.
     //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
     //   across four arrays (two uint-arrays for flora/trait ids, two ptr-arrays for resource/other).
     //   Buffer size seen in callers: >= 0x250 bytes. We allocate 0x400 to be safe.
-    using fn_aggregator_t   = void(*)(void* buffer, std::uint32_t planet_id);
+    using fn_aggregator_t = void (*)(void* buffer, std::uint32_t planet_id);
     // ID_65318: cleanup for the aggregator buffer.
-    using fn_buffer_free_t  = void(*)(void* buffer);
+    using fn_buffer_free_t = void (*)(void* buffer);
 
-    inline REL::Relocation<fn_aggregator_t>  SurveyAggregator { REL::ID(1016657) };
-    inline REL::Relocation<fn_buffer_free_t> SurveyBufferFree { REL::ID(65318)   };
+    inline REL::Relocation<fn_aggregator_t>  SurveyAggregator {REL::ID(1016657)};
+    inline REL::Relocation<fn_buffer_free_t> SurveyBufferFree {REL::ID(65318)};
 
     // ID_83007: returns 0 = not a biome species, 1 = biome species unscanned, 2 = already scanned.
     // Reads (939118, ref_formID) component — used as our "is this ref safe to pass to ID_83008" gate.
-    using fn_is_biome_ref_t = char(*)(void* ref);
-    inline REL::Relocation<fn_is_biome_ref_t> IsBiomeRef { REL::ID(83007) };
+    using fn_is_biome_ref_t = char (*)(void* ref);
+    inline REL::Relocation<fn_is_biome_ref_t> IsBiomeRef {REL::ID(83007)};
 
     // ID_97853: survey check-and-dispatch. Called by SetTraitKnown/SetScanned flows after a write.
     //   Signature: (struct*) where the struct starts with { uint32 planet_id, float prev_pct, u8 flag, u8 skip }.
     //   Fires PlayerPlanetSurveyProgressEvent (conditional) and PlayerPlanetSurveyCompleteEvent
     //   if the planet's survey is now 100%. The Complete event is what generates the in-world
     //   "<Planet> Survey Data" slate in the player's inventory.
-    using fn_survey_notify_t = void(*)(void* ctx);
-    inline REL::Relocation<fn_survey_notify_t> SurveyCheckNotify { REL::ID(97853) };
+    using fn_survey_notify_t = void (*)(void* ctx);
+    inline REL::Relocation<fn_survey_notify_t> SurveyCheckNotify {REL::ID(97853)};
 
     // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0, Ghidra-derived).
     constexpr std::size_t  kPlanetIdOffset       = 0x54;   // uint32 knowledge key at planetForm+0x54
@@ -94,80 +85,39 @@ namespace Engine
     constexpr std::size_t kAggPtrSpan1Begin  = 0x200;
     constexpr std::size_t kAggPtrSpan1End    = 0x208;
 
-    struct AddKnownArgs
-    {
-        std::uint32_t planetId;
-        std::uint32_t formId;
-        std::uint8_t  insert;
-        std::uint8_t  pad[3]{};
-    };
-
     std::uintptr_t GetKnowledgeDB()
     {
         const auto manager = GetKnowledgeManager();
-        if (!manager) return 0;
+        if (!manager)
+            return 0;
         return *reinterpret_cast<std::uintptr_t*>(manager + kManagerDbOffset);
     }
 
     std::uint32_t ReadPlanetId(const RE::TESForm* planetForm)
     {
-        if (!planetForm) return 0;
-        return *reinterpret_cast<const std::uint32_t*>(
-            reinterpret_cast<const std::uint8_t*>(planetForm) + kPlanetIdOffset);
-    }
-
-    bool MarkFormKnown(std::uintptr_t db, std::uint32_t planetId, std::uint32_t formId)
-    {
-        if (!db || !planetId || !formId) return false;
-        AddKnownArgs args{ planetId, formId, 1, {} };
-        AddKnownFormNative(&args, &db);
-        return true;
+        if (!planetForm)
+            return 0;
+        return *reinterpret_cast<const std::uint32_t*>(reinterpret_cast<const std::uint8_t*>(planetForm) +
+                                                       kPlanetIdOffset);
     }
 
     bool MarkTraitKnown(std::uint32_t planetId, RE::BGSKeyword* keyword)
     {
-        if (!planetId || !keyword) return false;
+        if (!planetId || !keyword)
+            return false;
         SetTraitKnownNative(planetId, reinterpret_cast<std::uintptr_t>(keyword), true);
         return true;
     }
 
-    // Mark a species (flora base form) as scanned via the ID_83038 writer.
-    // Returns the resulting count (0 if component for this form did not exist / no change).
-    int RegisterSpeciesScan(std::uint32_t formId)
-    {
-        const auto db = GetKnowledgeDB();
-        if (!db || !formId) return 0;
-        char flag = 1;
-        int  outCount = 0;
-        struct { char* flagPtr; int* outCountPtr; } args{ &flag, &outCount };
-        // Pass a 2-element array for the formId arg (engine reads *param_3 = first elem).
-        std::uint32_t formIdArr[2] = { formId, 0 };
-        FloraScanNative(db, &args, formIdArr);
-        return outCount;
-    }
-
-    // Read the species-component discriminator (set by the engine during component registration).
-    std::uint16_t ReadSpeciesDiscriminator()
-    {
-        static REL::Relocation<std::uint16_t*> g{ REL::ID(939118) };
-        return *g.get();
-    }
-
-    // Call the engine's inner SetScanned directly on a real ObjectReference,
-    // bypassing the harvest fallback of the Papyrus SetScanned native.
-    // The ref must be a biome-initialized instance (PlaceAtMe'd enabled) so its
-    // (939118, ref->formID) component exists.
-    void ScanRef(void* ref)
-    {
-        if (!ref) return;
-        ScanRefNative(ref, 1 /*scanned*/, kBiomeScanCategory, 0);
-    }
-
     // Skip ID_83038 (which no-ops for un-registered refs) and go straight to the
     // per-planet progress updater. count = the base form's formID (the "known species id").
+    // Used by spawn-and-scan: after PlaceAtMe + SetScanned, the flora path's
+    // ID_83038 no-ops because the spawned ref lacks the (939118, ref_formID)
+    // component. This updater fires ID_52157 directly — what ID_83038 would have.
     void UpdatePlanetProgress(void* ref, std::uint32_t speciesFormId)
     {
-        if (!ref || !speciesFormId) return;
+        if (!ref || !speciesFormId)
+            return;
         PlanetProgressNative(ref, static_cast<std::int32_t>(speciesFormId), kBiomeScanCategory, 0, 0);
     }
 
@@ -178,26 +128,29 @@ namespace Engine
     // Returns 1 on success, 0 if planet not found in DB, -1 on null/invalid inputs.
     int MarkSpeciesScannedForPlanet(std::uint32_t planetId, std::uint32_t speciesFormId, std::uint8_t delta)
     {
-        if (!planetId || !speciesFormId) return -1;
+        if (!planetId || !speciesFormId)
+            return -1;
         const auto db = GetKnowledgeDB();
-        if (!db) return -1;
+        if (!db)
+            return -1;
 
         // Build 64-bit key: (trait_discriminator << 48) | (planet_id << 16) | 0.
         const std::uint16_t disc = *TraitDiscriminator.get();
-        const std::uint64_t key  = (static_cast<std::uint64_t>(disc) << 48)
-                                 | (static_cast<std::uint64_t>(planetId) << 16);
+        const std::uint64_t key =
+            (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(planetId) << 16);
 
         // Look up per-planet entry.
-        std::uintptr_t out[4] = { 0, 0, 0, 0xfe0 };
-        auto container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
+        std::uintptr_t out[4]    = {0, 0, 0, 0xfe0};
+        auto           container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
         DbLookup(container, out, &key);
-        if (out[3] == 0xfe0 && out[2] == 0) return 0;
+        if (out[3] == 0xfe0 && out[2] == 0)
+            return 0;
 
         // Compute subobj pointer: base = out[2] + *(uint16*)(out[2] + 0x12 + out[3] * 4); subobj = base + 0x20.
-        const auto base = reinterpret_cast<std::uint8_t*>(out[2]);
+        const auto base            = reinterpret_cast<std::uint8_t*>(out[2]);
         const auto ushortOffsetPtr = reinterpret_cast<std::uint16_t*>(base + kBucketOffsetTableOff + out[3] * 4);
         const auto entryPtr        = base + *ushortOffsetPtr;
-        auto subobj                = entryPtr + kEntrySubobjOffset;
+        auto       subobj          = entryPtr + kEntrySubobjOffset;
 
         IncrementScanFlag(subobj, speciesFormId, delta, 0);
         return 1;
@@ -210,18 +163,22 @@ namespace Engine
     // Returns the number of form IDs marked.
     int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta)
     {
-        if (!planetId) return 0;
+        if (!planetId)
+            return 0;
 
         // Allocate aggregator buffer on the heap to stay conservative with stack size.
-        alignas(16) std::uint8_t buf[0x400]{};
+        alignas(16) std::uint8_t buf[0x400] {};
         SurveyAggregator(buf, planetId);
 
         int marked = 0;
 
         // Helper to mark a single form id.
-        auto mark = [&](std::uint32_t fid) {
-            if (!fid || fid == 0xFFFFFFFFu) return;
-            if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1) ++marked;
+        auto mark = [&](std::uint32_t fid)
+        {
+            if (!fid || fid == 0xFFFFFFFFu)
+                return;
+            if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
+                ++marked;
         };
 
         // Four arrays inside the aggregator buffer (offsets observed in ID_97851):
@@ -230,24 +187,29 @@ namespace Engine
         //   +0x1e8..+0x1f0 : TESForm*[] (form ids at *ptr+0x28)
         //   +0x200..+0x208 : TESForm*[] (form ids at *ptr+0x28)
 
-        auto scanUintRange = [&](std::size_t beginOff, std::size_t endOff) {
+        auto scanUintRange = [&](std::size_t beginOff, std::size_t endOff)
+        {
             const auto* begin = *reinterpret_cast<std::uint32_t* const*>(buf + beginOff);
             const auto* end   = *reinterpret_cast<std::uint32_t* const*>(buf + endOff);
-            for (auto p = begin; p && p != end; ++p) mark(*p);
+            for (auto p = begin; p && p != end; ++p)
+                mark(*p);
         };
-        auto scanPtrRange = [&](std::size_t beginOff, std::size_t endOff) {
+        auto scanPtrRange = [&](std::size_t beginOff, std::size_t endOff)
+        {
             const auto* begin = *reinterpret_cast<std::uintptr_t* const*>(buf + beginOff);
             const auto* end   = *reinterpret_cast<std::uintptr_t* const*>(buf + endOff);
-            for (auto p = begin; p && p != end; ++p) {
-                if (*p == 0) continue;
+            for (auto p = begin; p && p != end; ++p)
+            {
+                if (*p == 0)
+                    continue;
                 mark(*reinterpret_cast<const std::uint32_t*>(*p + kFormPtrFormIdOffset));
             }
         };
 
         scanUintRange(kAggUintSpan0Begin, kAggUintSpan0End);
         scanUintRange(kAggUintSpan1Begin, kAggUintSpan1End);
-        scanPtrRange (kAggPtrSpan0Begin,  kAggPtrSpan0End);
-        scanPtrRange (kAggPtrSpan1Begin,  kAggPtrSpan1End);
+        scanPtrRange(kAggPtrSpan0Begin, kAggPtrSpan0End);
+        scanPtrRange(kAggPtrSpan1Begin, kAggPtrSpan1End);
 
         SurveyBufferFree(buf);
         return marked;
@@ -260,82 +222,104 @@ namespace Engine
     // at +4, byte flag at +8 (0 = skip progress event dispatch), byte skip at +9 (0 = run).
     void NotifySurveyProgress(std::uint32_t planetId)
     {
-        if (!planetId) return;
-        struct Ctx {
+        if (!planetId)
+            return;
+        struct Ctx
+        {
             std::uint32_t planetId;
             float         prevPct;
             std::uint8_t  flag;
             std::uint8_t  skip;
-            std::uint16_t pad{};
-        } ctx{ planetId, 0.0f, 0, 0, 0 };
+            std::uint16_t pad {};
+        } ctx {planetId, 0.0f, 0, 0, 0};
         SurveyCheckNotify(&ctx);
     }
 
-    // Walk a cell's references, calling ID_83008 on each flora/fauna ref.
-    // Unlike PlaceAtMe'd refs, these are real engine-placed instances whose
-    // (939118, ref_formID) knowledge component exists, so ID_83008 flips
-    // the per-ref scanned flag — making the scanner UI treat them as scanned.
+    // Walk a cell's references directly (bypassing CommonLibSF's ForEachReference
+    // which uses a lock at cell+0x120 that isn't a BSReadWriteLock on 1.16.236.0
+    // — memory-probe confirmed that offset holds a 64-bit pointer, not lock state).
+    // The BSTArray header at cell+0x080 IS correct, so iterate raw.
+    //
+    // Unlocked iteration is safe because the poller only fires when menusVisible
+    // == false AND after a 30-frame grace period — cell is quiescent.
+    //
+    // Calls ScanRefNative (ID_83008) on each flora/fauna ref whose biome component
+    // exists (IsBiomeRef != 0). Flips the per-ref scanned outline blue → green.
     int ScanAllRefsInCell(RE::TESObjectCELL* cell)
     {
-        if (!cell || !cell->IsAttached()) {
-            spdlog::info("ScanAllRefsInCell: cell null or not attached");
+        if (!cell || !cell->IsAttached())
             return 0;
-        }
-        spdlog::info("ScanAllRefsInCell: entering cell 0x{:08X}", cell->GetFormID());
+
+        const auto* cellBytes = reinterpret_cast<const std::uint8_t*>(cell);
+        const auto  size      = *reinterpret_cast<const std::uint32_t*>(cellBytes + 0x080);
+        const auto  capacity  = *reinterpret_cast<const std::uint32_t*>(cellBytes + 0x084);
+        auto* const data      = *reinterpret_cast<RE::TESObjectREFR** const*>(cellBytes + 0x088);
+        if (!data || size == 0 || size > capacity)
+            return 0;
+
         int scanned = 0;
-        int inspected = 0;
-        cell->ForEachReference([&](const RE::NiPointer<RE::TESObjectREFR>& ref) -> RE::BSContainer::ForEachResult {
-            ++inspected;
-            if (!ref) return RE::BSContainer::ForEachResult::kContinue;
-            auto base = ref->GetBaseObject();
-            if (!base) return RE::BSContainer::ForEachResult::kContinue;
+        for (std::uint32_t i = 0; i < size; ++i)
+        {
+            auto* ref = data[i];
+            if (!ref)
+                continue;
+            auto* base = ref->GetBaseObject().get();
+            if (!base)
+                continue;
             const auto ft = base->GetFormType();
-            if (ft != RE::FormType::kFLOR && ft != RE::FormType::kNPC_) {
-                return RE::BSContainer::ForEachResult::kContinue;
-            }
-            spdlog::info("  candidate ref=0x{:08X} base=0x{:08X} ft={}",
-                         ref->GetFormID(), base->GetFormID(), static_cast<int>(ft));
-            const char biome = IsBiomeRef(ref.get());
-            spdlog::info("    IsBiomeRef -> {}", static_cast<int>(biome));
-            if (biome == 0) return RE::BSContainer::ForEachResult::kContinue;
-            spdlog::info("    calling ScanRefNative");
-            ScanRefNative(ref.get(), 1, kBiomeScanCategory, 0);
+            if (ft != RE::FormType::kFLOR && ft != RE::FormType::kNPC_)
+                continue;
+            if (IsBiomeRef(ref) == 0)
+                continue;
+            ScanRefNative(ref, 1, kBiomeScanCategory, 0);
             ++scanned;
-            spdlog::info("    done");
-            return RE::BSContainer::ForEachResult::kContinue;
-        });
-        spdlog::info("ScanAllRefsInCell: inspected={} scanned={}", inspected, scanned);
+        }
         return scanned;
     }
-}
+
+    // Pending-sweep flag: set by Papyrus's ScanNearbyRefs, consumed by
+    // Hook::InstallScanSweepPoller's per-frame task. Atomic so Papyrus dispatch
+    // (worker thread) can set it without a lock; the poller runs on main thread.
+    inline std::atomic<bool> g_pendingOutlineSweep {false};
+
+    // Countdown owned by the poller (main-thread-only writes). Grace period from
+    // flag-set to actually running the sweep, so the scanner UI has time to
+    // dismiss and its rendering pipeline to quiesce.
+    inline int g_scanSweepCountdown {0};
+
+    // Patch the scanner's per-species required-count GMSTs so each individual scan
+    // counts as a full completion. Matches the "Instant Scan" mod's approach (Nexus
+    // mods/759) — just two SetGS calls, no ESM, no CCR dependency.
+    //
+    // Without this: the engine requires N scans per species (N varies — often 6)
+    // before marking the species complete. Our CompleteSurvey post-scan flag-flip
+    // usually overrides that anyway by bumping the flag past any threshold, but
+    // species that slip through our iteration (rare spawns, sub-biomes not returned
+    // by GetBiomeFlora/GetBiomeActors) still cap at whatever natural scan count
+    // the player reached. Setting the threshold to 1 closes that gap.
+    void ApplyInstantScanGameSettings()
+    {
+        auto* settings = RE::GameSettingCollection::GetSingleton();
+        if (!settings)
+        {
+            spdlog::warn("ApplyInstantScanGameSettings: GameSettingCollection singleton null");
+            return;
+        }
+        const bool animalOk = settings->SetSetting<std::int32_t>("iHandScannerAnimalCountBase", 1);
+        const bool plantOk  = settings->SetSetting<std::int32_t>("iHandScannerPlantsCountBase", 1);
+        spdlog::info("ApplyInstantScanGameSettings: animal={} plants={}", animalOk, plantOk);
+    }
+}  // namespace Engine
 
 namespace Papyrus
 {
-    // Bound as CompletePlanetSurveyQuest.MarkFormKnownForPlanet(planet, form) -> bool.
-    // Papyrus iterates GetBiomeFlora / GetBiomeActors / resources and calls this per entry.
-    bool MarkFormKnownForPlanet(std::monostate, RE::TESForm* planetForm, RE::TESForm* formToMark)
-    {
-        const auto planetId = Engine::ReadPlanetId(planetForm);
-        const auto db       = Engine::GetKnowledgeDB();
-        const std::uint32_t planetFormId = planetForm ? planetForm->GetFormID() : 0;
-        const std::uint32_t markFormId   = formToMark ? formToMark->GetFormID() : 0;
-        spdlog::info("MarkFormKnownForPlanet: planet=0x{:08X} planetId=0x{:08X} form=0x{:08X} db=0x{:016X}",
-                     planetFormId, planetId, markFormId, db);
-        if (!planetId || !formToMark) {
-            return false;
-        }
-        return Engine::MarkFormKnown(db, planetId, markFormId);
-    }
-
-    // Bound as CompletePlanetSurveyQuest.MarkTraitKnownForPlanet(planet, traitKeyword) -> bool.
-    // Fires the "trait discovered" progress event so the UI/notifications behave normally.
+    // Mark a trait keyword as known on the planet. Fires the trait progress event
+    // (so UI notifications behave like a natural scan discovery).
     bool MarkTraitKnownForPlanet(std::monostate, RE::TESForm* planetForm, RE::BGSKeyword* keyword)
     {
         const auto planetId = Engine::ReadPlanetId(planetForm);
-        spdlog::info("MarkTraitKnownForPlanet: planet=0x{:08X} planetId=0x{:08X} kw={}",
-                     planetForm ? planetForm->GetFormID() : 0u, planetId,
-                     static_cast<const void*>(keyword));
-        if (!planetId || !keyword) return false;
+        if (!planetId || !keyword)
+            return false;
         return Engine::MarkTraitKnown(planetId, keyword);
     }
 
@@ -344,227 +328,161 @@ namespace Papyrus
         spdlog::info("[papyrus] {}", msg.c_str());
     }
 
-    // Bypass SetScanned's harvest fallback and call the engine's inner scan writer
-    // directly on a real ObjectReference. The ref MUST be a PlaceAtMe'd enabled
-    // instance (so the engine has registered its knowledge component).
-    bool ScanRef(std::monostate, RE::TESObjectREFR* ref)
+    // Bypass ID_83038's per-ref component check by calling the per-planet progress
+    // updater (ID_52157) directly. Required after SetScanned on a PlaceAtMe'd flora
+    // ref — the spawned ref lacks the (939118, ref_formID) component so ID_83038
+    // no-ops and ID_52157 never fires unless we call it here.
+    bool UpdatePlanetProgressForSpecies(std::monostate, RE::TESObjectREFR* ref, RE::TESForm* speciesForm)
     {
-        if (!ref) return false;
-        spdlog::info("ScanRef: ref=0x{:08X}", ref->GetFormID());
-        Engine::ScanRef(ref);
+        if (!ref || !speciesForm)
+            return false;
+        Engine::UpdatePlanetProgress(ref, speciesForm->GetFormID());
         return true;
     }
 
-    // Takes a real (in-biome) ref and a species base form id. Bypasses the per-ref
-    // component check and goes directly to the per-planet progress update.
-    bool UpdatePlanetProgressForSpecies(std::monostate, RE::TESObjectREFR* ref, RE::TESForm* speciesForm)
+    // Cache for EnumeratePlanetSpecies / GetPlanetSpeciesAt. Papyrus calls the
+    // enumerate native once, then iterates with index-based accessor. Thread-safe
+    // enough for single-threaded Papyrus usage; if multiple scripts hit this
+    // concurrently, results interleave — but nothing else calls it yet.
+    static std::vector<std::uint32_t> g_planetSpeciesCache;
+
+    // Enumerate all flora + fauna species tracked for the planet. Uses the engine
+    // aggregator (ID_1016657) which returns form IDs across all biomes — broader
+    // than Papyrus's GetBiomeFlora/GetBiomeActors which only return the player's
+    // current biome. Cache the FLOR + NPC_ form IDs; Papyrus fetches them via
+    // GetPlanetSpeciesAt(index).
+    std::int32_t EnumeratePlanetSpecies(std::monostate, RE::TESForm* planetForm)
     {
-        if (!ref || !speciesForm) return false;
-        const auto fid = speciesForm->GetFormID();
-        spdlog::info("UpdatePlanetProgress: ref=0x{:08X} species=0x{:08X}", ref->GetFormID(), fid);
-        Engine::UpdatePlanetProgress(ref, fid);
-        return true;
+        g_planetSpeciesCache.clear();
+        if (!planetForm) return 0;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        if (!planetId) return 0;
+
+        alignas(16) std::uint8_t buf[0x400] {};
+        Engine::SurveyAggregator(buf, planetId);
+
+        auto addIfSpecies = [&](std::uint32_t fid) {
+            if (!fid || fid == 0xFFFFFFFFu) return;
+            auto* form = RE::TESForm::LookupByID(fid);
+            if (!form) return;
+            const auto ft = form->GetFormType();
+            if (ft == RE::FormType::kFLOR || ft == RE::FormType::kNPC_)
+                g_planetSpeciesCache.push_back(fid);
+        };
+        auto scanUint = [&](std::size_t beginOff, std::size_t endOff) {
+            const auto* begin = *reinterpret_cast<std::uint32_t* const*>(buf + beginOff);
+            const auto* end   = *reinterpret_cast<std::uint32_t* const*>(buf + endOff);
+            for (auto p = begin; p && p != end; ++p) addIfSpecies(*p);
+        };
+        auto scanPtr = [&](std::size_t beginOff, std::size_t endOff) {
+            const auto* begin = *reinterpret_cast<std::uintptr_t* const*>(buf + beginOff);
+            const auto* end   = *reinterpret_cast<std::uintptr_t* const*>(buf + endOff);
+            for (auto p = begin; p && p != end; ++p) {
+                if (!*p) continue;
+                addIfSpecies(*reinterpret_cast<const std::uint32_t*>(*p + Engine::kFormPtrFormIdOffset));
+            }
+        };
+        scanUint(Engine::kAggUintSpan0Begin, Engine::kAggUintSpan0End);
+        scanUint(Engine::kAggUintSpan1Begin, Engine::kAggUintSpan1End);
+        scanPtr(Engine::kAggPtrSpan0Begin, Engine::kAggPtrSpan0End);
+        scanPtr(Engine::kAggPtrSpan1Begin, Engine::kAggPtrSpan1End);
+        Engine::SurveyBufferFree(buf);
+
+        spdlog::info("EnumeratePlanetSpecies: planet=0x{:08X} count={}",
+                     planetForm->GetFormID(), g_planetSpeciesCache.size());
+        return static_cast<std::int32_t>(g_planetSpeciesCache.size());
+    }
+
+    // Returns the form ID (as int) at the cached index. Papyrus converts via
+    // Game.GetForm(formID). Returning TESForm* from a native triggered a
+    // CommonLibSF ID-0 crash on DLL init (marshalling template had an unmapped
+    // REL::ID for 1.16.236.0), so we return a plain int instead.
+    std::int32_t GetPlanetSpeciesAt(std::monostate, std::int32_t index)
+    {
+        if (index < 0 || static_cast<std::size_t>(index) >= g_planetSpeciesCache.size()) return 0;
+        return static_cast<std::int32_t>(g_planetSpeciesCache[index]);
     }
 
     // Mark every species the game tracks for this planet (flora/fauna/resources/traits) as scanned.
     // Uses the engine's own aggregator to enumerate the form IDs — covers every UI category.
     // Walk every currently-loaded cell in the player's worldspace and scan all flora/fauna refs,
     // so the scanner UI stops showing them as "unscanned". Returns the number of refs scanned.
-    // Mark every BGSLocation whose parent chain leads to the player's current
-    // worldspace as explored + everExplored. Moves the "Frozen Mountains (50%)"
-    // style region-exploration meter. Independent from the survey DB.
-    std::int32_t MarkLocationsExplored(std::monostate)
-    {
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        if (!player || !player->parentCell) return 0;
-        auto* ws = player->parentCell->cellWorldspace;
-        if (!ws) return 0;
-        auto* rootLoc = ws->location.get();
-        if (!rootLoc) {
-            spdlog::warn("MarkLocationsExplored: worldspace has no root location");
-            return 0;
-        }
-
-        auto* dh = RE::TESDataHandler::GetSingleton();
-        if (!dh) return 0;
-
-        auto& locForms = dh->formArrays[std::to_underlying(RE::FormType::kLCTN)];
-        const RE::BSAutoReadLock locker(locForms.lock);
-
-        int marked = 0;
-
-        // Mark the root explicitly.
-        if (!rootLoc->explored) {
-            rootLoc->explored = true;
-            rootLoc->everExplored = true;
-            ++marked;
-        }
-
-        // Starfield's deepest observed location hierarchy is ~6 levels
-        // (galaxy → system → body → biome → region → area); 64 is a generous
-        // cycle-safety bound, not a real depth limit.
-        constexpr int kMaxLocationParentDepth = 64;
-
-        for (auto& formPtr : locForms.formArray) {
-            if (!formPtr) continue;
-            auto* loc = formPtr->As<RE::BGSLocation>();
-            if (!loc || loc->explored) continue;
-            auto* parent = loc->parentLocation.get();
-            int depth = 0;
-            while (parent && depth < kMaxLocationParentDepth) {
-                if (parent == rootLoc) {
-                    loc->explored = true;
-                    loc->everExplored = true;
-                    ++marked;
-                    break;
-                }
-                parent = parent->parentLocation.get();
-                ++depth;
-            }
-        }
-        spdlog::info("MarkLocationsExplored: marked {} locations under 0x{:08X}",
-                     marked, rootLoc->GetFormID());
-        return marked;
-    }
-
+    // Papyrus-facing wrapper: this used to run the sweep directly, but iterating
+    // refs while the scanner UI is still active is racy — crashes even when
+    // deferred to the next frame. Instead we set a flag and let the menu-close
+    // event fire the sweep once the scanner is gone. See OutlineSweepMenuSink below.
     std::int32_t ScanNearbyRefs(std::monostate)
     {
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        if (!player) {
-            spdlog::warn("ScanNearbyRefs: no player");
-            return 0;
-        }
-        auto* parentCell = player->parentCell;
-        if (!parentCell) {
-            spdlog::warn("ScanNearbyRefs: no parent cell");
-            return 0;
-        }
-        const int total = Engine::ScanAllRefsInCell(parentCell);
-        spdlog::info("ScanNearbyRefs: scanned {} flora/fauna refs in parent cell", total);
-        return total;
+        Engine::g_pendingOutlineSweep.store(true, std::memory_order_release);
+        spdlog::info("ScanNearbyRefs: queued pending sweep (fires on next menu close)");
+        return 0;
     }
 
-    std::int32_t MarkEverythingForPlanet(std::monostate, RE::TESForm* planetForm, std::int32_t delta)
+    // Covers the category Papyrus can't enumerate directly (no GetBiomeResources API):
+    // runs the engine's per-planet aggregator (ID_1016657) which returns every tracked
+    // form ID for the planet, then marks each by bumping its scan-flag byte. Flora, fauna,
+    // and traits are also swept as a by-product, but those are already marked explicitly
+    // via their per-category paths in Papyrus — this call's unique contribution is resources.
+    std::int32_t MarkResourcesForPlanet(std::monostate, RE::TESForm* planetForm, std::int32_t delta)
     {
-        if (!planetForm) return 0;
+        if (!planetForm)
+            return 0;
         const auto planetId = Engine::ReadPlanetId(planetForm);
         const auto d        = static_cast<std::uint8_t>(delta <= 0 ? 100 : (delta > 255 ? 255 : delta));
         const auto n        = Engine::MarkEverythingForPlanet(planetId, d);
         // Fire the completion check so the engine dispatches the survey-complete event
         // (generates the "Survey Data" slate, updates UI, etc.).
         Engine::NotifySurveyProgress(planetId);
-        spdlog::info("MarkEverythingForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
-                     planetForm->GetFormID(), planetId, d, n);
+        spdlog::info("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
+                     planetForm->GetFormID(),
+                     planetId,
+                     d,
+                     n);
         return n;
     }
 
-    // The definitive write: bump the scan-flag byte at the per-planet species array,
-    // which is exactly the byte GetSurveyPercent's aggregator reads.
-    bool MarkSpeciesScannedForPlanet(std::monostate, RE::TESForm* planetForm, RE::TESForm* speciesForm, std::int32_t delta)
-    {
-        if (!planetForm || !speciesForm) return false;
-        const auto planetId = Engine::ReadPlanetId(planetForm);
-        const auto fid      = speciesForm->GetFormID();
-        const auto d        = static_cast<std::uint8_t>(delta == 0 ? 1 : delta);
-        const auto rc = Engine::MarkSpeciesScannedForPlanet(planetId, fid, d);
-        spdlog::info("MarkSpeciesScanned: planet=0x{:08X} planetId=0x{:08X} species=0x{:08X} delta={} -> rc={}",
-                     planetForm->GetFormID(), planetId, fid, d, rc);
-        return rc == 1;
-    }
-
-    // Register a species scan. Returns post-call species count (0 on no-op).
-    std::int32_t RegisterSpeciesScan(std::monostate, RE::TESForm* speciesForm)
-    {
-        if (!speciesForm) return 0;
-        const auto formId = speciesForm->GetFormID();
-        const auto disc   = Engine::ReadSpeciesDiscriminator();
-        const auto count  = Engine::RegisterSpeciesScan(formId);
-        spdlog::info("RegisterSpeciesScan: form=0x{:08X} disc=0x{:04X} -> count={}", formId, disc, count);
-        return count;
-    }
 
     void Register()
     {
         auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-        if (!vm) {
+        if (!vm)
+        {
             spdlog::error("Failed to get VM singleton");
             return;
         }
         auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "MarkFormKnownForPlanet"sv,
-            &MarkFormKnownForPlanet,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "DebugLog"sv, &DebugLog, std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "MarkTraitKnownForPlanet"sv,
-            &MarkTraitKnownForPlanet,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, &MarkTraitKnownForPlanet,
+            std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "DebugLog"sv,
-            &DebugLog,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "MarkResourcesForPlanet"sv, &MarkResourcesForPlanet,
+            std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "RegisterSpeciesScan"sv,
-            &RegisterSpeciesScan,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "EnumeratePlanetSpecies"sv, &EnumeratePlanetSpecies,
+            std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "ScanRef"sv,
-            &ScanRef,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "GetPlanetSpeciesFormIdAt"sv, &GetPlanetSpeciesAt,
+            std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "UpdatePlanetProgressForSpecies"sv,
-            &UpdatePlanetProgressForSpecies,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "UpdatePlanetProgressForSpecies"sv, &UpdatePlanetProgressForSpecies,
+            std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "MarkSpeciesScannedForPlanet"sv,
-            &MarkSpeciesScannedForPlanet,
-            std::optional<bool>{ true },
-            false);
+            "CompletePlanetSurveyNative"sv, "ScanNearbyRefs"sv, &ScanNearbyRefs, std::optional<bool> {true}, false);
 
-        ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "MarkEverythingForPlanet"sv,
-            &MarkEverythingForPlanet,
-            std::optional<bool>{ true },
-            false);
-
-        ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "ScanNearbyRefs"sv,
-            &ScanNearbyRefs,
-            std::optional<bool>{ true },
-            false);
-
-        ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv,
-            "MarkLocationsExplored"sv,
-            &MarkLocationsExplored,
-            std::optional<bool>{ true },
-            false);
-
-        spdlog::info("Bound Papyrus natives: MarkFormKnownForPlanet, MarkTraitKnownForPlanet, DebugLog, RegisterSpeciesScan, ScanRef, UpdatePlanetProgressForSpecies, MarkSpeciesScannedForPlanet");
+        spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, MarkResourcesForPlanet, "
+                     "EnumeratePlanetSpecies, GetPlanetSpeciesFormIdAt, UpdatePlanetProgressForSpecies, "
+                     "ScanNearbyRefs");
     }
-}
+}  // namespace Papyrus
 
 namespace Hook
 {
@@ -583,24 +501,24 @@ namespace Hook
     // which would read garbage prologue bytes as a fake JMP target.
     struct ScanHook
     {
-        using fn_t = void(*)(void*);   // ID_97853: void(undefined4* ctx)
+        using fn_t = void (*)(void*);  // ID_97853: void(undefined4* ctx)
 
         static void thunk(void* ctx)
         {
-            func(ctx);   // call original SurveyCheckNotify (ID_97853)
+            func(ctx);  // call original SurveyCheckNotify (ID_97853)
 
             auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-            if (!vm) return;
+            if (!vm)
+                return;
             auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
 
             // All per-scan constants hoisted out of the hot path: firing on
             // every species scan, we don't want to reconstruct the lambda,
             // both BSFixedStrings (atomized), and the empty smart pointer each time.
-            using VarArray = RE::BSScrapArray<RE::BSScript::Variable>;
-            static const std::function<bool(VarArray&)> kNoArgs =
-                [](VarArray&) -> bool { return true; };
-            static const RE::BSFixedString kScriptName{ "CompletePlanetSurveyQuest" };
-            static const RE::BSFixedString kFnName{ "CompleteSurveyIfEnabled" };
+            using VarArray                                      = RE::BSScrapArray<RE::BSScript::Variable>;
+            static const std::function<bool(VarArray&)> kNoArgs = [](VarArray&) -> bool { return true; };
+            static const RE::BSFixedString              kScriptName {"CompletePlanetSurveyQuest"};
+            static const RE::BSFixedString              kFnName {"CompleteSurveyIfEnabled"};
             static const RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> kNoCallback;
 
             ivm->DispatchStaticCall(kScriptName, kFnName, kNoArgs, kNoCallback, 0);
@@ -620,13 +538,15 @@ namespace Hook
                                        std::uintptr_t inner,
                                        std::size_t    scan_limit = kScanHookSearchWindow)
     {
-        for (std::size_t i = 0; i < scan_limit; ++i) {
+        for (std::size_t i = 0; i < scan_limit; ++i)
+        {
             const auto* p = reinterpret_cast<const std::uint8_t*>(outer + i);
-            if (*p == 0xE8) {
+            if (*p == 0xE8)
+            {
                 const auto disp        = *reinterpret_cast<const std::int32_t*>(p + 1);
-                const auto call_target = static_cast<std::uintptr_t>(
-                    static_cast<std::int64_t>(outer + i + 5) + disp);
-                if (call_target == inner) {
+                const auto call_target = static_cast<std::uintptr_t>(static_cast<std::int64_t>(outer + i + 5) + disp);
+                if (call_target == inner)
+                {
                     return outer + i;
                 }
             }
@@ -636,44 +556,111 @@ namespace Hook
 
     void Install()
     {
-        REL::Relocation<std::uintptr_t> outer{ REL::ID(52157) };   // planet-progress updater
-        REL::Relocation<std::uintptr_t> inner{ REL::ID(97853) };   // survey check/notify
+        REL::Relocation<std::uintptr_t> outer {REL::ID(52157)};  // planet-progress updater
+        REL::Relocation<std::uintptr_t> inner {REL::ID(97853)};  // survey check/notify
 
         const auto call_site = FindCallSite(outer.address(), inner.address());
-        if (!call_site) {
+        if (!call_site)
+        {
             spdlog::error("ScanHook: CALL to ID_97853 not found inside ID_52157 — hook skipped");
             return;
         }
 
         ScanHook::func = reinterpret_cast<ScanHook::fn_t>(
-            REL::GetTrampoline().write_call<5>(
-                call_site,
-                reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
+            REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
 
-        spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)",
-                     call_site);
+        spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)", call_site);
     }
-}
+
+    // Per-frame poll: waits for the pending-sweep flag + scanner menu closed,
+    // then fires ScanAllRefsInCell on the player's current cell.
+    //
+    // History: tried event sink on UI's BSTEventSource<MenuOpenCloseEvent>.
+    // CommonLibSF's shared REL::ID(123821) for BSTEventSource::RegisterSink
+    // doesn't line up with the MenuOpenCloseEvent specialization on 1.16.236.0
+    // and crashes DLL init. Polling via SFSE's permanent-task is the pragmatic
+    // alternative — runs every frame, but the hot path is a single atomic load
+    // that returns false 99.9% of the time.
+    //
+    // Safety gate combines two signals:
+    //   1. menusVisible == false (no menus open right now)
+    //   2. at least kScannerDismissGraceFrames have elapsed since the flag was
+    //      set (defensive: scanner animation may persist beyond menu close)
+    constexpr int kScannerDismissGraceFrames = 30;  // ~0.5s at 60fps
+
+    void InstallScanSweepPoller()
+    {
+        auto* task = SFSE::GetTaskInterface();
+        if (!task) {
+            spdlog::error("InstallScanSweepPoller: no task interface");
+            return;
+        }
+        task->AddPermanentTask([]() {
+            // Hot path: return immediately when no sweep is pending.
+            if (!Engine::g_pendingOutlineSweep.load(std::memory_order_acquire)) {
+                Engine::g_scanSweepCountdown = 0;
+                return;
+            }
+
+            // Grace countdown — gives the scanner UI time to dismiss + animations
+            // to complete even after the flag was set by Papyrus. Prevents running
+            // the sweep while the scanner's rendering pipeline is still active.
+            if (Engine::g_scanSweepCountdown == 0) {
+                Engine::g_scanSweepCountdown = kScannerDismissGraceFrames;
+                return;
+            }
+            if (--Engine::g_scanSweepCountdown > 0) {
+                return;
+            }
+
+            auto* ui = RE::UI::GetSingleton();
+            if (ui && ui->menusVisible) {
+                // Any menu is visible — keep waiting. Reset countdown so we wait
+                // a full grace period after the menu closes.
+                Engine::g_scanSweepCountdown = kScannerDismissGraceFrames;
+                return;
+            }
+
+            // Claim the sweep — clear flag first so a concurrent Papyrus set
+            // during the sweep requeues cleanly next iteration.
+            if (!Engine::g_pendingOutlineSweep.exchange(false, std::memory_order_acq_rel)) {
+                return;
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!player || !player->parentCell) {
+                spdlog::warn("ScanSweep poller: no player or parent cell");
+                return;
+            }
+            const int total = Engine::ScanAllRefsInCell(player->parentCell);
+            spdlog::info("ScanSweep poller: fired after menus closed, scanned {} refs", total);
+        });
+        spdlog::info("InstallScanSweepPoller: per-frame poller registered");
+    }
+}  // namespace Hook
 
 namespace
 {
     void MessageCallback(SFSE::MessagingInterface::Message* a_msg) noexcept
     {
-        if (a_msg->type == SFSE::MessagingInterface::kPostDataLoad) {
+        if (a_msg->type == SFSE::MessagingInterface::kPostDataLoad)
+        {
             Papyrus::Register();
             Hook::Install();
+            Hook::InstallScanSweepPoller();  // DIAGNOSTIC: verbose logging to pinpoint crash
+            Engine::ApplyInstantScanGameSettings();
             spdlog::info("CompletePlanetSurvey initialized");
         }
     }
-}
+}  // namespace
 
 SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
 {
-    SFSE::Init(a_sfse, { .trampoline = true, .trampolineSize = 64 });
+    SFSE::Init(a_sfse, {.trampoline = true, .trampolineSize = 64});
     spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
 
     const auto* messaging = SFSE::GetMessagingInterface();
-    if (!messaging || !messaging->RegisterListener(MessageCallback)) {
+    if (!messaging || !messaging->RegisterListener(MessageCallback))
+    {
         spdlog::critical("Failed to register messaging listener");
         return false;
     }

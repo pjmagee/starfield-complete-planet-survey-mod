@@ -3,13 +3,18 @@ ScriptName CompletePlanetSurveyQuest
 ; Complete the planet survey for the WHOLE planet (all biomes).
 ; Invoke via console:  cgf "CompletePlanetSurveyQuest.CompleteSurvey"
 ;
-; Two passes on purpose:
-;   1. Per-biome flora/fauna marked via MarkSpeciesScannedForPlanet — flips the
-;      per-species scan-flag byte at subobj+0x21 (engine ID_124898 path).
-;   2. Planet-wide aggregator sweep via MarkEverythingForPlanet — enumerates
-;      every tracked form (all biomes' flora/fauna, resources, misc) via
-;      ID_1016657 and marks each "known" in the knowledge DB slot array.
-; Both layers are needed to hit 100% + trigger the Survey Data slate.
+; Also auto-fires on any in-game scan when the Settings > Gameplay toggle is on
+; (see CompleteSurveyIfEnabled and the C++ scan hook at ID_52157 → ID_97853).
+;
+; Flow:
+;   1. Mark traits via the DB-level trait native (ID_52155).
+;   2. Mark resources + aggregator catch-all (ID_1016657 → ID_52156 per form).
+;      Fires PlayerPlanetSurveyCompleteEvent so the Survey Data slate drops.
+;   3. For each flora + fauna species across ALL biomes, PlaceAtMe a disabled ref,
+;      SetScanned + UpdatePlanetProgressForSpecies (bypasses ID_83038 component
+;      check that no-ops PlaceAtMe'd flora), then delete. Fires BIOME COMPLETE
+;      for every biome on the planet.
+;   4. Per-ref outline refresh for in-world refs (flips blue → scanned colour).
 
 Function CompleteSurvey() global
     Actor playerRef = Game.GetPlayer()
@@ -26,27 +31,22 @@ Function CompleteSurvey() global
     EndIf
 
     float surveyBefore = currentPlanet.GetSurveyPercent()
-
+    Form  planetForm   = currentPlanet as Form
     ObjectReference playerRef_OR = playerRef as ObjectReference
-    Flora[]     biomeFlora  = playerRef_OR.GetBiomeFlora(1.0)
-    ActorBase[] biomeActors = playerRef_OR.GetBiomeActors(1.0)
-    Keyword[]   traitKw     = currentPlanet.GetKeywordTypeList(44)
-    Form        planetForm  = currentPlanet as Form
 
-    int floraCount = MarkSpecies(planetForm, biomeFlora as Form[])
-    int faunaCount = MarkSpecies(planetForm, biomeActors as Form[])
-    int traitCount = MarkTraits(currentPlanet, traitKw)
-    int everything = CompletePlanetSurveyNative.MarkEverythingForPlanet(planetForm, 100)
+    Keyword[] traitKw      = currentPlanet.GetKeywordTypeList(44)
+    int       traitCount   = MarkTraits(currentPlanet, traitKw)
+    int       resourceCount = CompletePlanetSurveyNative.MarkResourcesForPlanet(planetForm, 100)
+    int       speciesCount = SpawnAndScanAllPlanetSpecies(planetForm, playerRef_OR)
+    CompletePlanetSurveyNative.ScanNearbyRefs()
 
     float surveyAfter = currentPlanet.GetSurveyPercent()
-    CompletePlanetSurveyNative.DebugLog("marked flora=" + floraCount + " fauna=" + faunaCount + " traits=" + traitCount + " all=" + everything + " survey=" + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%)")
-    Debug.Notification("Survey: " + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%)")
+    CompletePlanetSurveyNative.DebugLog("CompleteSurvey: traits=" + traitCount + " resources=" + resourceCount + " species=" + speciesCount + " survey=" + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%)")
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
-; Settings > Gameplay toggle, short-circuits early if disabled or the planet
-; is already 100% surveyed, then delegates to CompleteSurvey() which does
-; its own interior/planet guards.
+; Settings > Gameplay toggle, short-circuits if disabled or planet already
+; complete, then delegates to CompleteSurvey.
 Function CompleteSurveyIfEnabled() global
     ; FormID 0x80C assigned by Creation Kit to GPOF CPSScanAutoComplete.
     ; Verify in xEdit if the ESM is ever regenerated — CK reassigns IDs.
@@ -64,18 +64,57 @@ Function CompleteSurveyIfEnabled() global
     CompleteSurvey()
 EndFunction
 
-int Function MarkSpecies(Form planetForm, Form[] speciesList) global
-    int marked = 0
+; Spawn one disabled ref of every flora + fauna species the engine tracks for
+; this planet (across all biomes, via the aggregator), scan each to register
+; biome progress, then delete. Refs stay disabled so there's no visual flicker.
+;
+; Capped at 128 species to bound runtime on dense planets.
+int Function SpawnAndScanAllPlanetSpecies(Form planetForm, ObjectReference playerRef_OR) global
+    int total = CompletePlanetSurveyNative.EnumeratePlanetSpecies(planetForm)
+    If total == 0
+        Return 0
+    EndIf
+
+    ObjectReference[] spawned = new ObjectReference[128]
+    int spawnCount = 0
     int i = 0
-    While i < speciesList.Length
-        If speciesList[i] != None
-            If CompletePlanetSurveyNative.MarkSpeciesScannedForPlanet(planetForm, speciesList[i], 100)
-                marked += 1
+    While i < total && spawnCount < 128
+        int  speciesFid  = CompletePlanetSurveyNative.GetPlanetSpeciesFormIdAt(i)
+        Form speciesForm = Game.GetForm(speciesFid)
+        If speciesForm != None
+            ObjectReference ref = playerRef_OR.PlaceAtMe(speciesForm, 1, false, true, true, None, None, true)
+            If ref != None
+                spawned[spawnCount] = ref
+                spawnCount += 1
             EndIf
         EndIf
         i += 1
     EndWhile
-    Return marked
+
+    ; SetScanned drives ID_83008 (fauna works). UpdatePlanetProgressForSpecies hits
+    ; ID_52157 directly — required for flora whose ID_83038 no-ops on PlaceAtMe'd refs.
+    i = 0
+    While i < spawnCount
+        If spawned[i] != None
+            spawned[i].SetScanned(true)
+            Form baseForm = spawned[i].GetBaseObject()
+            If baseForm != None
+                CompletePlanetSurveyNative.UpdatePlanetProgressForSpecies(spawned[i], baseForm)
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+
+    i = 0
+    While i < spawnCount
+        If spawned[i] != None
+            spawned[i].Disable(false)
+            spawned[i].Delete()
+        EndIf
+        i += 1
+    EndWhile
+
+    Return spawnCount
 EndFunction
 
 int Function MarkTraits(Planet akPlanet, Keyword[] traitKeywords) global
