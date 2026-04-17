@@ -46,7 +46,9 @@ EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
 ; Settings > Gameplay toggle, short-circuits if disabled or planet already
-; complete, then delegates to CompleteSurvey.
+; complete, then QUEUES CompleteSurvey. C++ poller dispatches it once the
+; scanner UI has closed — avoids PlaceAtMe racing with live scanner state,
+; which is what crashed the direct-dispatch path.
 Function CompleteSurveyIfEnabled() global
     ; FormID 0x80C assigned by Creation Kit to GPOF CPSScanAutoComplete.
     ; Verify in xEdit if the ESM is ever regenerated — CK reassigns IDs.
@@ -61,7 +63,7 @@ Function CompleteSurveyIfEnabled() global
         Return
     EndIf
 
-    CompleteSurvey()
+    CompletePlanetSurveyNative.QueueCompleteSurvey()
 EndFunction
 
 ; Spawn one disabled ref of every flora + fauna species the engine tracks for

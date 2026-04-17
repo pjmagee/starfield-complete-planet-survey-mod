@@ -282,10 +282,17 @@ namespace Engine
     // (worker thread) can set it without a lock; the poller runs on main thread.
     inline std::atomic<bool> g_pendingOutlineSweep {false};
 
-    // Countdown owned by the poller (main-thread-only writes). Grace period from
-    // flag-set to actually running the sweep, so the scanner UI has time to
-    // dismiss and its rendering pipeline to quiesce.
+    // Pending CompleteSurvey dispatch. Set by the scan hook via Papyrus's
+    // CompleteSurveyIfEnabled; consumed by the poller when scanner UI is closed.
+    // Deferring CompleteSurvey out of the active-scanner state avoids a race
+    // between PlaceAtMe and the scanner UI's ref-list rendering.
+    inline std::atomic<bool> g_pendingCompleteSurvey {false};
+
+    // Countdowns owned by the poller (main-thread-only writes). Grace periods
+    // from flag-set to actually running the dispatch, so the scanner UI has time
+    // to dismiss and its rendering pipeline to quiesce.
     inline int g_scanSweepCountdown {0};
+    inline int g_completeSurveyCountdown {0};
 
     // Patch the scanner's per-species required-count GMSTs so each individual scan
     // counts as a full completion. Matches the "Instant Scan" mod's approach (Nexus
@@ -407,6 +414,15 @@ namespace Papyrus
     // Uses the engine's own aggregator to enumerate the form IDs — covers every UI category.
     // Walk every currently-loaded cell in the player's worldspace and scan all flora/fauna refs,
     // so the scanner UI stops showing them as "unscanned". Returns the number of refs scanned.
+    // Queue a deferred CompleteSurvey dispatch. The scan-hook path calls this
+    // instead of running CompleteSurvey immediately, so PlaceAtMe doesn't race
+    // with the active scanner UI. The poller picks up the flag, waits until
+    // menusVisible == false + a grace period, then dispatches Papyrus CompleteSurvey.
+    void QueueCompleteSurvey(std::monostate)
+    {
+        Engine::g_pendingCompleteSurvey.store(true, std::memory_order_release);
+    }
+
     // Papyrus-facing wrapper: this used to run the sweep directly, but iterating
     // refs while the scanner UI is still active is racy — crashes even when
     // deferred to the next frame. Instead we set a flag and let the menu-close
@@ -478,9 +494,12 @@ namespace Papyrus
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "ScanNearbyRefs"sv, &ScanNearbyRefs, std::optional<bool> {true}, false);
 
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "QueueCompleteSurvey"sv, &QueueCompleteSurvey, std::optional<bool> {true}, false);
+
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, MarkResourcesForPlanet, "
                      "EnumeratePlanetSpecies, GetPlanetSpeciesFormIdAt, UpdatePlanetProgressForSpecies, "
-                     "ScanNearbyRefs");
+                     "ScanNearbyRefs, QueueCompleteSurvey");
     }
 }  // namespace Papyrus
 
@@ -596,28 +615,55 @@ namespace Hook
             return;
         }
         task->AddPermanentTask([]() {
-            // Hot path: return immediately when no sweep is pending.
+            auto* ui = RE::UI::GetSingleton();
+            const bool menusOpen = ui && ui->menusVisible;
+
+            // Gate helper: advance countdown while menus are open/just closed.
+            // Returns true once safe to proceed (countdown elapsed + menus closed).
+            auto readyToFire = [&](int& countdown) -> bool {
+                if (countdown == 0) {
+                    countdown = kScannerDismissGraceFrames;
+                    return false;
+                }
+                if (menusOpen) {
+                    countdown = kScannerDismissGraceFrames;
+                    return false;
+                }
+                return --countdown <= 0;
+            };
+
+            // === Pending CompleteSurvey dispatch ===
+            // Scan hook sets this via QueueCompleteSurvey (Papyrus). We dispatch
+            // Papyrus CompleteSurvey from here, well after the scanner UI has
+            // closed, so PlaceAtMe doesn't race with the active scanner.
+            if (Engine::g_pendingCompleteSurvey.load(std::memory_order_acquire)) {
+                if (readyToFire(Engine::g_completeSurveyCountdown)) {
+                    if (Engine::g_pendingCompleteSurvey.exchange(false, std::memory_order_acq_rel)) {
+                        auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+                        if (vm) {
+                            auto* vmi = static_cast<RE::BSScript::IVirtualMachine*>(vm);
+                            using VarArray = RE::BSScrapArray<RE::BSScript::Variable>;
+                            static const std::function<bool(VarArray&)> kNoArgs =
+                                [](VarArray&) -> bool { return true; };
+                            static const RE::BSFixedString              kScriptName {"CompletePlanetSurveyQuest"};
+                            static const RE::BSFixedString              kFnName {"CompleteSurvey"};
+                            static const RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> kNoCallback;
+                            vmi->DispatchStaticCall(kScriptName, kFnName, kNoArgs, kNoCallback, 0);
+                            spdlog::info("Poller: dispatched CompleteSurvey (scanner closed)");
+                        }
+                    }
+                }
+            }
+            else {
+                Engine::g_completeSurveyCountdown = 0;
+            }
+
+            // === Pending outline sweep ===
             if (!Engine::g_pendingOutlineSweep.load(std::memory_order_acquire)) {
                 Engine::g_scanSweepCountdown = 0;
                 return;
             }
-
-            // Grace countdown — gives the scanner UI time to dismiss + animations
-            // to complete even after the flag was set by Papyrus. Prevents running
-            // the sweep while the scanner's rendering pipeline is still active.
-            if (Engine::g_scanSweepCountdown == 0) {
-                Engine::g_scanSweepCountdown = kScannerDismissGraceFrames;
-                return;
-            }
-            if (--Engine::g_scanSweepCountdown > 0) {
-                return;
-            }
-
-            auto* ui = RE::UI::GetSingleton();
-            if (ui && ui->menusVisible) {
-                // Any menu is visible — keep waiting. Reset countdown so we wait
-                // a full grace period after the menu closes.
-                Engine::g_scanSweepCountdown = kScannerDismissGraceFrames;
+            if (!readyToFire(Engine::g_scanSweepCountdown)) {
                 return;
             }
 

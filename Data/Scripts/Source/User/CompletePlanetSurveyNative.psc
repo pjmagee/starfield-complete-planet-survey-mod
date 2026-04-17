@@ -27,3 +27,9 @@ bool Function UpdatePlanetProgressForSpecies(ObjectReference akRef, Form akSpeci
 ; parentCell's references when menus are closed — outside the scanner UI's
 ; active state, avoiding a cell-iteration race.
 int  Function ScanNearbyRefs() global native
+
+; Queue a deferred CompleteSurvey dispatch. The scan hook calls this instead of
+; invoking CompleteSurvey directly so PlaceAtMe doesn't race with the active
+; scanner UI. C++ polls the flag, waits until the scanner is closed + grace
+; period, then dispatches Papyrus CompleteSurvey from a clean state.
+Function QueueCompleteSurvey() global native
