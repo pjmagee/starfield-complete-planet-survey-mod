@@ -1,0 +1,123 @@
+// Complete Planet Survey — Views
+
+views {
+
+  // ── Root overview ──
+  view index {
+    title 'Complete Planet Survey — Architecture Overview'
+    description 'High-level view: Player → Mod → Starfield engine'
+
+    include player
+    include completePlanetSurvey
+    include starfield
+
+    include player -> completePlanetSurvey
+    include player -> starfield
+    include completePlanetSurvey.sfsePlugin.hookNs -> starfield.scanPath
+    include completePlanetSurvey.sfsePlugin.papyrusNs -> starfield.*
+
+    autoLayout TopBottom
+  }
+
+  // ── Distribution: what ships in the mod ──
+  view distribution {
+    title 'Distribution — Mod Components'
+    description 'DLL, ESM records, Papyrus scripts that make up the mod package'
+
+    include completePlanetSurvey,
+            completePlanetSurvey.sfsePlugin,
+            completePlanetSurvey.esmPlugin,
+            completePlanetSurvey.esmPlugin.*,
+            completePlanetSurvey.papyrusScripts,
+            completePlanetSurvey.papyrusScripts.*
+
+    include completePlanetSurvey.papyrusScripts.questScript -> completePlanetSurvey.sfsePlugin
+    include completePlanetSurvey.papyrusScripts.nativeScript -> completePlanetSurvey.sfsePlugin
+
+    autoLayout TopBottom
+  }
+
+  // ── Plugin internals ──
+  view pluginInternals {
+    title 'SFSE Plugin Internals'
+    description 'Hook, Papyrus, and Engine namespaces inside the DLL'
+
+    include completePlanetSurvey.sfsePlugin,
+            completePlanetSurvey.sfsePlugin.hookNs,
+            completePlanetSurvey.sfsePlugin.hookNs.*,
+            completePlanetSurvey.sfsePlugin.papyrusNs,
+            completePlanetSurvey.sfsePlugin.papyrusNs.*,
+            completePlanetSurvey.sfsePlugin.engineNs,
+            completePlanetSurvey.sfsePlugin.engineNs.*
+
+    include completePlanetSurvey.sfsePlugin.hookNs.* -> completePlanetSurvey.sfsePlugin.engineNs.*
+    include completePlanetSurvey.sfsePlugin.hookNs.* -> completePlanetSurvey.sfsePlugin.papyrusNs.*
+    include completePlanetSurvey.sfsePlugin.papyrusNs.* -> completePlanetSurvey.sfsePlugin.engineNs.*
+
+    autoLayout LeftRight
+  }
+
+  // ── Game engine internals ──
+  view gameEngine {
+    title 'Game Engine — Scan Path & Knowledge DB'
+    description 'Starfield engine functions hooked or called by the plugin'
+
+    include starfield,
+            starfield.scanPath,
+            starfield.scanPath.*,
+            starfield.knowledgeDb,
+            starfield.knowledgeDb.*,
+            starfield.aggregator,
+            starfield.aggregator.*,
+            starfield.events,
+            starfield.events.*
+
+    include starfield.scanPath.* -> starfield.scanPath.*
+    include starfield.scanPath.* -> starfield.events.*
+    include starfield.knowledgeDb.* -> starfield.knowledgeDb.*
+
+    autoLayout TopBottom
+  }
+
+  // ── Data flows: scan hook → completion ──
+  view dataFlows {
+    title 'Data Flows — Scan Hook to Survey Completion'
+    description '''
+      End-to-end flow: scan hook fires → toggle gate → deferred dispatch →
+      CompleteSurvey body → survey completion event
+    '''
+
+    include completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk,
+            completePlanetSurvey.sfsePlugin.engineNs.atomicToggle,
+            completePlanetSurvey.sfsePlugin.engineNs.atomicPending,
+            completePlanetSurvey.sfsePlugin.hookNs.poller,
+            completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey,
+            starfield.aggregator.surveyAggregator,
+            starfield.knowledgeDb.hashMap,
+            starfield.scanPath.setScanned,
+            starfield.scanPath.planetProgress,
+            starfield.scanPath.surveyCheckNotify,
+            starfield.events.completeEvent
+
+    // Hook → toggle → pending
+    include completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -> completePlanetSurvey.sfsePlugin.engineNs.atomicToggle
+    include completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -> completePlanetSurvey.sfsePlugin.engineNs.atomicPending
+    include completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -> starfield.scanPath.surveyCheckNotify
+
+    // Poller → CompleteSurvey
+    include completePlanetSurvey.sfsePlugin.hookNs.poller -> completePlanetSurvey.sfsePlugin.engineNs.atomicPending
+    include completePlanetSurvey.sfsePlugin.hookNs.poller -> completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey
+
+    // CompleteSurvey body
+    include completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -> starfield.aggregator.surveyAggregator
+    include completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -> starfield.knowledgeDb.hashMap
+    include completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -> starfield.scanPath.setScanned
+    include completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -> starfield.scanPath.planetProgress
+    include completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -> starfield.scanPath.surveyCheckNotify
+
+    // Completion
+    include starfield.scanPath.surveyCheckNotify -> starfield.events.completeEvent
+
+    autoLayout TopBottom
+  }
+}

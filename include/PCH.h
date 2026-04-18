@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+
 #include <RE/Starfield.h>
 #include <SFSE/SFSE.h>
 #include <spdlog/spdlog.h>

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "likec4": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@likec4/mcp"
+      ],
+      "env": {
+        "LIKEC4_WORKSPACE": "d:/Projects/pjmagee/starfield-complete-planet-survey-mod"
+      }
+    }
+  }
+}
