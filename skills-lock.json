@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "claude-session-rescue": {
+      "source": "ianbmacdonald/claude-session-rescue",
+      "sourceType": "github",
+      "computedHash": "ff6969f1767501963b59cd7f0a8da2afff3d5eb1699dd3d0ee342d859fe1bc30"
+    }
+  }
+}
