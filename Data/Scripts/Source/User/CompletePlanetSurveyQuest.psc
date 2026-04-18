@@ -42,6 +42,10 @@ Function CompleteSurvey() global
 
     float surveyAfter = currentPlanet.GetSurveyPercent()
     CompletePlanetSurveyNative.DebugLog("CompleteSurvey: traits=" + traitCount + " resources=" + resourceCount + " species=" + speciesCount + " survey=" + (surveyAfter * 100) as int + "% (was " + (surveyBefore * 100) as int + "%)")
+
+    If surveyAfter < 1.0
+        Debug.Notification("Survey: completed " + (surveyAfter * 100) as int + "% (some items may need manual scan)")
+    EndIf
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
@@ -54,7 +58,11 @@ Function CompleteSurveyIfEnabled() global
     ; Verify in xEdit if the ESM is ever regenerated — CK reassigns IDs.
     Form gpofForm = Game.GetFormFromFile(0x80C, "CompletePlanetSurvey.esm")
     GameplayOption gpofOption = gpofForm as GameplayOption
-    If gpofOption == None || gpofOption.GetValue() < 0.5
+    If gpofOption == None
+        CompletePlanetSurveyNative.DebugLog("CompleteSurveyIfEnabled: GPOF 0x80C not found — ESM missing or FormID changed")
+        Return
+    EndIf
+    If gpofOption.GetValue() < 0.5
         Return
     EndIf
 

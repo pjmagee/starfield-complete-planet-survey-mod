@@ -1,0 +1,95 @@
+// Complete Planet Survey — LikeC4 specification
+// Defines element kinds, relationship kinds, tags and visual styling
+
+specification {
+
+  element actor {
+    style {
+      shape person
+      color green
+    }
+  }
+
+  element game {
+    style {
+      shape rectangle
+      color slate
+    }
+  }
+
+  element mod {
+    style {
+      shape rectangle
+      color indigo
+    }
+  }
+
+  element plugin {
+    style {
+      shape rectangle
+      color amber
+    }
+  }
+
+  element component {
+    style {
+      shape rectangle
+    }
+  }
+
+  element namespace {
+    style {
+      shape rectangle
+      color sky
+    }
+  }
+
+  element function {
+    style {
+      shape rectangle
+      color secondary
+    }
+  }
+
+  element data {
+    style {
+      shape storage
+      color muted
+    }
+  }
+
+  element script {
+    style {
+      shape rectangle
+      color green
+    }
+  }
+
+  element record {
+    style {
+      shape storage
+      color sky
+    }
+  }
+
+  element file {
+    style {
+      shape rectangle
+      color muted
+    }
+  }
+
+  // Relationship kinds
+  relationship async
+  relationship hooks
+  relationship calls
+  relationship reads
+  relationship writes
+  relationship fires
+
+  // Tags
+  tag ghidra
+  tag papyrus
+  tag sfse
+  tag esm
+}
