@@ -1,0 +1,43 @@
+name: Deploy Architecture Diagram
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**/*.c4']
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build LikeC4 static site
+        uses: likec4/actions@v1
+        with:
+          action: build
+          path: docs
+          output: docs/dist
+          base: /starfield-complete-planet-survey-mod/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

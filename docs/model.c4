@@ -1,0 +1,245 @@
+// Complete Planet Survey — Architecture Model
+
+model {
+
+  actor player 'Player' {
+    description 'Starfield player who wants to complete planet surveys instantly'
+  }
+
+  game starfield 'Starfield' {
+    description 'Bethesda Game Studios — Starfield (Creation Engine 2)'
+
+    component scanPath 'Scan Path' {
+      description 'Engine code path triggered when the player scans flora/fauna'
+
+      function setScanned 'SetScanned (ID_83008)' {
+        #ghidra
+        description 'Entry point — dispatches to flora (ID_83038 + ID_52157) or actor (ID_52160)'
+      }
+
+      function resolveComponent 'ResolveComponent (ID_83038)' {
+        #ghidra
+        description 'Looks up (939118, ref->formID) component to verify ref is a biome species'
+      }
+
+      function planetProgress 'PlanetProgress (ID_52157)' {
+        #ghidra
+        description 'Per-planet progress updater — ticks the species scan-flag for the biome'
+      }
+
+      function surveyCheckNotify 'SurveyCheckNotify (ID_97853)' {
+        #ghidra
+        description '''
+          Survey check-and-dispatch. Fires PlayerPlanetSurveyProgressEvent
+          and PlayerPlanetSurveyCompleteEvent when survey hits 100%.
+          The Complete event generates the "<Planet> Survey Data" slate.
+        '''
+      }
+    }
+
+    component knowledgeDb 'Knowledge Database' {
+      description 'Per-save singleton that tracks what the player has discovered'
+
+      function getManager 'GetKnowledgeManager (ID_126578)' {
+        #ghidra
+        description 'Returns the per-save knowledge-manager singleton; DB at manager+0x8B0'
+      }
+
+      data hashMap 'BSTHashMap' {
+        #ghidra
+        description '''
+          Key: (trait_discriminator << 48) | (planet_id << 16).
+          Value: per-planet component with species scan-flag arrays.
+          Lookup via ID_126806.
+        '''
+      }
+    }
+
+    component aggregator 'Survey Aggregator' {
+      description 'Enumerates all tracked form IDs for a planet'
+
+      function surveyAggregator 'SurveyAggregator (ID_1016657)' {
+        #ghidra
+        description '''
+          Populates buffer with four span pairs:
+          two uint32[] (traits, flora IDs) and two TESForm*[] (resources, other).
+          Buffer >= 0x250 bytes.
+        '''
+      }
+    }
+
+    component events 'Game Events' {
+      description 'Event bus for survey progress and completion'
+
+      function progressEvent 'PlayerPlanetSurveyProgressEvent' {
+        description 'Fired when survey percentage changes'
+      }
+
+      function completeEvent 'PlayerPlanetSurveyCompleteEvent' {
+        description 'Fired when survey reaches 100% — generates Survey Data slate'
+      }
+    }
+  }
+
+  mod completePlanetSurvey 'Complete Planet Survey Mod' {
+    description 'SFSE plugin + ESM that auto-completes planet surveys on scan'
+
+    plugin sfsePlugin 'SFSE Plugin (DLL)' {
+      #sfse
+      description 'Native C++ plugin loaded by Starfield Script Extender'
+
+      namespace hookNs 'Hook Namespace' {
+        description 'Installs and manages the scan-path hook'
+
+        function installHook 'Install()' {
+          description '''
+            Patches ID_97853 call site with write_call<5>.
+            Replaces SurveyCheckNotify call in the scan path
+            with ScanHook::thunk.
+          '''
+        }
+
+        function scanHookThunk 'ScanHook::thunk' {
+          description '''
+            Intercept point. Reads the toggle atomic flag.
+            If toggle is ON: sets g_pending_planet atomic,
+            defers CompleteSurvey dispatch to the poller.
+            Always calls the original ID_97853 afterward.
+          '''
+        }
+
+        function poller 'Poller (on_message)' {
+          description '''
+            SFSE messaging callback, runs each frame on the main thread.
+            When g_pending_planet is set: exchanges it atomically,
+            calls CompleteSurvey, then clears.
+          '''
+        }
+      }
+
+      namespace papyrusNs 'Papyrus Namespace' {
+        description 'Native functions exposed to Papyrus scripts'
+
+        function getToggle 'GetAutoCompleteSurveyEnabled' {
+          #papyrus
+          description 'Reads the atomic toggle flag'
+        }
+
+        function setToggle 'SetAutoCompleteSurveyEnabled' {
+          #papyrus
+          description 'Writes the atomic toggle flag'
+        }
+
+        function completeSurvey 'CompleteSurvey' {
+          #papyrus
+          description '''
+            Main logic: enumerates all tracked species via the aggregator,
+            marks each scanned via MarkSpeciesScannedForPlanet,
+            spawn-and-scans flora refs for biome progress,
+            then fires SurveyCheckNotify for the completion event.
+          '''
+        }
+
+        function getPlanetId 'GetPlanetId' {
+          #papyrus
+          description 'Reads planet form knowledge key at offset 0x54'
+        }
+
+        function markTraitKnown 'MarkTraitKnown' {
+          #papyrus
+          description 'Calls ID_52155 SetTraitKnown for a trait keyword'
+        }
+
+        function markSpeciesScanned 'MarkSpeciesScanned' {
+          #papyrus
+          description 'Direct DB write — bumps species scan-flag byte'
+        }
+
+        function getFormIdsForPlanet 'GetFormIdsForPlanet' {
+          #papyrus
+          description 'Runs the aggregator and returns all tracked form IDs'
+        }
+      }
+
+      namespace engineNs 'Engine Namespace' {
+        description 'Thin wrappers around engine functions via Address Library'
+
+        data atomicToggle 'g_auto_complete (atomic<bool>)' {
+          description 'Toggle flag — ON means the hook will auto-complete surveys'
+        }
+
+        data atomicPending 'g_pending_planet (atomic<uint32>)' {
+          description 'Planet ID pending deferred CompleteSurvey dispatch'
+        }
+      }
+    }
+
+    component esmPlugin 'ESM Plugin' {
+      #esm
+      description 'Creation Kit-authored plugin with game records'
+
+      record gpog 'GPOG Record' {
+        description 'Game-Play Option Group — adds "Auto-Complete Survey" to the Settings menu'
+      }
+
+      record gpof 'GPOF Record' {
+        description 'Game-Play Option Flag — the boolean toggle backing the GPOG entry'
+      }
+    }
+
+    component papyrusScripts 'Papyrus Scripts' {
+      #papyrus
+      description 'Event-driven scripts that bridge ESM settings to the SFSE plugin'
+
+      script questScript 'CompletePlanetSurveyQuest.psc' {
+        description '''
+          Main quest script. OnInit registers for GPOF change events.
+          When the player toggles the setting, calls
+          SetAutoCompleteSurveyEnabled native to sync the atomic flag.
+        '''
+      }
+
+      script nativeScript 'CompletePlanetSurveyNative.psc' {
+        description 'ScriptObject declaring the 7 native function signatures bound by the SFSE plugin'
+      }
+    }
+  }
+
+  // ── Top-level relationships ──
+
+  player -> completePlanetSurvey 'Installs & uses'
+  player -> starfield 'Plays'
+
+  // Mod → Engine relationships
+  completePlanetSurvey.sfsePlugin.hookNs.installHook -[hooks]-> starfield.scanPath.surveyCheckNotify 'Patches call site with write_call<5>'
+  completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -[hooks]-> starfield.scanPath.surveyCheckNotify 'Intercepts, then calls original'
+  completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -> completePlanetSurvey.sfsePlugin.engineNs.atomicPending 'Sets pending planet'
+  completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.atomicToggle 'Checks toggle'
+  completePlanetSurvey.sfsePlugin.hookNs.poller -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.atomicPending 'Exchanges atomically'
+  completePlanetSurvey.sfsePlugin.hookNs.poller -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey 'Dispatches on main thread'
+
+  // Papyrus namespace → Engine
+  completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -[calls]-> starfield.aggregator.surveyAggregator 'Enumerates species'
+  completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -[writes]-> starfield.knowledgeDb.hashMap 'Marks species scanned'
+  completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -[calls]-> starfield.scanPath.setScanned 'Spawn-and-scan flora'
+  completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -[calls]-> starfield.scanPath.planetProgress 'Direct biome progress tick'
+  completePlanetSurvey.sfsePlugin.papyrusNs.completeSurvey -[fires]-> starfield.scanPath.surveyCheckNotify 'Triggers completion event'
+
+  // Engine scan path internal flow
+  starfield.scanPath.setScanned -[calls]-> starfield.scanPath.resolveComponent 'Resolve biome ref'
+  starfield.scanPath.resolveComponent -[calls]-> starfield.scanPath.planetProgress 'Update progress'
+  starfield.scanPath.surveyCheckNotify -[fires]-> starfield.events.progressEvent 'Conditional'
+  starfield.scanPath.surveyCheckNotify -[fires]-> starfield.events.completeEvent 'When 100%'
+
+  // Knowledge DB
+  starfield.knowledgeDb.getManager -[reads]-> starfield.knowledgeDb.hashMap 'manager+0x8B0'
+
+  // ESM ↔ Papyrus scripts
+  completePlanetSurvey.papyrusScripts.questScript -[reads]-> completePlanetSurvey.esmPlugin.gpof 'OnGamePlayOptionChanged'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.setToggle 'Syncs atomic flag'
+  completePlanetSurvey.papyrusScripts.nativeScript -> completePlanetSurvey.sfsePlugin.papyrusNs 'Declares native bindings'
+
+  // Toggle flow
+  completePlanetSurvey.sfsePlugin.papyrusNs.getToggle -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.atomicToggle
+  completePlanetSurvey.sfsePlugin.papyrusNs.setToggle -[writes]-> completePlanetSurvey.sfsePlugin.engineNs.atomicToggle
+}
