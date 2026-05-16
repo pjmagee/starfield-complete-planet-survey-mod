@@ -7,8 +7,9 @@ moment you scan any single flora or fauna. Toggleable from **Settings →
 Gameplay**.
 
 Built as an SFSE plugin (DLL) + a tiny ESM (Settings toggle) + a Papyrus glue
-script. Targets Starfield 1.16.242.0 with SFSE 0.2.20. (Address Library
-makes the native IDs version-independent — see "Ghidra findings" below.)
+script. Address Library makes the native IDs version-independent — see
+"Ghidra findings" below. The game / SFSE versions each release was built and
+tested against are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -124,10 +125,10 @@ found at runtime by scanning the first `0x400` bytes of `ID_52157` for an
 
 ## Ghidra findings we actually use
 
-The IDs below were Ghidra-derived on Starfield 1.16.236.0 and remain valid
-on 1.16.242.0 (a minor patch — same `1.16` code generation, no SFSE-flagged
-ABI break). Address Library decouples these IDs from runtime offsets so the
-mod survives game patches (as long as the IDs stay mapped).
+The IDs below were Ghidra-derived on Starfield 1.16.236.0. Address Library
+decouples these IDs from runtime offsets so the mod survives game patches
+(as long as the IDs stay mapped); the game / SFSE versions each release was
+built and tested against are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ### Knowledge database
 
