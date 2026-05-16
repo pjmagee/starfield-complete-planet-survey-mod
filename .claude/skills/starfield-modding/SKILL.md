@@ -1,11 +1,11 @@
 ---
 name: starfield-modding
 description: |
-  End-to-end guidance for modding and reverse engineering Bethesda's Starfield: SFSE plugin development with CommonLibSF, Papyrus scripting and decompilation (Champollion), binary analysis in Ghidra, address-library offset discovery across game versions, and packaging/distribution via FOMOD, Wrye Bash, and Nexus Mods.
+  End-to-end guidance for modding and reverse engineering Bethesda's Starfield: SFSE plugin development with CommonLibSF, Papyrus scripting and decompilation (Champollion), binary analysis in Ghidra (GUI and `analyzeHeadless` CLI for scripted/agent-driven RE), address-library offset discovery across game versions, and packaging/distribution via FOMOD, Wrye Bash, and Nexus Mods.
 
-  USE WHEN: user works on Starfield mods (SFSE plugins, Papyrus scripts, ESM/ESP plugins), reverse engineers Starfield.exe, hunts for function offsets after a game update, decompiles .pex scripts, or packages/distributes a mod.
+  USE WHEN: user works on Starfield mods (SFSE plugins, Papyrus scripts, ESM/ESP plugins), reverse engineers Starfield.exe, hunts for function offsets after a game update, decompiles .pex scripts, drives Ghidra in headless mode for automated analysis, or packages/distributes a mod.
 
-  COVERS: SFSE plugin anatomy, address library IDs, CommonLibSF RE/ types, Papyrus <-> native boundaries, Ghidra signature hunting, AOB/sig updating workflow, FOMOD structure, Wrye Bash tagging, community-patch conventions.
+  COVERS: SFSE plugin anatomy, address library IDs, CommonLibSF RE/ types, Papyrus <-> native boundaries, Ghidra signature hunting (interactive and headless `analyzeHeadless` CLI workflows), AOB/sig updating workflow, FOMOD structure, Wrye Bash tagging, community-patch conventions.
 
 ---
 
@@ -20,7 +20,7 @@ Bethesda officially supports Starfield modding — Creation Kit is first-party, 
 | Layer | What it is | Primary tool |
 |---|---|---|
 | Native code extension | DLL injected into Starfield.exe | [SFSE](https://github.com/ianpatt/sfse) + CommonLibSF |
-| Native binary analysis | Reversing Starfield.exe to find offsets/types | [Ghidra](https://github.com/NationalSecurityAgency/ghidra) (+ IDA) |
+| Native binary analysis | Reversing Starfield.exe to find offsets/types | [Ghidra](https://github.com/NationalSecurityAgency/ghidra) (GUI **or** `analyzeHeadless` CLI) (+ IDA) |
 | Scripting | Papyrus `.psc` -> compiled `.pex` | Creation Kit compiler; [Champollion](https://github.com/Orvid/Champollion) to decompile |
 | Data/records | ESM/ESP/ESL plugins (forms, quests, records) | Creation Kit, xEdit (SF1Edit) |
 | Load order / patching | Merging, tagging, conflict resolution | [Wrye Bash](https://github.com/wrye-bash/wrye-bash) |
@@ -34,18 +34,22 @@ Bethesda officially supports Starfield modding — Creation Kit is first-party, 
 
 When the user poses a Starfield modding task, produce:
 
-1. **Task classification** — plugin (native), script (Papyrus), data (ESM), or hybrid
-2. **Game version target** — offsets and structs vary per update
-3. **Tool plan** — which of the above layers are in scope
-4. **Risk notes** — offset rot after patches, load-order hazards
-5. **First concrete action** — one command or file to open
+1. **Verify deployment state** — what's actually installed in `Data\`, `Data\SFSE\Plugins\`, `Plugins.txt`, `ContentCatalog.txt`, and the SFSE log dir. Filesystem is the truth; READMEs and prior session memory are hearsay until checked. See [references/deployment-state.md](references/deployment-state.md).
+2. **Task classification** — plugin (native), script (Papyrus), data (ESM), or hybrid
+3. **Game version target** — offsets and structs vary per update
+4. **Tool plan** — which of the above layers are in scope
+5. **Risk notes** — offset rot after patches, load-order hazards
+6. **First concrete action** — one command or file to open
 
-Do not speculate about offsets or function signatures — verify with Address Library / Ghidra.
+Do not speculate about offsets, function signatures, or what's currently deployed — verify with Address Library / Ghidra / the filesystem.
+
+**Prefer Ghidra's headless CLI for agent-driven RE.** Ghidra ships `analyzeHeadless.bat` (Windows) / `analyzeHeadless` (Unix) under `<ghidra>/support/`. It runs import, analysis, and Java/Jython post-scripts non-interactively — ideal when Claude is driving the loop (batch decompile dumps, offset-label imports, pattern searches, cross-version diffs) instead of a human clicking in the GUI. Reach for headless mode by default for any automatable RE step; only open the GUI when you need to browse decompiler output or the graph view. See [references/reverse-engineering.md](references/reverse-engineering.md) for the commands and script-authoring rules (no `askFile`, positional args, etc.).
 
 ---
 
 ## Quick Reference by Task
 
+- **Auditing what's actually deployed (start of session, before claiming "no conflict", post-pivot cleanup)** → [references/deployment-state.md](references/deployment-state.md)
 - **Writing an SFSE plugin** → [references/sfse.md](references/sfse.md) and [references/commonlibsf.md](references/commonlibsf.md)
 - **Finding or updating an offset after a game patch** → [references/reverse-engineering.md](references/reverse-engineering.md)
 - **Working with Papyrus / decompiling .pex** → [references/papyrus.md](references/papyrus.md)
@@ -67,11 +71,13 @@ Do not speculate about offsets or function signatures — verify with Address Li
 
 ## Common Pitfalls
 
+- **Trusting the README / project memory over the filesystem** when claiming what's deployed. Architecture pivots (ESM → SFSE) leave the old layer running unless it's actively removed — `Plugins.txt` and `ContentCatalog.txt` don't auto-clean. Run the [deployment-state checklist](references/deployment-state.md) at the start of every session and before any "X is the only thing doing Y" claim.
 - Loading a plugin built against a different CommonLibSF commit than the runtime expects — linker will succeed, behavior will be undefined.
 - Using Address Library IDs from one version's database against a different version.
 - Shipping `.pex` without the matching `.psc` — makes future maintenance impossible.
 - Forgetting to register FormIDs as `0xFE000000`-prefixed when shipping as ESL-flagged.
 - Publishing without a FOMOD when the mod has optional features — users end up manually copying files.
+- Running an SFSE-only mod without [CrashLoggerSF](https://www.nexusmods.com/starfield/mods/3273) — the raw `.dmp` Starfield drops on crash needs WinDbg + symbols. CrashLogger writes a readable stack trace to `SFSE\Logs\crash-*.log`. Install before any RE or hooking work.
 
 ---
 

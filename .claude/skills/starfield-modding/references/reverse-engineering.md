@@ -57,11 +57,21 @@ Typical recipe:
 4. Confirm with a runtime hook + log print.
 5. If promoting: request an Address Library ID assignment (or generate locally with known naming conventions).
 
-## Headless Ghidra workflow (process we actually use)
+## Headless Ghidra CLI workflow (`analyzeHeadless`)
+
+Ghidra has a first-class non-interactive mode: `support/analyzeHeadless.bat`
+(Windows) / `support/analyzeHeadless` (Unix). It accepts a project dir + name,
+`-import`/`-process` for the target binary, and `-preScript` / `-postScript` to
+run Java or Python (Jython, or Python 3 via Ghidrathon) scripts against the
+program with no GUI. **This is the mode Claude should use by default** for any
+scripted RE step — batch decompile dumps, offset-label imports, string/xref
+sweeps, cross-version diffs — so the agent can run the loop instead of the
+user clicking through menus.
 
 Install: Ghidra isn't on winget — download the release zip from
 `github.com/NationalSecurityAgency/ghidra/releases/latest` and extract to
 `C:/Tools/ghidra_<ver>_PUBLIC/`. Needs JDK 21 on PATH (or set `JAVA_HOME`).
+`analyzeHeadless.bat` lives under `<ghidra>/support/`.
 
 One-time import + analysis (~30 min for Starfield.exe 1.16.236.0):
 
