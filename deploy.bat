@@ -4,6 +4,15 @@ setlocal
 set "GAME_DIR=E:\SteamLibrary\steamapps\common\Starfield"
 set "PROJECT_DIR=%~dp0"
 
+:: Refuse to deploy while Starfield is running. The DLL and ESM are locked, so a
+:: copy aborts partway and leaves a STALE DLL loaded — a silent footgun that looks
+:: like "the new build didn't change anything". Close the game fully first.
+tasklist /fi "imagename eq Starfield.exe" 2>nul | find /i "Starfield.exe" >nul
+if not errorlevel 1 (
+  echo [FAIL] Starfield is running - close it fully before deploying.
+  exit /b 1
+)
+
 :: Compile Papyrus
 set "COMPILER=E:\SteamLibrary\steamapps\common\Starfield 2722710\Tools\Papyrus Compiler\PapyrusCompiler.exe"
 set "INC=%PROJECT_DIR%temp_scripts\source;%PROJECT_DIR%Data\Scripts\Source\User"
