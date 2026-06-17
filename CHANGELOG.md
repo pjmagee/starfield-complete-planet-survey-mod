@@ -41,6 +41,45 @@ verified.
 
 *No unreleased changes.*
 
+## [1.0.8] — 2026-06-17
+
+Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21**.
+
+> ⚠ **Target changed from v1.0.7.** This DLL is built for Starfield 1.16.244.0 +
+> SFSE 0.2.21. The v1.0.7 build (1.16.242.0) **crashes at load** on 1.16.244 with
+> `REL/IDDB.cpp: Failed to find offset for Address Library ID! Invalid ID: 139352`.
+> Match your game and SFSE to this release; stay on v1.0.7 only if you remain on
+> 1.16.242.0.
+
+A compatibility recompile for Starfield 1.16.244 — no new survey capability over
+v1.0.7.
+
+### Changed
+
+- Rebuilt against CommonLibSF `998b6cd` (was `186654e`). 1.16.244 relocated
+  `BSStringPool::GetEntry` / `GetEntryW`, whose Address Library IDs changed
+  (`139352 → 1186742`, `139354 → 1186743`); the old IDs are absent from Address
+  Library v22, so the prior build aborted at load on the first `BSFixedString`
+  construction. Upstream `RUNTIME_LATEST` is now 1.16.244.
+- Native `REL::ID`s and the Ghidra-derived struct offsets are **unchanged** —
+  re-verified correct on 1.16.244 across 5 planets and all four trigger paths
+  (console command, resource / flora / fauna scan).
+
+### Added
+
+- Per-stage survey diagnostics in `CompletePlanetSurvey.log` (aggregator span
+  sizes, DB `seen`/`marked`, form-type breakdown, spawn `placeFail`/`noForm`) so
+  the next patch's triage is a single log read rather than an offset hunt.
+
+### Internal (no behavior change)
+
+- `build.bat` now runs the real xmake build (it referenced a non-existent
+  CMake/Ninja setup); `deploy.bat` refuses to run while Starfield is open (a
+  locked partial copy silently left a stale DLL loaded); removed the stale
+  FOMOD-era `package.bat` (superseded by `package.py` since v1.0.5).
+- Skill: added the game-patch update playbook + next-patch test checklist
+  (`.claude/skills/starfield-modding/references/game-patch-update.md`).
+
 ## [1.0.7] — 2026-05-16
 
 Built/tested against **Starfield 1.16.242.0 / SFSE 0.2.20**.
@@ -155,7 +194,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.7...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.8...HEAD
+[1.0.8]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.4...v1.0.5
