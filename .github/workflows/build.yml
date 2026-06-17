@@ -64,15 +64,19 @@ jobs:
           files: Complete-Planet-Survey-*.zip
           generate_release_notes: true
 
-      # Nexus upload uses a beta API (v1.0.0-beta.4). Pin to a known tag —
-      # when the action stabilises, move to v1 or a commit SHA.
+      # Nexus upload on the Nexus Mods v3 API (action beta.8). beta.4 used the
+      # createUpdateGroupVersion endpoint, removed 2026-09-09; beta.8 switches to
+      # createModFileVersion (POST /mod-files/{id}/versions) and renames inputs.
+      # Requires repo variable NEXUS_FILE_ID = the Nexus *file* ID to push new
+      # versions to (mod page → Files tab), NOT the old file-group ID.
+      # Still a beta pin; move to v1 or a commit SHA once it stabilises.
       - name: Upload to Nexus Mods
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: Nexus-Mods/upload-action@v1.0.0-beta.4
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.8
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
-          file_group_id: ${{ vars.NEXUS_FILE_GROUP_ID }}
+          file_id: ${{ vars.NEXUS_FILE_ID }}
           filename: ${{ env.ZIP_NAME }}
           display_name: Complete Planet Survey
           version: ${{ env.VERSION }}
-          file_category: main
+          category: main
