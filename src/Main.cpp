@@ -178,15 +178,22 @@ namespace Engine
     // Runs the aggregator, walks the four span pairs (two uint32[], two TESForm*[]),
     // calls `fn(formId)` for each valid entry, then frees the buffer.
     template <typename Fn>
-    void ForEachAggregatedFormId(std::uint32_t planetId, Fn&& fn)
+    void ForEachAggregatedFormId(std::uint32_t planetId, Fn&& fn, const char* diagTag = nullptr)
     {
         alignas(16) std::uint8_t buf[0x400] {};
         SurveyAggregator(buf, planetId);
 
+        // Diagnostic: raw element count per span. A wrong span offset on a new
+        // game build shows up here as 0 or an absurd length while sibling spans
+        // look normal — the signature of planet-specific partial completion.
+        std::size_t spanLen[4] = {0, 0, 0, 0};
+        int         spanIdx    = 0;
+
         auto scanUint = [&](std::size_t beginOff, std::size_t endOff)
         {
-            const auto* begin = *reinterpret_cast<std::uint32_t* const*>(buf + beginOff);
-            const auto* end   = *reinterpret_cast<std::uint32_t* const*>(buf + endOff);
+            const auto* begin   = *reinterpret_cast<std::uint32_t* const*>(buf + beginOff);
+            const auto* end     = *reinterpret_cast<std::uint32_t* const*>(buf + endOff);
+            spanLen[spanIdx++]  = (begin && end && end >= begin) ? static_cast<std::size_t>(end - begin) : 0;
             for (auto p = begin; p && p != end; ++p)
             {
                 if (*p && *p != kInvalidFormId)
@@ -195,8 +202,9 @@ namespace Engine
         };
         auto scanPtr = [&](std::size_t beginOff, std::size_t endOff)
         {
-            const auto* begin = *reinterpret_cast<std::uintptr_t* const*>(buf + beginOff);
-            const auto* end   = *reinterpret_cast<std::uintptr_t* const*>(buf + endOff);
+            const auto* begin   = *reinterpret_cast<std::uintptr_t* const*>(buf + beginOff);
+            const auto* end     = *reinterpret_cast<std::uintptr_t* const*>(buf + endOff);
+            spanLen[spanIdx++]  = (begin && end && end >= begin) ? static_cast<std::size_t>(end - begin) : 0;
             for (auto p = begin; p && p != end; ++p)
             {
                 if (!*p)
@@ -212,6 +220,10 @@ namespace Engine
         scanPtr(kAggPtrSpan0Begin, kAggPtrSpan0End);
         scanPtr(kAggPtrSpan1Begin, kAggPtrSpan1End);
 
+        if (diagTag)
+            spdlog::info("{}: aggregator spans uint0={} uint1={} ptr0={} ptr1={}",
+                         diagTag, spanLen[0], spanLen[1], spanLen[2], spanLen[3]);
+
         SurveyBufferFree(buf);
     }
 
@@ -226,11 +238,18 @@ namespace Engine
             return 0;
 
         int marked = 0;
+        int seen   = 0;
+        // Span breakdown is logged once per completion by EnumeratePlanetSpecies
+        // (same aggregator, same planet) — don't double-log it here.
         ForEachAggregatedFormId(planetId, [&](std::uint32_t fid)
         {
+            ++seen;
             if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
                 ++marked;
         });
+        // seen > marked => DB lookup missed some forms (per-planet entry not found
+        // or hashmap offset wrong); seen == 0 => aggregator returned nothing.
+        spdlog::info("MarkEverythingForPlanet: planetId=0x{:08X} seen={} marked={}", planetId, seen, marked);
         return marked;
     }
 
@@ -388,16 +407,22 @@ namespace Papyrus
         const auto planetId = Engine::ReadPlanetId(planetForm);
         if (!planetId) return 0;
 
+        // Diagnostic tallies: how many aggregated IDs resolve, and into which
+        // form types. `noform` > 0 implicates LookupByID (CommonLibSF); `other`
+        // > 0 means species are tracked under a type the FLOR/NPC_ filter drops.
+        int total = 0, noform = 0, flora = 0, fauna = 0, other = 0;
         Engine::ForEachAggregatedFormId(planetId, [&](std::uint32_t fid) {
+            ++total;
             auto* form = RE::TESForm::LookupByID(fid);
-            if (!form) return;
+            if (!form) { ++noform; return; }
             const auto ft = form->GetFormType();
-            if (ft == RE::FormType::kFLOR || ft == RE::FormType::kNPC_)
-                g_planetSpeciesCache.push_back(fid);
-        });
+            if (ft == RE::FormType::kFLOR) { ++flora; g_planetSpeciesCache.push_back(fid); }
+            else if (ft == RE::FormType::kNPC_) { ++fauna; g_planetSpeciesCache.push_back(fid); }
+            else { ++other; }
+        }, "EnumeratePlanetSpecies");
 
-        spdlog::info("EnumeratePlanetSpecies: planet=0x{:08X} count={}",
-                     planetForm->GetFormID(), g_planetSpeciesCache.size());
+        spdlog::info("EnumeratePlanetSpecies: planet=0x{:08X} aggregated={} flora={} fauna={} other={} noform={} kept={}",
+                     planetForm->GetFormID(), total, flora, fauna, other, noform, g_planetSpeciesCache.size());
         return static_cast<std::int32_t>(g_planetSpeciesCache.size());
     }
 
