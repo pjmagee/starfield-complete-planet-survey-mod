@@ -231,23 +231,62 @@ build.bat / deploy.bat / import-esm.bat / package.py
 
 ---
 
-## Build
+## Build & development setup
 
-Requires xmake, MSVC, Python 3 (for packaging), Starfield Creation Kit (only
-if editing the ESM), and the Papyrus Compiler from the CK install.
+A fresh clone needs different things depending on what you're doing —
+**building the DLL needs very little; everything else is optional.**
+
+### 1. Build the DLL (the only hard requirement)
 
 ```bat
-build.bat        :: compile DLL via xmake
-deploy.bat       :: compile Papyrus, copy DLL+ESM+PEX to game, manage plugins.txt
-import-esm.bat   :: copy game ESM back into the repo (run after editing in CK)
-package.py       :: build the distributable CompletePlanetSurvey.zip
+git submodule update --init --recursive   :: fetch CommonLibSF (clones empty otherwise)
+build.bat                                  :: compile the DLL via xmake
 ```
 
-Address Library (`offsets-1-16-236-0.txt`) is **not** checked in (19 MB) —
-download from [Address Library on Nexus](https://www.nexusmods.com/starfield/mods/3256)
-and place at the repo root before building.
+Needs **xmake**, **MSVC** (VS Build Tools), and **Python 3** (for packaging).
+xmake fetches the rest (spdlog) on first build — this is exactly what CI does.
 
-For VSCode IntelliSense, generate `compile_commands.json` once after cloning:
+### 2. Recompile Papyrus / deploy locally
+
+```bat
+deploy.bat       :: compile Papyrus, copy DLL+ESM+PEX to the game, manage plugins.txt
+import-esm.bat   :: copy the game ESM back into the repo (after editing in CK)
+```
+
+`deploy.bat` additionally needs the **Creation Kit Papyrus Compiler** and a
+populated **`temp_scripts/`** (gitignored): the base-game `.psc` sources plus
+`Starfield_Papyrus_Flags.flg`, taken from the CK install. Without them the
+Papyrus compile step fails. (CI never runs this — it packages the committed
+`.pex`.)
+
+### 3. Package the distributable
+
+```bat
+package.bat 1.0.8    :: -> Complete-Planet-Survey-1.0.8.zip (wraps package.py)
+```
+
+Packages the current build, so run `build.bat` first. CI runs `package.py` on
+`v*` tags.
+
+### 4. Reverse engineering (optional)
+
+- **Ghidra** (headless or GUI) plus a copy of `Starfield.exe` to analyse.
+- `offsets-1-16-236-0.txt` — **not** checked in (~19 MB); download from
+  [Address Library on Nexus](https://www.nexusmods.com/starfield/mods/3256) and
+  place at the repo root. Used only to label IDs in Ghidra — **not** to build.
+- `ghidra-project/` (gitignored) — regenerate by importing + analysing the exe.
+- `tools/champollion/` (gitignored) —
+  [Champollion](https://github.com/Orvid/Champollion) for decompiling `.pex`.
+
+### 5. Run / test in-game
+
+The game, a matching **SFSE** build, and the **Address Library** versionlib for
+your game version (both from Nexus).
+[CrashLoggerSF](https://www.nexusmods.com/starfield/mods/3273) is strongly
+recommended for any hooking/RE work.
+
+For VSCode IntelliSense, regenerate `compile_commands.json` after cloning
+(machine-specific, gitignored):
 
 ```bat
 xmake project -k compile_commands .
