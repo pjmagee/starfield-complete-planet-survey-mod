@@ -49,6 +49,7 @@ Do not speculate about offsets, function signatures, or what's currently deploye
 
 ## Quick Reference by Task
 
+- **Updating the mod after a Starfield game patch (versionlib lag, IDDB load crash, offset rot, shipping the recompile)** → [references/game-patch-update.md](references/game-patch-update.md)
 - **Auditing what's actually deployed (start of session, before claiming "no conflict", post-pivot cleanup)** → [references/deployment-state.md](references/deployment-state.md)
 - **Writing an SFSE plugin** → [references/sfse.md](references/sfse.md) and [references/commonlibsf.md](references/commonlibsf.md)
 - **Finding or updating an offset after a game patch** → [references/reverse-engineering.md](references/reverse-engineering.md)
@@ -90,6 +91,6 @@ This repo (`starfield-complete-planet-survey-mod`) is a concrete example of the 
 - Ghidra analysis artifacts in [re/](../../../re/) — scripts under `re/ghidra/scripts/`, decompile dumps under `re/ghidra/output/`, Python helpers under `re/tools/`
 - Ghidra project DB (`ghidra-project/Starfield.gpr` + `Starfield.rep`) is local-only (gitignored). In Ghidra's Script Manager add `re/ghidra/scripts/` as a script directory so the canonical scripts run from there.
 - Champollion decompiler binary in `tools/champollion/` (local-only, gitignored)
-- FOMOD installer staged in [fomod/](../../../fomod/)
+- Distributable is a **flat `Data/`-prefixed zip** built by [package.py](../../../package.py) (FOMOD was dropped in v1.0.5 for MO2/Vortex "Install From File" compatibility); CI runs it on `v*` tags and auto-uploads to Nexus
 
 Use these as the first place to ground any concrete suggestion before looking elsewhere.
