@@ -87,19 +87,29 @@ int Function SpawnAndScanAllPlanetSpecies(Form planetForm, ObjectReference playe
 
     ObjectReference[] spawned = new ObjectReference[128]
     int spawnCount = 0
+    int noFormCount = 0
+    int placeFailCount = 0
     int i = 0
     While i < total && spawnCount < 128
         int  speciesFid  = CompletePlanetSurveyNative.GetPlanetSpeciesFormIdAt(i)
         Form speciesForm = Game.GetForm(speciesFid)
-        If speciesForm != None
+        If speciesForm == None
+            noFormCount += 1
+        Else
             ObjectReference ref = playerRef_OR.PlaceAtMe(speciesForm, 1, false, true, true, None, None, true)
             If ref != None
                 spawned[spawnCount] = ref
                 spawnCount += 1
+            Else
+                placeFailCount += 1
             EndIf
         EndIf
         i += 1
     EndWhile
+
+    ; Diagnostic: spawned < total means some species could not be placed (PlaceAtMe
+    ; returned None) or resolved (Game.GetForm None) — those biomes won't complete.
+    CompletePlanetSurveyNative.DebugLog("SpawnAndScan: total=" + total + " spawned=" + spawnCount + " noForm=" + noFormCount + " placeFail=" + placeFailCount)
 
     ; SetScanned drives ID_83008 (fauna works). UpdatePlanetProgressForSpecies hits
     ; ID_52157 directly — required for flora whose ID_83038 no-ops on PlaceAtMe'd refs.
