@@ -1,0 +1,73 @@
+=== ID_52204 / ID_52204 @ 1407bfc40 ===
+
+void ID_52204(longlong param_1,ulonglong param_2,undefined8 param_3,undefined8 param_4)
+
+{
+  int *piVar1;
+  uint uVar2;
+  int iVar3;
+  longlong lVar4;
+  longlong *plVar5;
+  undefined8 *puVar6;
+  ulonglong uVar7;
+  longlong local_28;
+  uint local_20;
+  int local_1c;
+  
+  uVar7 = (ulonglong)ID_938333;
+  lVar4 = *(longlong *)(param_1 + 0x30);
+  puVar6 = (undefined8 *)ID_123895(lVar4 + 0x40,&local_28,0x98,8);
+  puVar6[1] = ID_51538;
+  *puVar6 = BSComponentDB2::Detail::
+            CreateAndDeleteCommand<class_<lambda_546d49705a2f97f85331da948a35af88>,class_BSComponentDB2::Detail::ComponentKey<struct_BSComponentDB2::Detail::SortByTypeTraits>&___ptr64,struct_BSGalaxy::PlayerKnowledge>
+            ::vftable;
+  ID_51393(puVar6 + 3,param_4);
+  puVar6[0x11] = (uVar7 << 0x20 | param_2 & 0xffffffff) << 0x10;
+  puVar6[0x12] = param_1;
+  LOCK();
+  uVar2 = *(uint *)(local_28 + 0x10);
+  *(uint *)(local_28 + 0x10) = local_20;
+  UNLOCK();
+  if (uVar2 < *(uint *)(lVar4 + 0x1a4)) {
+    *(uint *)((ulonglong)uVar2 + 0x44 + local_28) = local_20;
+  }
+  else {
+    *(uint *)(local_28 + 0x14) = local_20;
+  }
+  LOCK();
+  piVar1 = (int *)(local_28 + 0xc);
+  iVar3 = *piVar1;
+  *piVar1 = *piVar1 + local_1c;
+  UNLOCK();
+  plVar5 = *(longlong **)(*(longlong *)(param_1 + 0x30) + 0x238);
+  if (plVar5 != (longlong *)0x0) {
+    (**(code **)(*plVar5 + 0x10))(plVar5,local_20,iVar3);
+  }
+  return;
+}
+
+
+
+=== ID_51421 / ID_51421 @ 140772c70 ===
+
+longlong * ID_51421(longlong *param_1)
+
+{
+  longlong lVar1;
+  
+  *param_1 = 0;
+  param_1[1] = 0;
+  if (ID_883288 != 2) {
+    ID_123789(&ID_883289,&ID_883288);
+  }
+  lVar1 = ID_123792(&ID_883289,0x28,8,1);
+  *(longlong *)lVar1 = lVar1;
+  *(longlong *)(lVar1 + 8) = lVar1;
+  *(longlong *)(lVar1 + 0x10) = lVar1;
+  *(undefined2 *)(lVar1 + 0x18) = 0x101;
+  *param_1 = lVar1;
+  return param_1;
+}
+
+
+

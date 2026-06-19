@@ -1,0 +1,80 @@
+=== ID_90626 / ID_90626 @ 1415a9690 ===
+
+ulonglong ID_90626(undefined4 param_1,int param_2,int *param_3)
+
+{
+  uint *puVar1;
+  uint uVar2;
+  undefined8 *puVar3;
+  longlong lVar4;
+  int *piVar5;
+  ulonglong uVar6;
+  ulonglong uVar7;
+  undefined4 local_res8 [2];
+  longlong local_res18;
+  int *local_68;
+  int local_60;
+  undefined4 *local_58;
+  undefined1 local_50;
+  undefined **local_48;
+  int *local_40;
+  undefined8 *local_38;
+  int *local_30;
+  
+  local_res8[0] = 1;
+  local_58 = local_res8;
+  local_50 = 0;
+  local_68 = param_3;
+  local_60 = param_2;
+  lVar4 = ID_126578();
+  local_res18 = *(longlong *)(lVar4 + 0x8b0);
+  puVar3 = *(undefined8 **)(local_res18 + 0x238);
+  lVar4 = 0;
+  if (puVar3 != (undefined8 *)0x0) {
+    LOCK();
+    *(int *)(puVar3 + 1) = *(int *)(puVar3 + 1) + 1;
+    UNLOCK();
+    lVar4 = *(longlong *)(local_res18 + 0x238);
+  }
+  local_38 = puVar3;
+  piVar5 = (int *)ID_126655(lVar4 + 0x10);
+  local_30 = piVar5;
+  uVar6 = ID_90635(&local_58,&local_res18,param_1,&local_68);
+  *piVar5 = *piVar5 + -1;
+  if (*piVar5 == 0) {
+    LOCK();
+    puVar1 = (uint *)((longlong)puVar3 + 0x21c);
+    uVar6 = (ulonglong)*puVar1;
+    *puVar1 = *puVar1 + 4;
+    UNLOCK();
+  }
+  if (puVar3 != (undefined8 *)0x0) {
+    LOCK();
+    puVar1 = (uint *)(puVar3 + 1);
+    uVar2 = *puVar1;
+    uVar6 = (ulonglong)uVar2;
+    *puVar1 = *puVar1 - 1;
+    UNLOCK();
+    if (uVar2 == 1) {
+      uVar6 = (**(code **)*puVar3)(puVar3,1);
+    }
+  }
+  if (((*param_3 == 0) &&
+      ((((lVar4 = ID_890986, param_2 == 0x23 || (lVar4 = ID_890990, param_2 == 0x24)) ||
+        (lVar4 = ID_890992, param_2 == 0x25)) ||
+       ((lVar4 = ID_890994, param_2 == 0x26 || (lVar4 = ID_890988, param_2 == 0x2d)))))) &&
+     (lVar4 != 0)) {
+    local_48 = BSTArrayAllocatorFunctor<class_BSScrapArrayAllocator>::vftable;
+    local_40 = param_3;
+    uVar6 = ID_123859(param_3,&local_48,param_3[1],8);
+    if ((int)uVar6 != -1) {
+      uVar7 = uVar6 & 0xffffffff;
+      uVar6 = *(ulonglong *)(param_3 + 4);
+      *(longlong *)(uVar6 + uVar7 * 8) = lVar4;
+    }
+  }
+  return uVar6;
+}
+
+
+
