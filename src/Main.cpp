@@ -32,6 +32,12 @@ namespace Engine
     //   Signature (subobj*, species_id, delta_byte, ?).
     //   Finds/creates entry for species_id and increments the scan-flag byte at entry+0x21.
     using fn_incr_flag_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t delta, std::uint64_t zero);
+    // ID_124899: per-species PERCENT-byte writer on the same subobj as IncrementScanFlag.
+    //   Signature (subobj*, species_id, percent_byte, ?). Writes the scanned-% byte at the
+    //   entry's +0x20 (sibling of the scan-flag at +0x21). The real scan (ID_52158) sets BOTH;
+    //   GetSurveyPercent counts on +0x21, but the UI/other categories read +0x20, so we set both.
+    //   NOTE: param_3 is a BYTE — pass a literal 0..100, never a float.
+    using fn_set_percent_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t percent, std::uint64_t zero);
 
     inline REL::Relocation<fn_get_manager_t>     GetKnowledgeManager {REL::ID(126578)};
     inline REL::Relocation<fn_set_trait_known_t> SetTraitKnownNative {REL::ID(52155)};
@@ -39,6 +45,7 @@ namespace Engine
     inline REL::Relocation<fn_planet_progress_t> PlanetProgressNative {REL::ID(52157)};
     inline REL::Relocation<fn_db_lookup_t>       DbLookup {REL::ID(126806)};
     inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
+    inline REL::Relocation<fn_set_percent_t>     SetPercentByte {REL::ID(124899)};
     inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
 
     // ID_1016657: per-planet survey aggregator constructor.
@@ -65,6 +72,25 @@ namespace Engine
     using fn_survey_notify_t = void (*)(void* ctx);
     inline REL::Relocation<fn_survey_notify_t> SurveyCheckNotify {REL::ID(97853)};
 
+    // ID_52174: GetOrCreate the per-planet BSGalaxy::PlayerKnowledge entry.
+    //   Args: ({uint32 planetId, uint32 value}, &db). On a lookup-miss it builds a
+    //   fresh component internally (ID_51421) and enqueues a BSComponentDB2
+    //   create command (ID_52204 → CreateAndDeleteCommand<…,PlayerKnowledge>).
+    //   We call it with value=0 solely to MATERIALISE the entry for an undiscovered
+    //   planet so the ref-free survey writers have something to write to. The
+    //   create is asynchronous — the command is processed a frame or two later.
+    using fn_ensure_entry_t = void (*)(std::uint32_t* planetIdAndValue, std::uintptr_t* dbPtr);
+    inline REL::Relocation<fn_ensure_entry_t> EnsurePlanetEntryNative {REL::ID(52174)};
+
+    // ID_102650: the engine's ref-free "scan & fully survey a planet" entry point —
+    // what a starmap/orbital scan ultimately drives. It resolves the knowledge DB
+    // itself, then (via ID_102651) sets the surveyed bit, CREATES the entry if
+    // missing (ID_52204), fires the survey-complete event (→ the Survey Data slate
+    // reward), and recurses over the planet's moons. Self-contained: no spawn, no
+    // teleport, no async two-phase. Args: (unused-context, planetId, fullFlag=1).
+    using fn_scan_complete_t = void (*)(std::int64_t context, std::uint32_t planetId, std::uint8_t fullFlag);
+    inline REL::Relocation<fn_scan_complete_t> ScanCompletePlanet {REL::ID(102650)};
+
     // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0, Ghidra-derived).
     constexpr std::size_t  kPlanetIdOffset       = 0x54;   // uint32 knowledge key at planetForm+0x54
     constexpr std::size_t  kManagerDbOffset      = 0x8B0;  // knowledge DB ptr at manager+0x8B0 (ID_126578 result)
@@ -80,6 +106,9 @@ namespace Engine
     constexpr std::uint32_t  kInvalidFormId         = 0xFFFFFFFFu;
     // Default delta for scan-flag increment (marks species fully scanned in one pass).
     constexpr std::uint8_t   kDefaultScanDelta      = 100;
+    // Per-species percent byte value for "fully scanned" (ID_124899). Survey % counts on the
+    // scan-flag byte, but the UI/secondary categories read this percent — set it to complete.
+    constexpr std::uint8_t   kScanPercentComplete   = 100;
     // Maximum delta value (uint8 ceiling).
     constexpr std::uint8_t   kMaxScanDelta           = 255;
 
@@ -144,6 +173,50 @@ namespace Engine
     // reads to compute GetSurveyPercent — the only thing that matters.
     //
     // Returns 1 on success, 0 if planet not found in DB, -1 on null/invalid inputs.
+    // Resolve the per-planet survey component "subobj" in the knowledge DB.
+    //   subobj = entry + 0x20, where entry = out[2] + *(u16*)(out[2] + 0x12 + out[3]*4).
+    // The species scan table lives at subobj+0x18 (keys) / subobj+0x40 (data); each 0x30-stride
+    // entry has the PERCENT byte at +0x20 and the SCAN-FLAG byte at +0x21. subobj+0x00 itself is
+    // the planet-level "attribute known" bitmask (bits read by ID_52151 / GetSurveyPercent).
+    // Returns nullptr if the planet has no entry yet (create still pending / never discovered).
+    std::uint8_t* ResolvePlanetSubobj(std::uintptr_t db, std::uint32_t planetId)
+    {
+        if (!db || !planetId)
+            return nullptr;
+        // 64-bit key: (survey_discriminator << 48) | (planet_id << 16).
+        const std::uint16_t disc = *TraitDiscriminator.get();
+        const std::uint64_t key =
+            (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(planetId) << 16);
+
+        std::uintptr_t out[4]    = {0, 0, 0, kDbLookupNotFound};
+        auto           container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
+        DbLookup(container, out, &key);
+        if (out[3] == kDbLookupNotFound && out[2] == 0)
+            return nullptr;
+
+        const auto base            = reinterpret_cast<std::uint8_t*>(out[2]);
+        const auto ushortOffsetPtr = reinterpret_cast<std::uint16_t*>(base + kBucketOffsetTableOff + out[3] * 4);
+        const auto entryPtr        = base + *ushortOffsetPtr;
+        return entryPtr + kEntrySubobjOffset;
+    }
+
+    // Set the planet-level "attribute known" bits (magnetosphere / resources / atmosphere /
+    // gravity / temperature / water etc.) that gate a large cluster of GetSurveyPercent's
+    // categories. ID_97851 reads bits 0,1,2 of the bitmask at entry+0x20 (== subobj+0x00):
+    // bit0 selects the +0x24 "DV" value, bits 1,2 (-> struct 0x1b0/0x1b1) gate the binary
+    // attribute categories. Setting the low 3 bits marks every scan-revealed attribute known.
+    // This is what a barren body (no species) needs to reach 100%. Returns true if applied.
+    bool SetPlanetAttributeBits(std::uint32_t planetId)
+    {
+        const auto db     = GetKnowledgeDB();
+        auto       subobj = ResolvePlanetSubobj(db, planetId);
+        if (!subobj)
+            return false;
+        // subobj+0x00 is the attribute bitmask. OR in the low 3 "known" bits. Idempotent.
+        *reinterpret_cast<std::uint32_t*>(subobj) |= 0x7u;
+        return true;
+    }
+
     int MarkSpeciesScannedForPlanet(std::uint32_t planetId, std::uint32_t speciesFormId, std::uint8_t delta)
     {
         if (!planetId || !speciesFormId)
@@ -152,25 +225,14 @@ namespace Engine
         if (!db)
             return -1;
 
-        // Build 64-bit key: (trait_discriminator << 48) | (planet_id << 16) | 0.
-        const std::uint16_t disc = *TraitDiscriminator.get();
-        const std::uint64_t key =
-            (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(planetId) << 16);
-
-        // Look up per-planet entry.
-        std::uintptr_t out[4]    = {0, 0, 0, kDbLookupNotFound};
-        auto           container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
-        DbLookup(container, out, &key);
-        if (out[3] == kDbLookupNotFound && out[2] == 0)
+        auto subobj = ResolvePlanetSubobj(db, planetId);
+        if (!subobj)
             return 0;
 
-        // Compute subobj pointer: base = out[2] + *(uint16*)(out[2] + 0x12 + out[3] * 4); subobj = base + 0x20.
-        const auto base            = reinterpret_cast<std::uint8_t*>(out[2]);
-        const auto ushortOffsetPtr = reinterpret_cast<std::uint16_t*>(base + kBucketOffsetTableOff + out[3] * 4);
-        const auto entryPtr        = base + *ushortOffsetPtr;
-        auto       subobj          = entryPtr + kEntrySubobjOffset;
-
+        // Set BOTH bytes the engine's real scan sets: the scan-flag (+0x21, what
+        // GetSurveyPercent counts on) and the percent byte (+0x20, the per-species %).
         IncrementScanFlag(subobj, speciesFormId, delta, 0);
+        SetPercentByte(subobj, speciesFormId, Engine::kScanPercentComplete, 0);
         return 1;
     }
 
@@ -232,25 +294,46 @@ namespace Engine
     // categories the UI displays (flora / fauna / resources / traits) for this planet.
     //
     // Returns the number of form IDs marked.
-    int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta)
+    int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta,
+                                const char* diagTag = nullptr, int* outSeen = nullptr)
     {
         if (!planetId)
             return 0;
 
         int marked = 0;
         int seen   = 0;
-        // Span breakdown is logged once per completion by EnumeratePlanetSpecies
-        // (same aggregator, same planet) — don't double-log it here.
+        int traits = 0;
+        // diagTag (when set) logs the four aggregator span lengths — used by the
+        // galaxy sweep on a few sample planets to confirm the canonical species
+        // lists are actually populated (vs empty on never-loaded fresh planets).
         ForEachAggregatedFormId(planetId, [&](std::uint32_t fid)
         {
             ++seen;
-            if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
+            // Planet TRAITS are BGSKeywords tracked by a separate per-planet
+            // "known" bitmask, NOT the per-species scan-flag byte. Bumping their
+            // scan flag is a no-op (they show 0/1 on the survey screen forever),
+            // so a keyword must go through SetTraitKnown (ID_52155) instead —
+            // the same call the per-planet path makes via Papyrus MarkTraits.
+            auto* form = RE::TESForm::LookupByID(fid);
+            if (form && form->GetFormType() == RE::FormType::kKYWD)
+            {
+                SetTraitKnownNative(planetId, reinterpret_cast<std::uintptr_t>(form), true);
+                ++traits;
+            }
+            else if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
+            {
                 ++marked;
-        });
-        // seen > marked => DB lookup missed some forms (per-planet entry not found
-        // or hashmap offset wrong); seen == 0 => aggregator returned nothing.
-        spdlog::info("MarkEverythingForPlanet: planetId=0x{:08X} seen={} marked={}", planetId, seen, marked);
-        return marked;
+            }
+        }, diagTag);
+        if (outSeen)
+            *outSeen = seen;
+        // seen > marked+traits => DB lookup missed some forms; seen == 0 =>
+        // aggregator returned nothing for this planet. debug-level: the galaxy
+        // sweep calls this 1798x, so keep it out of the default log; the sweep's
+        // aggregate markedTotal is the number that matters there.
+        spdlog::debug("MarkEverythingForPlanet: planetId=0x{:08X} seen={} marked={} traits={}",
+                      planetId, seen, marked, traits);
+        return marked + traits;
     }
 
     // Fire the survey check/notify routine. Triggers the completion event that
@@ -272,6 +355,202 @@ namespace Engine
         } ctx {planetId, 0.0f, 0, 0, 0};
         SurveyCheckNotify(&ctx);
     }
+
+    // Cheap test for "does this planet have a per-planet knowledge-DB entry yet?"
+    // (i.e. has the player discovered/scanned it). Same (disc, planetId) lookup
+    // the engine's writers do; returns false on the not-found sentinel. Lets the
+    // galaxy sweep touch only discovered planets and skip the rest with no work.
+    bool PlanetHasKnowledgeEntry(std::uint32_t planetId)
+    {
+        if (!planetId)
+            return false;
+        const auto db = GetKnowledgeDB();
+        if (!db)
+            return false;
+        const std::uint16_t disc = *TraitDiscriminator.get();
+        const std::uint64_t key =
+            (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(planetId) << 16);
+        std::uintptr_t out[4]    = {0, 0, 0, kDbLookupNotFound};
+        auto           container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
+        DbLookup(container, out, &key);
+        return !(out[3] == kDbLookupNotFound && out[2] == 0);
+    }
+
+    // Complete one planet's survey ref-free (no teleport, no spawn): mark every
+    // tracked form scanned + fire the survey-complete check. Assumes the entry
+    // already exists (caller checks / has just created it).
+    void CompletePlanetRefFree(std::uint32_t planetId, std::uint8_t delta)
+    {
+        MarkEverythingForPlanet(planetId, delta);
+        NotifySurveyProgress(planetId);
+    }
+
+    // Materialise the per-planet knowledge entry for an undiscovered planet.
+    // ID_52174 builds the PlayerKnowledge component and enqueues the create
+    // command; processing is deferred (see the two-phase poller below).
+    void CreatePlanetEntry(std::uint32_t planetId)
+    {
+        if (!planetId)
+            return;
+        const auto db = GetKnowledgeDB();
+        if (!db)
+            return;
+        std::uint32_t  arg[2] {planetId, 0};  // {planetId, value=0}
+        std::uintptr_t dbPtr = db;
+        EnsurePlanetEntryNative(arg, &dbPtr);
+    }
+
+    // The engine's global form registry — a BSTScatterTable<FormID, TESForm*>.
+    // ID_883341 is the global that holds the map pointer; it's what
+    // TESForm::LookupByID (ID_47401) reads. Starfield does NOT keep planets in
+    // TESDataHandler::formArrays (those are empty for galaxy types like PNDT), so
+    // this registry is the only place to enumerate all planet forms.
+    inline REL::Relocation<std::uintptr_t*> AllFormsMapHolder {REL::ID(883341)};
+
+    // Iterate every loaded form of a given type. Layout derived from the
+    // LookupByID disassembly + CommonLibSF's BSTScatterTable iterator:
+    //   map+0x10 -> entries base; map+0x18 -> slot count; slot stride 0x18;
+    //   TESForm* at slot+0x08; nextIndex (int32) at slot+0x10, -1 == empty.
+    // Defensive: bail (logging) on a null/absurd map rather than walking garbage.
+    template <typename Fn>
+    void ForEachFormOfType(RE::FormType type, Fn&& fn)
+    {
+        const auto map = *AllFormsMapHolder.get();
+        if (!map)
+        {
+            spdlog::warn("ForEachFormOfType: global form map is null");
+            return;
+        }
+        const auto entries  = *reinterpret_cast<std::uintptr_t*>(map + 0x10);
+        const auto capacity = *reinterpret_cast<std::uint64_t*>(map + 0x18);
+        if (!entries || capacity == 0 || capacity > 8'000'000)
+        {
+            spdlog::warn("ForEachFormOfType: suspicious form map (entries=0x{:X} capacity={})", entries, capacity);
+            return;
+        }
+
+        constexpr std::size_t kSlotStride = 0x18;
+        constexpr std::size_t kValueOff   = 0x08;
+        constexpr std::size_t kNextOff    = 0x10;
+        for (std::uint64_t i = 0; i < capacity; ++i)
+        {
+            const auto slot = entries + i * kSlotStride;
+            if (*reinterpret_cast<std::int32_t*>(slot + kNextOff) == -1)
+                continue;  // empty slot
+            auto* form = *reinterpret_cast<RE::TESForm**>(slot + kValueOff);
+            if (form && form->GetFormType() == type)
+                fn(form);
+        }
+    }
+
+    // ---- Galaxy-wide "complete all survey data" -----------------------------
+    //
+    // Drive the engine's own ref-free scan-complete (ID_102650) for every planet.
+    // One synchronous call per planet does the genuine completion an on-planet
+    // scan would: sets the surveyed bit, creates the entry if missing, fires the
+    // survey-complete event (the Survey Data slate reward), recurses over moons,
+    // and updates the map UI. No spawn-and-scan, no teleport, no async two-phase,
+    // no per-species/trait fiddling — the engine handles all of it.
+    //
+    // Cap is now just a runaway guard (well above the ~1798 real planet count);
+    // the engine call (ID_102650) proved safe at scale, so we process them all.
+    constexpr int kMaxScansPerRun = 5000;
+
+    // Form IDs of the planets the last sweep scan-completed. Consumed by the
+    // Papyrus trait pass (Planet.GetKeywordTypeList(44) -> MarkTraitKnownForPlanet)
+    // — the original mod's proven trait path, which ID_102650 alone doesn't apply
+    // to every planet (it skips already-discovered ones).
+    inline std::vector<std::uint32_t> g_sweepPlanetForms;
+    inline std::mutex                 g_sweepMtx;
+
+    // Returns the number of planets scan-completed (and records them for the
+    // Papyrus trait pass).
+    int CompleteAllPlanetsSurveyData_Phase1(std::uint8_t /*delta*/)
+    {
+        std::vector<std::uint32_t> sweptForms;
+        std::string                formIds;  // sample, for the log
+        int                        idsLogged = 0;
+        int                        total             = 0;
+        int                        completed         = 0;
+        int                        skipped           = 0;
+        int                        markedTotal       = 0;  // species/resource scan flags set
+        int                        seenTotal         = 0;  // total species the aggregator returned
+        int                        planetsWithSpecies = 0; // planets whose canonical lists were non-empty
+        int                        sampleLogged      = 0;  // span-length dumps emitted
+        int                        bitsSet           = 0;  // planets that got attribute "known" bits set
+
+        // Enumerate every planet (PNDT) form from the global form registry —
+        // TESDataHandler::formArrays[kPNDT] is empty in Starfield (galaxy forms
+        // live in the registry / galaxy DB, not the per-type arrays).
+        ForEachFormOfType(RE::FormType::kPNDT, [&](RE::TESForm* form)
+        {
+            ++total;
+            const auto planetId = ReadPlanetId(form);
+            if (!planetId)
+                return;
+            if (completed >= kMaxScansPerRun)
+            {
+                ++skipped;
+                return;
+            }
+            // 1) Engine scan: creates the knowledge entry if missing, marks the
+            //    planet "scanned/known", fires the survey-complete event (slate).
+            ScanCompletePlanet(0, planetId, 1);
+            // 2) Fill in the actual per-species survey data (flora/fauna/resource
+            //    scan flags) — what drives the % bar. ID_102650 does NOT do this,
+            //    so a from-scratch planet stays at 0% without it. The entry now
+            //    exists (step 1 created it), so the DB writes land.
+            int  seen = 0;
+            char sampleTag[48];
+            const char* diagTag = nullptr;
+            if (sampleLogged < 10)
+            {
+                std::snprintf(sampleTag, sizeof(sampleTag), "sweep-sample[0x%08X]", form->GetFormID());
+                diagTag = sampleTag;
+                ++sampleLogged;
+            }
+            markedTotal += MarkEverythingForPlanet(planetId, Engine::kDefaultScanDelta, diagTag, &seen);
+            seenTotal += seen;
+            if (seen > 0)
+                ++planetsWithSpecies;
+            // 3) Set the planet-level "attribute known" bits (magnetosphere / resources /
+            //    atmosphere / gravity / temperature / water). These gate a large cluster of
+            //    GetSurveyPercent's categories and are what a barren body (no species) needs to
+            //    reach 100%. We never set them before — which is why a barren moon with traits
+            //    done still capped around 50%.
+            if (SetPlanetAttributeBits(planetId))
+                ++bitsSet;
+            sweptForms.push_back(form->GetFormID());
+            ++completed;
+            if (idsLogged < 24)
+            {
+                char buf[16];
+                std::snprintf(buf, sizeof(buf), "0x%08X ", form->GetFormID());
+                formIds += buf;
+                ++idsLogged;
+            }
+        });
+
+        {
+            std::lock_guard lock(g_sweepMtx);
+            g_sweepPlanetForms = std::move(sweptForms);
+        }
+
+        spdlog::info("CompleteAllPlanetsSurveyData: {} PNDT forms, {} scan-completed, {} species/resource flags set, {} over cap (skipped)",
+                     total, completed, markedTotal, skipped);
+        spdlog::info("CompleteAllPlanetsSurveyData: {} planets had non-empty species lists, {} total species seen ({} avg per planet w/ species)",
+                     planetsWithSpecies, seenTotal,
+                     planetsWithSpecies ? seenTotal / planetsWithSpecies : 0);
+        spdlog::info("CompleteAllPlanetsSurveyData: {} planets got attribute-known bits set", bitsSet);
+        if (!formIds.empty())
+            spdlog::info("CompleteAllPlanetsSurveyData: scan-completed planet form IDs (sample): {}", formIds);
+        return completed;
+    }
+
+    // Galaxy completion is now synchronous (ID_102650 self-contains create +
+    // complete), so there's no deferred phase. Retained as a no-op hook so the
+    // per-frame poller's call site stays valid.
+    void PumpGalaxyComplete(std::uint8_t /*delta*/) {}
 
     // Walk a cell's references directly (bypassing CommonLibSF's ForEachReference
     // which uses a lock at cell+0x120 that isn't a BSReadWriteLock on 1.16.236.0
@@ -479,6 +758,31 @@ namespace Papyrus
         return n;
     }
 
+    // Complete the survey for every DISCOVERED planet in the save (ref-free: no
+    // teleport, no spawn). Undiscovered planets are skipped for now. Returns the
+    // count completed. Console: cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
+    std::int32_t CompleteAllPlanetsSurveyData(std::monostate)
+    {
+        return Engine::CompleteAllPlanetsSurveyData_Phase1(Engine::kDefaultScanDelta);
+    }
+
+    // Index-based accessor over the planets the last sweep scan-completed, so the
+    // Papyrus trait pass can re-resolve each as a Planet and mark its traits via
+    // the original mod's proven GetKeywordTypeList(44) -> MarkTraitKnownForPlanet.
+    std::int32_t GetSweepPlanetCount(std::monostate)
+    {
+        std::lock_guard lock(Engine::g_sweepMtx);
+        return static_cast<std::int32_t>(Engine::g_sweepPlanetForms.size());
+    }
+
+    std::int32_t GetSweepPlanetFormIdAt(std::monostate, std::int32_t index)
+    {
+        std::lock_guard lock(Engine::g_sweepMtx);
+        if (index < 0 || static_cast<std::size_t>(index) >= Engine::g_sweepPlanetForms.size())
+            return 0;
+        return static_cast<std::int32_t>(Engine::g_sweepPlanetForms[index]);
+    }
+
 
     void Register()
     {
@@ -519,9 +823,22 @@ namespace Papyrus
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "QueueCompleteSurvey"sv, &QueueCompleteSurvey, std::optional<bool> {true}, false);
 
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CompleteAllPlanetsSurveyData"sv, &CompleteAllPlanetsSurveyData,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetSweepPlanetCount"sv, &GetSweepPlanetCount,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetSweepPlanetFormIdAt"sv, &GetSweepPlanetFormIdAt,
+            std::optional<bool> {true}, false);
+
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, MarkResourcesForPlanet, "
                      "EnumeratePlanetSpecies, GetPlanetSpeciesFormIdAt, UpdatePlanetProgressForSpecies, "
-                     "ScanNearbyRefs, QueueCompleteSurvey");
+                     "ScanNearbyRefs, QueueCompleteSurvey, CompleteAllPlanetsSurveyData, "
+                     "GetSweepPlanetCount, GetSweepPlanetFormIdAt");
     }
 }  // namespace Papyrus
 
@@ -640,6 +957,10 @@ namespace Hook
             return;
         }
         task->AddPermanentTask([]() {
+            // Galaxy-complete phase 2 runs independent of the scanner menu gate —
+            // it's pure DB work (no PlaceAtMe, no scanner-UI race).
+            Engine::PumpGalaxyComplete(Engine::kDefaultScanDelta);
+
             auto* ui = RE::UI::GetSingleton();
             const bool menusOpen = ui && ui->menusVisible;
 

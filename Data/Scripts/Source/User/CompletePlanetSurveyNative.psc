@@ -33,3 +33,14 @@ int  Function ScanNearbyRefs() global native
 ; scanner UI. C++ polls the flag, waits until the scanner is closed + grace
 ; period, then dispatches Papyrus CompleteSurvey from a clean state.
 Function QueueCompleteSurvey() global native
+
+; Complete the survey for every DISCOVERED planet in the save (ref-free: no
+; teleport, no spawn). Returns the count completed. Undiscovered planets — those
+; without a knowledge-DB entry yet — are skipped (entry creation is a later step).
+int Function CompleteAllPlanetsSurveyData() global native
+
+; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep
+; scan-completed, so the Papyrus trait pass can re-resolve each as a Planet and
+; mark its traits via the proven GetKeywordTypeList(44) -> MarkTraitKnownForPlanet.
+int Function GetSweepPlanetCount() global native
+int Function GetSweepPlanetFormIdAt(int aiIndex) global native
