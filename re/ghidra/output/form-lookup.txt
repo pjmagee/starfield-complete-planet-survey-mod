@@ -1,0 +1,36 @@
+=== ID_47401 / ID_47401 @ 1405def30 ===
+
+undefined8 ID_47401(ulonglong param_1)
+
+{
+  uint *puVar1;
+  uint uVar2;
+  longlong lVar3;
+  longlong lVar4;
+  undefined8 uVar5;
+  int local_res8 [2];
+  
+  local_res8[0] = (int)param_1;
+  uVar5 = 0;
+  if ((ID_883341 != 0) && (local_res8[0] != 0)) {
+    ID_38386(param_1,param_1 & 0xffffffff);
+    lVar3 = ID_883341;
+    ID_123862(ID_883341 + 0x30);
+    lVar4 = ID_46657(lVar3,local_res8);
+    if (lVar4 != *(longlong *)(lVar3 + 0x18)) {
+      uVar5 = *(undefined8 *)(*(longlong *)(lVar3 + 0x10) + 8 + lVar4 * 0x18);
+    }
+    puVar1 = (uint *)(lVar3 + 0x34);
+    LOCK();
+    uVar2 = *puVar1;
+    *puVar1 = *puVar1 - 1;
+    UNLOCK();
+    if (((uVar2 & 0xffc00fff) == 1) && ((uVar2 & 0x3ff000) != 0)) {
+      WakeByAddressSingle();
+    }
+  }
+  return uVar5;
+}
+
+
+

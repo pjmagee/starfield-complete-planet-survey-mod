@@ -29,13 +29,20 @@ public class DumpSurveyXrefs extends GhidraScript {
     public void run() throws Exception {
         String[] args = getScriptArgs();
         String outPath = args.length > 0 ? args[0]
-            : getSourceFile().getParentFile().getParent() + "/output/survey-xrefs.txt";
+            : getSourceFile().getParentFile().getParentFile().getAbsolutePath() + "/output/survey-xrefs.txt";
 
         List<Long> seedIds = Arrays.asList(
             92501L, 92502L, 174581L, 402674L, 402676L,
             867581L, 860384L, 855566L, 860436L, 843159L, 843161L,
             // PlanetData ctors / callers found in first pass:
-            51449L, 51399L, 19496L, 92492L
+            51449L, 51399L, 19496L, 92492L,
+            // discriminators (per-planet-progress / per-ref) — find the CREATE site:
+            938333L, 939118L,
+            // survey-complete notify + percent reader/writer — find ALL completion
+            // paths (incl. the starmap/orbital "scan planet -> full survey" one):
+            97853L, 97851L, 124899L,
+            // the ref-free scan-complete fn + its sibling — find the entry point:
+            102651L, 52173L
         );
         SymbolTable st = currentProgram.getSymbolTable();
 
