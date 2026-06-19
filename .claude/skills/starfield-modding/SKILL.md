@@ -27,6 +27,7 @@ Bethesda officially supports Starfield modding — Creation Kit is first-party, 
 | Compat baseline | Bug fixes + cross-mod glue | [Starfield Community Patch](https://github.com/Starfield-Community-Patch/Starfield-Community-Patch) |
 | Install format | Versioned, option-driven installer | FOMOD (ModuleConfig.xml) |
 | Distribution | Nexus Mods (primary), GitHub for source | [Address Library (Nexus 3256)](https://www.nexusmods.com/starfield/mods/3256), [SFSE distribution (Nexus 7589)](https://www.nexusmods.com/starfield/mods/7589) |
+| Reference docs | CK records, Papyrus base scripts, form/file formats | [Starfield Wiki](https://starfieldwiki.net/wiki/Starfield_Mod:Main_Page) (the canonical CK/Papyrus/data reference; 403s automated fetchers — open in a browser) |
 
 ---
 
@@ -53,7 +54,9 @@ Do not speculate about offsets, function signatures, or what's currently deploye
 - **Auditing what's actually deployed (start of session, before claiming "no conflict", post-pivot cleanup)** → [references/deployment-state.md](references/deployment-state.md)
 - **Writing an SFSE plugin** → [references/sfse.md](references/sfse.md) and [references/commonlibsf.md](references/commonlibsf.md)
 - **Finding or updating an offset after a game patch** → [references/reverse-engineering.md](references/reverse-engineering.md)
-- **Working with Papyrus / decompiling .pex** → [references/papyrus.md](references/papyrus.md)
+- **Working with Papyrus — authoring, decompiling, Starfield-new features (Guards/Structs/Imports), base-script API** → [references/papyrus.md](references/papyrus.md)
+- **Record / form types (`PNDT`, `STDT`, `BIOM`, ship records, top-level group order)** → [references/record-types.md](references/record-types.md)
+- **Authoring records / ESMs / quests in the Creation Kit (the official data path)** → [references/creation-kit.md](references/creation-kit.md)
 - **Editing ESM/ESP or merging plugins** → [references/data-plugins.md](references/data-plugins.md)
 - **Packaging an installer / shipping to Nexus** → [references/packaging.md](references/packaging.md)
 - **Writing to the planet-survey knowledge DB** → [references/planet-survey-internals.md](references/planet-survey-internals.md) (1.16.236.0 offsets, ID_124898/97853, BSComponentDB2 keys)

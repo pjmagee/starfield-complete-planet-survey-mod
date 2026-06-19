@@ -20,6 +20,58 @@ Int Function ApplyPlanetSurveyPercent(ObjectReference akPlanet, Float afPercent)
 
 The `native global` signature must exactly match what the SFSE plugin registers with `BindNativeMethod`. Mismatches cause silent no-ops or crashes.
 
+## Starfield-new language features
+
+The CK's Papyrus adds capabilities over Skyrim/Fallout Papyrus
+([wiki: Papyrus — New Features](https://starfieldwiki.net/wiki/Starfield_Mod:Papyrus_-_New_Features)):
+
+- **Guards** — critical-path single-thread protection. A `Guard` marks a region
+  so the VM serialises access to shared state, avoiding the races you'd hit when
+  multiple script instances touch the same data. (This repo solves the same class
+  of problem at the native layer with a per-frame poller + atomics; Papyrus
+  Guards are the in-script equivalent.)
+- **Structs** — near first-class user-defined data structures (named fields
+  passed around as a value) instead of parallel arrays.
+- **Imports** — import namespaces *and* attributes from other scripts, not just
+  global functions — cuts `OtherScript.Function()` boilerplate.
+
+These are CK-compiler features; a `.pex` using them won't run on older engines,
+which is moot for Starfield-only mods.
+
+## Base script reference (Object Scripts)
+
+The base-game Papyrus API — what each script *type* exposes — is on the wiki's
+[Papyrus category](https://starfieldwiki.net/wiki/Category:Starfield_Mod-Papyrus)
+(the "Object Scripts" reference, ~32 types). Use it for a real signature on a
+vanilla type instead of guessing; each page lists the `ScriptName … Extends …`
+header and its members. (starfieldwiki.net 403s automated fetchers — open in a
+browser.)
+
+Notable types:
+- **Starfield-new**: `SpaceshipBase`, `SpaceshipReference`,
+  `LeveledSpaceshipBase`, `GameplayOption` (Settings-menu options),
+  `Terminal` / `TerminalMenu`, `ConditionForm`, `WwiseEvent`.
+- **Workhorses** (as before): `ObjectReference`, `Actor`, `Game`, `Form`,
+  `Quest`, `Keyword`, `FormList`, `Utility`, `Debug`, `Math`,
+  `ReferenceAlias` / `RefCollectionAlias`.
+
+Example — the [`GameplayOption`](https://starfieldwiki.net/wiki/Starfield_Mod:Script-GameplayOption)
+type this repo's Settings → Gameplay toggle uses:
+
+```papyrus
+ScriptName GameplayOption Extends Form Native Hidden
+
+float Function GetValue()      ; the toggle / slider value
+float Function GetRewardValue()
+float Function GetXPTotal()
+Function NotifyGameplayOptionUpdateFinished()
+```
+
+`CompletePlanetSurveyQuest.psc` does exactly this: resolve the GPOF via
+`Game.GetFormFromFile(0x80C, "CompletePlanetSurvey.esm") as GameplayOption`, then
+gate on `GetValue()`. See [record-types.md](record-types.md) for the `GPOF`/`GPOG`
+record side and [creation-kit.md](creation-kit.md) for authoring it.
+
 ## Decompiling with Champollion
 
 Upstream: https://github.com/Orvid/Champollion
