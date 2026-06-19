@@ -48,6 +48,41 @@ Function CompleteSurvey() global
     EndIf
 EndFunction
 
+; Complete survey data for every DISCOVERED planet in the save in one pass —
+; ref-free (no teleport, no spawn). The native loops all PNDT (planet) forms and
+; completes each that the player has already discovered. Console:
+;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
+Function CompleteAllPlanetsSurveyData() global
+    ; 1) Engine scan-complete every planet (survey data, %, Survey Data slate),
+    ;    and record the planets it touched.
+    int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData()
+
+    ; 2) Trait pass. The engine scan doesn't mark traits on every planet (it skips
+    ;    already-discovered ones), so apply the original mod's proven trait path —
+    ;    GetKeywordTypeList(44) -> MarkTraitKnownForPlanet — to each swept planet.
+    ;    Papyrus spreads this loop across frames, so it won't freeze the game.
+    int count = CompletePlanetSurveyNative.GetSweepPlanetCount()
+    int traitsMarked = 0
+    int fullyComplete = 0
+    int i = 0
+    While i < count
+        Planet p = Game.GetForm(CompletePlanetSurveyNative.GetSweepPlanetFormIdAt(i)) as Planet
+        If p != None
+            traitsMarked += MarkTraits(p, p.GetKeywordTypeList(44))
+            ; Measure the actual outcome: how many planets truly read 100% after
+            ; the scan-flag + trait pass. This is the number that tells us whether
+            ; the remote completion is real or just "marked known".
+            If p.GetSurveyPercent() >= 1.0
+                fullyComplete += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+
+    CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
+    Debug.Notification("Complete Planet Survey: " + fullyComplete + " / " + count + " planets at 100%")
+EndFunction
+
 ; Called by the C++ scan hook on every species/resource scan. Reads the
 ; Settings > Gameplay toggle, short-circuits if disabled or planet already
 ; complete, then QUEUES CompleteSurvey. C++ poller dispatches it once the
