@@ -41,6 +41,43 @@ verified.
 
 *No unreleased changes.*
 
+## [1.1.0] — 2026-06-20
+
+Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.0.8 —
+a drop-in upgrade; no game or SFSE change required).
+
+The first release that completes the **entire galaxy at once**, and the first to set the
+**persistent green flora/fauna scanner outline** for planets — including ones you have
+never visited. The original single-scan behaviour is unchanged; this adds a new console
+command on top of it.
+
+### Added
+
+- **`cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"`** — completes the
+  survey for every planet and moon in the galaxy in one pass, with no fast-travel and no
+  per-planet visiting:
+  - **Survey data** for all ~1798 bodies — attribute bits, every species/resource scan
+    flag, and the `<Planet> Survey Data` slate — written ref-free.
+  - **Traits** marked on every planet.
+  - **Persistent green flora/fauna.** The scanner "scanned" outline is saved per species
+    per planet, so when you later land on a planet completed this way — even one you have
+    never set foot on — its plants and creatures render green, including freshly-spawned
+    instances, and across save/reload.
+- Flora/fauna species are read directly from `Starfield.esm`'s PNDT *Per Biome Data*
+  (zlib-inflated at runtime), so a planet can be completed without the game first having
+  to materialise its biomes on landing.
+
+### Internal (no change to existing features)
+
+- New `EsmReader` (PNDT/PPBD parse + zlib inflate); `xmake.lua` adds the `zlib` package.
+- The galaxy green is written by driving two engine routines with an **explicit target
+  planet**: `ID_52161` (per-type scanned-species tree) + `ID_52158` (per-species count
+  completion). The tree write alone stays blue; the pair greens. The full reverse-
+  engineering trail — including every approach that failed and why — is in
+  [`docs/green-outline-attempts.md`](docs/green-outline-attempts.md).
+- Corrected the green-outline model in the RE/skill docs (it is persistent per-type
+  state, not a per-loaded-instance paint); added decompile dumps + RE scripts under `re/`.
+
 ## [1.0.8] — 2026-06-17
 
 Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21**.
@@ -194,7 +231,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.8...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.8...v1.1.0
 [1.0.8]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.5...v1.0.6
