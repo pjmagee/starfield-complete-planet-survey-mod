@@ -52,6 +52,15 @@ EndFunction
 ; (no teleport, no spawn). Console:
 ;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
 Function CompleteAllPlanetsSurveyData() global
+    ; Immersive framing as a MODAL popup — the CK-authored MESG record CPSRecallMessage (0x807),
+    ; NOT a toast. A toast would be buried under the cascade of native "<Planet> Survey Data"
+    ; notifications that drains over several minutes. Message.Show() is modal and blocks until the
+    ; player presses OK, so the narrative lands first; the cascade that follows becomes the story.
+    Message recallMsg = Game.GetFormFromFile(0x807, "CompletePlanetSurvey.esm") as Message
+    If recallMsg != None
+        recallMsg.Show()
+    EndIf
+
     ; 1) C++ sweep: discover every planet + write its survey state (attribute bits +
     ;    species/resource flags), and record the planets it touched.
     int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData()
@@ -79,11 +88,10 @@ Function CompleteAllPlanetsSurveyData() global
     EndWhile
 
     CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
-    Debug.Notification("Survey DATA complete: " + fullyComplete + " / " + count + " planets at 100%")
 
     ; 3) Green pass: every planet now has its survey entry, so paint all flora/fauna green for the
     ;    whole galaxy from here — one live handle per species, tree + count completion per planet.
-    Debug.Notification("Greening flora/fauna across the galaxy...")
+    ;    (No toast here — the modal popup at the top carries the narrative; counts go to the log.)
     GreenAllPlanets()
 EndFunction
 
