@@ -306,11 +306,13 @@ deploy.bat       :: compile Papyrus, copy DLL+ESM+PEX to the game, manage plugin
 import-esm.bat   :: copy the game ESM back into the repo (after editing in CK)
 ```
 
-`deploy.bat` additionally needs the **Creation Kit Papyrus Compiler** and a
-populated **`temp_scripts/`** (gitignored): the base-game `.psc` sources plus
-`Starfield_Papyrus_Flags.flg`, taken from the CK install. Without them the
-Papyrus compile step fails. (CI never runs this — it packages the committed
-`.pex`.)
+`deploy.bat` compiles against the **game's own base scripts** — it points the
+compiler's import path at `<Starfield>\Data\Scripts\Source` (1500+ base `.psc` +
+`Starfield_Papyrus_Flags.flg`) and uses the Creation Kit Papyrus Compiler at
+`<Starfield>\Tools\Papyrus Compiler\PapyrusCompiler.exe`. No separate
+`temp_scripts/` copy is needed. (CI never runs this — it packages the committed
+`.pex`.) Both paths are derived from `GAME_DIR` at the top of `deploy.bat`; adjust
+that one line if your Starfield install is elsewhere.
 
 ### 3. Package the distributable
 

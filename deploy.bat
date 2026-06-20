@@ -14,9 +14,11 @@ if not errorlevel 1 (
 )
 
 :: Compile Papyrus
-set "COMPILER=E:\SteamLibrary\steamapps\common\Starfield 2722710\Tools\Papyrus Compiler\PapyrusCompiler.exe"
-set "INC=%PROJECT_DIR%temp_scripts\source;%PROJECT_DIR%Data\Scripts\Source\User"
-set "FLG=%PROJECT_DIR%temp_scripts\Starfield_Papyrus_Flags.flg"
+set "COMPILER=%GAME_DIR%\Tools\Papyrus Compiler\PapyrusCompiler.exe"
+:: Base-game Papyrus sources + flags come from the game's own Scripts\Source — no separate
+:: temp_scripts copy to maintain. Our scripts live in the repo's Data\Scripts\Source\User.
+set "INC=%GAME_DIR%\Data\Scripts\Source;%PROJECT_DIR%Data\Scripts\Source\User"
+set "FLG=%GAME_DIR%\Data\Scripts\Source\Starfield_Papyrus_Flags.flg"
 set "OUT=%PROJECT_DIR%Data\Scripts"
 
 "%COMPILER%" "CompletePlanetSurveyNative" -i="%INC%" -f="%FLG%" -o="%OUT%"
