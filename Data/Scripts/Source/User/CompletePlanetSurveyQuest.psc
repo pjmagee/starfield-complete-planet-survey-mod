@@ -1,20 +1,20 @@
 ScriptName CompletePlanetSurveyQuest
 
-; Complete the planet survey for the WHOLE planet (all biomes).
+; Complete the planet survey for the planet the player is currently on (all biomes).
 ; Invoke via console:  cgf "CompletePlanetSurveyQuest.CompleteSurvey"
 ;
 ; Also auto-fires on any in-game scan when the Settings > Gameplay toggle is on
-; (see CompleteSurveyIfEnabled and the C++ scan hook at ID_52157 → ID_97853).
+; (see CompleteSurveyIfEnabled and the C++ scan hook).
 ;
 ; Flow:
-;   1. Mark traits via the DB-level trait native (ID_52155).
-;   2. Mark resources + aggregator catch-all (ID_1016657 → ID_52156 per form).
-;      Fires PlayerPlanetSurveyCompleteEvent so the Survey Data slate drops.
-;   3. For each flora + fauna species across ALL biomes, PlaceAtMe a disabled ref,
-;      SetScanned + UpdatePlanetProgressForSpecies (bypasses ID_83038 component
-;      check that no-ops PlaceAtMe'd flora), then delete. Fires BIOME COMPLETE
-;      for every biome on the planet.
-;   4. Per-ref outline refresh for in-world refs (flips blue → scanned colour).
+;   1. Mark traits (MarkTraits -> MarkTraitKnownForPlanet).
+;   2. MarkResourcesForPlanet — the shared single-planet completion core: sets the
+;      attribute "known" bits + every species/resource scan flag, then fires the
+;      survey-complete event so the Survey Data slate drops.
+;   3. SpawnAndScanAllPlanetSpecies — PlaceAtMe + scan each flora/fauna species so the
+;      in-world refs register as scanned and BIOME COMPLETE fires. This needs the player
+;      present, so it's the one step the ref-free galaxy sweep can't reproduce.
+;   4. ScanNearbyRefs — per-ref outline refresh (flips blue -> scanned colour).
 
 Function CompleteSurvey() global
     Actor playerRef = Game.GetPlayer()
@@ -48,30 +48,29 @@ Function CompleteSurvey() global
     EndIf
 EndFunction
 
-; Complete survey data for every DISCOVERED planet in the save in one pass —
-; ref-free (no teleport, no spawn). The native loops all PNDT (planet) forms and
-; completes each that the player has already discovered. Console:
+; Complete the survey for EVERY planet/moon in the galaxy in one pass — ref-free
+; (no teleport, no spawn). Console:
 ;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
 Function CompleteAllPlanetsSurveyData() global
-    ; 1) Engine scan-complete every planet (survey data, %, Survey Data slate),
-    ;    and record the planets it touched.
+    ; 1) C++ sweep: discover every planet + write its survey state (attribute bits +
+    ;    species/resource flags), and record the planets it touched.
     int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData()
 
-    ; 2) Trait pass. The engine scan doesn't mark traits on every planet (it skips
-    ;    already-discovered ones), so apply the original mod's proven trait path —
-    ;    GetKeywordTypeList(44) -> MarkTraitKnownForPlanet — to each swept planet.
-    ;    Papyrus spreads this loop across frames, so it won't freeze the game.
+    ; 2) Finalize + trait pass. This loop runs across later frames, by which point the
+    ;    sweep's async knowledge-entry creates have flushed. Per planet it re-applies the
+    ;    survey state, fires the completion event (drops the Survey Data slate), then
+    ;    marks traits (GetKeywordTypeList(44) -> MarkTraitKnownForPlanet). Spreading the
+    ;    loop across frames keeps the game from freezing.
     int count = CompletePlanetSurveyNative.GetSweepPlanetCount()
     int traitsMarked = 0
     int fullyComplete = 0
     int i = 0
     While i < count
-        Planet p = Game.GetForm(CompletePlanetSurveyNative.GetSweepPlanetFormIdAt(i)) as Planet
+        int fid = CompletePlanetSurveyNative.GetSweepPlanetFormIdAt(i)
+        CompletePlanetSurveyNative.FinalizeSweptPlanet(fid)   ; state + slate (entry ready now)
+        Planet p = Game.GetForm(fid) as Planet
         If p != None
             traitsMarked += MarkTraits(p, p.GetKeywordTypeList(44))
-            ; Measure the actual outcome: how many planets truly read 100% after
-            ; the scan-flag + trait pass. This is the number that tells us whether
-            ; the remote completion is real or just "marked known".
             If p.GetSurveyPercent() >= 1.0
                 fullyComplete += 1
             EndIf
@@ -80,7 +79,93 @@ Function CompleteAllPlanetsSurveyData() global
     EndWhile
 
     CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
-    Debug.Notification("Complete Planet Survey: " + fullyComplete + " / " + count + " planets at 100%")
+    Debug.Notification("Survey DATA complete: " + fullyComplete + " / " + count + " planets at 100%")
+
+    ; 3) Green pass: every planet now has its survey entry, so paint all flora/fauna green for the
+    ;    whole galaxy from here — one live handle per species, tree + count completion per planet.
+    Debug.Notification("Greening flora/fauna across the galaxy...")
+    GreenAllPlanets()
+EndFunction
+
+; Atomically green every planet's flora/fauna from one spot — no visiting. For each UNIQUE species
+; across the galaxy, spawn ONE live instance as a handle, drive the tree write (ID_52161) + the
+; count completion (ID_52158) for every planet that hosts it (planet passed explicitly), then
+; delete the instance. Only ONE ref is live at a time (spawn -> green-everywhere -> delete), so
+; there's no mass-spawn accumulation. Throttled so the engine can flush PlaceAtMe/Delete.
+;   cgf "CompletePlanetSurveyQuest.GreenAllPlanets"
+Function GreenAllPlanets() global
+    Actor player = Game.GetPlayer()
+    If player.IsInInterior() || player.GetCurrentPlanet() == None
+        Debug.Notification("Green all: stand on any planet surface first")
+        Return
+    EndIf
+    ObjectReference playerRef = player as ObjectReference
+
+    int speciesCount = CompletePlanetSurveyNative.EnumerateAllSpecies()
+    int greenedPlanets = 0
+    int spawned = 0
+    int i = 0
+    While i < speciesCount
+        int  fid = CompletePlanetSurveyNative.GetAllSpeciesFormIdAt(i)
+        Form sf  = Game.GetForm(fid)
+        If sf != None
+            ObjectReference r = playerRef.PlaceAtMe(sf, 1, false, true, true, None, None, true)
+            If r != None
+                greenedPlanets += CompletePlanetSurveyNative.GreenSpeciesEverywhere(r, fid)
+                r.Disable(false)
+                r.Delete()
+                spawned += 1
+                ; yield periodically so the engine flushes the spawn/delete churn
+                If spawned % 16 == 0
+                    Utility.Wait(0.05)
+                EndIf
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+
+    CompletePlanetSurveyNative.DebugLog("GreenAllPlanets: " + spawned + " species spawned, " + greenedPlanets + " planet-types greened")
+    Debug.Notification("Green all: " + spawned + " species across " + greenedPlanets + " planet-types")
+EndFunction
+
+; VALIDATION for the atomic galaxy green: spawn the current planet's species and green each TYPE
+; by driving ID_52161 DIRECTLY with the planet handed in explicitly (instead of letting the scan
+; path infer "current planet"). If this greens the ground, then pointing the same call at any
+; OTHER planet's id greens that planet from here — the whole atomic loop.
+;   cgf "CompletePlanetSurveyQuest.TestDirectGreen"
+Function TestDirectGreen() global
+    Planet currentPlanet = Game.GetPlayer().GetCurrentPlanet()
+    If currentPlanet == None || Game.GetPlayer().IsInInterior()
+        Debug.Notification("Direct green: land on a planet surface first")
+        Return
+    EndIf
+    Form planetForm = currentPlanet as Form
+    ObjectReference playerRef = Game.GetPlayer() as ObjectReference
+    CompletePlanetSurveyNative.MarkResourcesForPlanet(planetForm, 100)   ; ensure survey entry exists
+    int n = CompletePlanetSurveyNative.EnumeratePlanetSpecies(planetForm)
+    int greened = 0
+    int i = 0
+    While i < n
+        int  fid = CompletePlanetSurveyNative.GetPlanetSpeciesFormIdAt(i)
+        Form sf  = Game.GetForm(fid)
+        If sf != None
+            ObjectReference r = playerRef.PlaceAtMe(sf, 1, false, true, true, None, None, true)
+            If r != None
+                ; tree write (ID_52161, planet explicit) PLUS the count completion driven with the
+                ; planet EXPLICIT (ID_52158-direct, via CompleteTypeForPlanet) — the exact pair the
+                ; galaxy loop uses. Validates the explicit-planet count greens (target == current here).
+                CompletePlanetSurveyNative.GreenTypeForPlanet(r, planetForm)
+                CompletePlanetSurveyNative.CompleteTypeForPlanet(r, planetForm, sf)
+                r.Disable(false)
+                r.Delete()
+                greened += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    CompletePlanetSurveyNative.ScanNearbyRefs()
+    CompletePlanetSurveyNative.DebugLog("TestDirectGreen: tree + count completion for " + greened + " species on planet 0x" + planetForm)
+    Debug.Notification("Direct green: " + greened + " types — open scanner / walk a patch")
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
