@@ -16,6 +16,8 @@
 #include <fstream>
 #include <mutex>
 
+#include <spdlog/spdlog.h>  // logging — also via the forced PCH, but include-what-you-use
+
 namespace
 {
     // Record header flag: record data is a u32 decompressed-size + zlib stream.

@@ -5,7 +5,7 @@ namespace Plugin
     using namespace std::string_view_literals;
     static constexpr auto Name{ "CompletePlanetSurvey"sv };
     static constexpr auto Author{ "pjmagee"sv };
-    static constexpr auto Version{ REL::Version{ 1, 0, 0, 0 } };
+    static constexpr auto Version{ REL::Version{ 1, 1, 0, 0 } };
 }
 
 SFSE_PLUGIN_VERSION = []() noexcept {
@@ -15,7 +15,10 @@ SFSE_PLUGIN_VERSION = []() noexcept {
     data.PluginName(Plugin::Name);
     data.AuthorName(Plugin::Author);
     data.UsesAddressLibrary(true);
-    data.HasNoStructUse(true);
+    // This plugin reads version-specific engine struct layouts at hardcoded offsets, so it IS
+    // layout-dependent — SFSE must refuse to load it on a runtime whose layout it wasn't built
+    // for, rather than load and read wrong offsets. (Was incorrectly HasNoStructUse(true).)
+    data.IsLayoutDependent(true);
     data.CompatibleVersions({ SFSE::RUNTIME_LATEST });
 
     return data;

@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 
-// Address Library IDs for Starfield 1.16.236.0 — discovered via Ghidra.
+// Address Library IDs for Starfield 1.16.236.0–1.16.244.0 — discovered via Ghidra.
 // See memory/re_progress.md for the derivation and the knowledge-DB architecture.
 //
 // ID_126578: getter for the per-save knowledge-manager singleton.
@@ -104,7 +104,7 @@ namespace Engine
     using fn_scan_complete_t = void (*)(std::int64_t context, std::uint32_t planetId, std::uint8_t fullFlag);
     inline REL::Relocation<fn_scan_complete_t> ScanCompletePlanet {REL::ID(102650)};
 
-    // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0, Ghidra-derived).
+    // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0–1.16.244.0, Ghidra-derived).
     constexpr std::size_t  kPlanetIdOffset       = 0x54;   // uint32 knowledge key at planetForm+0x54
     constexpr std::size_t  kManagerDbOffset      = 0x8B0;  // knowledge DB ptr at manager+0x8B0 (ID_126578 result)
     constexpr std::size_t  kDbContainerOffset    = 0x268;  // BSTHashMap<> start within the DB object
@@ -125,7 +125,7 @@ namespace Engine
     // Maximum delta value (uint8 ceiling).
     constexpr std::uint8_t   kMaxScanDelta           = 255;
 
-    // BSTArray header offsets within TESObjectCELL (Starfield 1.16.236.0).
+    // BSTArray header offsets within TESObjectCELL (Starfield 1.16.236.0–1.16.244.0).
     constexpr std::size_t kCellRefArraySize     = 0x080;
     constexpr std::size_t kCellRefArrayCapacity = 0x084;
     constexpr std::size_t kCellRefArrayData     = 0x088;
@@ -379,7 +379,7 @@ namespace Engine
         scanPtr(kAggPtrSpan1Begin, kAggPtrSpan1End);
 
         if (diagTag)
-            spdlog::info("{}: aggregator spans uint0={} uint1={} ptr0={} ptr1={}",
+            spdlog::debug("{}: aggregator spans uint0={} uint1={} ptr0={} ptr1={}",
                          diagTag, spanLen[0], spanLen[1], spanLen[2], spanLen[3]);
 
         SurveyBufferFree(buf);
@@ -602,7 +602,7 @@ namespace Engine
     }
 
     // Walk a cell's references directly (bypassing CommonLibSF's ForEachReference
-    // which uses a lock at cell+0x120 that isn't a BSReadWriteLock on 1.16.236.0
+    // which uses a lock at cell+0x120 that isn't a BSReadWriteLock on 1.16.236.0–1.16.244.0
     // — memory-probe confirmed that offset holds a 64-bit pointer, not lock state).
     // The BSTArray header at cell+0x080 IS correct, so iterate raw.
     //
@@ -770,7 +770,7 @@ namespace Papyrus
             consider(fid, agg);
         }, "EnumeratePlanetSpecies");
 
-        spdlog::info("EnumeratePlanetSpecies: planet=0x{:08X} esm={} agg(extra)={} other={} noform={} kept={}",
+        spdlog::debug("EnumeratePlanetSpecies: planet=0x{:08X} esm={} agg(extra)={} other={} noform={} kept={}",
                      planetForm->GetFormID(), esm, agg, other, noform, g_planetSpeciesCache.size());
         return static_cast<std::int32_t>(g_planetSpeciesCache.size());
     }
@@ -778,7 +778,7 @@ namespace Papyrus
     // Returns the form ID (as int) at the cached index. Papyrus converts via
     // Game.GetForm(formID). Returning TESForm* from a native triggered a
     // CommonLibSF ID-0 crash on DLL init (marshalling template had an unmapped
-    // REL::ID for 1.16.236.0), so we return a plain int instead.
+    // REL::ID for 1.16.236.0–1.16.244.0), so we return a plain int instead.
     std::int32_t GetPlanetSpeciesAt(std::monostate, std::int32_t index)
     {
         std::lock_guard lock(g_speciesCacheMtx);
@@ -882,26 +882,6 @@ namespace Papyrus
         return marked;
     }
 
-    // Green one species TYPE on an explicit target planet using a live spawned instance as the
-    // handle (drives ID_52161 directly). The planet is an argument, so the caller can green any
-    // planet from one spot — the basis for the atomic galaxy green.
-    void GreenTypeForPlanet(std::monostate, RE::TESObjectREFR* ref, RE::TESForm* planetForm)
-    {
-        if (!ref || !planetForm)
-            return;
-        Engine::GreenTypeForPlanet(ref, Engine::ReadPlanetId(planetForm));
-    }
-
-    // Drive the per-species COUNT completion (ID_52158) for an EXPLICIT target planet — the
-    // second half of the green, alongside GreenTypeForPlanet. Used by TestDirectGreen to validate
-    // the explicit-planet count on the current planet before the galaxy loop relies on it.
-    void CompleteTypeForPlanet(std::monostate, RE::TESObjectREFR* ref, RE::TESForm* planetForm, RE::TESForm* speciesForm)
-    {
-        if (!ref || !planetForm || !speciesForm)
-            return;
-        Engine::CompleteTypeForPlanet(Engine::ReadPlanetId(planetForm), speciesForm->GetFormID(), ref);
-    }
-
     // Cache of every UNIQUE flora/fauna species across all planets (the keys of the species->
     // planets inversion). The atomic galaxy green spawns ONE live instance per entry, then calls
     // GreenSpeciesEverywhere to green it on every planet that hosts it.
@@ -989,14 +969,6 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "GreenTypeForPlanet"sv, &GreenTypeForPlanet,
-            std::optional<bool> {true}, false);
-
-        ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "CompleteTypeForPlanet"sv, &CompleteTypeForPlanet,
-            std::optional<bool> {true}, false);
-
-        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "EnumerateAllSpecies"sv, &EnumerateAllSpecies,
             std::optional<bool> {true}, false);
 
@@ -1032,7 +1004,7 @@ namespace Papyrus
 
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, MarkResourcesForPlanet, "
                      "EnumeratePlanetSpecies, GetPlanetSpeciesFormIdAt, UpdatePlanetProgressForSpecies, "
-                     "GreenTypeForPlanet, CompleteTypeForPlanet, EnumerateAllSpecies, GetAllSpeciesFormIdAt, "
+                     "EnumerateAllSpecies, GetAllSpeciesFormIdAt, "
                      "GreenSpeciesEverywhere, ScanNearbyRefs, QueueCompleteSurvey, CompleteAllPlanetsSurveyData, "
                      "GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet");
     }
@@ -1134,7 +1106,7 @@ namespace Hook
     //
     // History: tried event sink on UI's BSTEventSource<MenuOpenCloseEvent>.
     // CommonLibSF's shared REL::ID(123821) for BSTEventSource::RegisterSink
-    // doesn't line up with the MenuOpenCloseEvent specialization on 1.16.236.0
+    // doesn't line up with the MenuOpenCloseEvent specialization on 1.16.236.0–1.16.244.0
     // and crashes DLL init. Polling via SFSE's permanent-task is the pragmatic
     // alternative — runs every frame, but the hot path is a single atomic load
     // that returns false 99.9% of the time.
