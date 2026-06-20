@@ -4,7 +4,9 @@
 
 A Starfield mod that completes a planet's survey — across every biome — the
 moment you scan any single flora or fauna. Toggleable from **Settings →
-Gameplay**.
+Gameplay**. Or complete the **entire galaxy at once** — survey data, traits, and
+the persistent green flora/fauna scanner outline for every planet — with a single
+console command.
 
 Built as an SFSE plugin (DLL) + a tiny ESM (Settings toggle) + a Papyrus glue
 script. Address Library makes the native IDs version-independent — see
@@ -30,6 +32,22 @@ to trigger a scan):
 
 `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` from the console does the
 same thing regardless of the toggle state.
+
+### Complete the entire galaxy (one command)
+
+`cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"` completes **every
+planet and moon in the galaxy** in a single pass — no fast-travel, no visiting:
+
+- **Survey data** for all ~1798 bodies — attribute bits, every species/resource
+  scan flag, and the `<Planet> Survey Data` slate — written ref-free.
+- **Traits** marked on every planet.
+- **Persistent green flora/fauna** — the "scanned" scanner outline, saved per
+  species per planet. Land on any planet you completed this way — even one you
+  have never set foot on — and its plants and creatures render green, including
+  freshly-spawned instances, and across save/reload.
+
+The pass takes a minute or two (it spawns one invisible handle per unique species
+to drive the engine's completion, then deletes it) and may briefly stutter.
 
 ---
 
@@ -88,6 +106,36 @@ species. To cover every biome without physically visiting them:
    `ID_52157` (the per-planet progress updater) directly, bypassing
    `ID_83038`'s component check.
 5. `Disable + Delete` the spawned refs. Scan flags persist, refs don't.
+
+### Galaxy-wide completion + persistent green
+
+`CompleteAllPlanetsSurveyData` completes every body without visiting it. Two
+problems had to be solved that the single-planet path sidesteps:
+
+**1. Enumerating a never-visited planet's species.** The runtime only
+materialises a planet's biome flora/fauna when you land. So instead of asking the
+runtime, the DLL parses `Starfield.esm` directly: each planet's `PNDT` record
+carries a *Per Biome Data* (`PPBD`) subrecord listing its authored species
+(zlib-compressed). `EsmReader` inflates and parses it once at startup — ~1097
+unique species across the galaxy — and inverts it to a species → planets map.
+
+**2. Setting the green outline for a planet you're not on.** The green "scanned"
+outline is **persistent per-(planet, species)** state in the saved knowledge DB —
+fresh instances read it when they spawn, which is why a completed planet is green
+on a later visit, even on a fresh game launch. Writing it for an arbitrary target
+planet takes **two** engine routines, each driven with the planet passed
+*explicitly* (rather than letting the engine infer "the planet you're on"):
+
+- `ID_52161` — the per-type scanned-species tree writer (the green state itself).
+- `ID_52158` — the per-species count completion.
+
+The tree write **alone** leaves the outline blue; the **pair** greens it. The
+galaxy pass spawns one invisible handle per unique species, calls both routines
+for every planet that hosts that species, then deletes the handle — only one ref
+is ever live at a time. Every direct-write shortcut that skipped the engine
+routines (raw scan byte, hand-built tree key, stamping a key captured from the
+per-instance catalog) failed; the full trail is in
+[`docs/green-outline-attempts.md`](docs/green-outline-attempts.md).
 
 ### Why the dispatch is deferred
 
@@ -177,6 +225,9 @@ filters to `FLOR` + `NPC_` types to produce the spawn-and-scan list.
 | `126806`   | `void*(container, out[4], &key)`                | Generic `BSTHashMap` lookup                                           |
 | `52155`    | `void(planetId, BGSKeyword*, bool)`             | `SetTraitKnown` — sets bit + dispatches trait-progress event          |
 | `52157`    | `void(ref, count, byte=0xd, byte, byte)`        | Per-planet progress updater. Hook target; we also call it directly    |
+| `52158`    | `void(ctx, &db)`                                | Per-species count completion. Driven with an explicit target planet   |
+| `52161`    | `void(ctx, &db)`                                | Per-type scanned-species tree writer — the persistent green state     |
+| `102650`   | `void(ctx, planetId, full)`                     | Ref-free "scan & survey a planet" — discover, slate, recurse on moons  |
 | `83008`    | `void(ref, scanned, byte=0xd, byte=0)`          | `SetScanned` inner — dispatches to flora or actor writer              |
 | `97853`    | `void(ctx)`                                     | Survey-completion notify. Hook callee; generates Survey Data slate    |
 | `124898`   | `void(subobj*, species_id, delta, 0)`           | Per-species scan-flag increment on subobj at `value + 0x20`           |
@@ -218,7 +269,9 @@ race.
 
 ```text
 src/Main.cpp                                      # SFSE plugin
+src/EsmReader.cpp / include/EsmReader.h           # Starfield.esm PNDT/PPBD reader (galaxy species)
 include/PCH.h                                     # precompiled header
+docs/                                             # design notes + the green-outline RE attempt log
 Data/CompletePlanetSurvey.esm                     # CK-authored Settings toggle
 Data/Scripts/Source/User/*.psc                    # Papyrus sources
 Data/Scripts/*.pex                                # Compiled scripts
@@ -262,11 +315,11 @@ Papyrus compile step fails. (CI never runs this — it packages the committed
 ### 3. Package the distributable
 
 ```bat
-package.bat 1.0.8    :: -> Complete-Planet-Survey-1.0.8.zip (wraps package.py)
+python package.py --version 1.1.0    :: -> Complete-Planet-Survey-1.1.0.zip in CWD
 ```
 
-Packages the current build, so run `build.bat` first. CI runs `package.py` on
-`v*` tags.
+Packages the current build, so run `build.bat` first. CI runs the same command
+(`python package.py --version $version`) on `v*` tags.
 
 ### 4. Reverse engineering (optional)
 
