@@ -1,0 +1,57 @@
+[size=6][b]Complete Planet Survey[/b][/size]
+
+Skip the planet survey grind. Scan a single flora or fauna, run one console command on a planet, or complete the [b]entire galaxy at once[/b] — survey data, traits, flora, fauna, and resources, all in one shot.
+
+[line]
+
+[size=4][b]Main features[/b][/size]
+[list]
+[*][b]One planet, instantly[/b] — advances the current planet's survey to 100%: all flora, fauna, resources, and traits.
+[*][b]The whole galaxy, one command[/b] — completes every planet and moon at once (~1798 bodies), with no fast-travel and no per-planet visiting.
+[*][b]Persistent green flora & fauna[/b] — planets completed this way show their plants and creatures as scanned (green) when you land, including planets you have [i]never visited[/i], and it survives saving and reloading.
+[*][b]Reveals all planet traits.[/b]
+[*][b]Awards the "<Planet> Survey Data" slate[/b] to your inventory — the same reward a vanilla full survey gives.
+[*][b]Biome Complete[/b] fires for every biome, not just the one you are standing in.
+[*][b]Built-in instant scan[/b] — one scan completes a species, so natural scanning is faster too (no separate Instant Scan mod needed).
+[/list]
+
+[line]
+
+[size=4][b]Requirements[/b][/size]
+[list]
+[*][url=https://www.nexusmods.com/starfield/mods/7589]Starfield Script Extender (SFSE)[/url] — required, and must match your game version.
+[*][url=https://www.nexusmods.com/starfield/mods/3256]Address Library for SFSE Plugins[/url] — required.
+[/list]
+
+[line]
+
+[size=4][b]How to use[/b][/size]
+
+[b]Option 1 — Hand Scanner (auto-complete on scan)[/b]
+Turn the toggle on:
+[code]Settings → Gameplay → Complete Planet Survey → Auto-Complete Survey on Scan[/code]
+Then open your scanner, point at any flora, fauna or resource, and Scan (E) as normal — the whole planet completes.
+
+[b]Option 2 — Console, current planet[/b]
+[code]cgf "CompletePlanetSurveyQuest.CompleteSurvey"[/code]
+Be on a planet surface (not in a ship or interior). Works regardless of the toggle.
+
+[b]Option 3 — Console, the entire galaxy[/b]
+[code]cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"[/code]
+Completes every planet in the game in a single pass (it takes a minute or two and may briefly stutter). Afterwards, land on any planet — even one you have never visited — and its flora and fauna are already scanned and shown in green.
+
+[line]
+
+[size=4][b]Notes[/b][/size]
+[list]
+[*]The hand-scanner UI may not refresh until the area is reloaded; the survey data and the green scanned outlines are applied either way.
+[*]Address Library keeps the mod resilient across game patches, but each release is built and tested against a specific game / SFSE build — check the changelog or sticky post for the tested version.
+[/list]
+
+[line]
+
+[size=4][b]Shout outs[/b][/size]
+[list]
+[*]CommonLibSF / SFSE teams for the plugin framework.
+[*]The Starfield modding community for the reverse-engineering documentation.
+[/list]
