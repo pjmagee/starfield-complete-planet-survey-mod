@@ -54,18 +54,6 @@ int Function GetSweepPlanetFormIdAt(int aiIndex) global native
 ; Returns the number of species/resource forms marked.
 int Function FinalizeSweptPlanet(int aiFormId) global native
 
-; Green one species TYPE on an EXPLICIT target planet, using a live spawned instance as the
-; handle (drives the engine's type-completion writer ID_52161 directly). The planet is an
-; argument — so one spawned instance can green that species on ANY planet, not just the one the
-; player is on. The target planet's survey entry must already exist (discover / MarkResources).
-Function GreenTypeForPlanet(ObjectReference akRef, Form akPlanet) global native
-
-; Drive the per-species COUNT completion (ID_52158) for an EXPLICIT target planet — the second
-; half of the green (the tree write alone stayed blue; tree + count greened). `akRef` is a live
-; spawned instance of the species. Used to validate the explicit-planet count before the galaxy
-; loop, and is what GreenSpeciesEverywhere drives per planet internally.
-Function CompleteTypeForPlanet(ObjectReference akRef, Form akPlanet, Form akSpecies) global native
-
 ; Enumerate every UNIQUE flora/fauna species across ALL planets (from the ESM PPBD data).
 ; Call once, then iterate 0..count-1 via GetAllSpeciesFormIdAt + Game.GetForm. The atomic galaxy
 ; green spawns one live instance per entry as the handle for GreenSpeciesEverywhere.

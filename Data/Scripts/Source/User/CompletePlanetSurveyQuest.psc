@@ -128,46 +128,6 @@ Function GreenAllPlanets() global
     Debug.Notification("Green all: " + spawned + " species across " + greenedPlanets + " planet-types")
 EndFunction
 
-; VALIDATION for the atomic galaxy green: spawn the current planet's species and green each TYPE
-; by driving ID_52161 DIRECTLY with the planet handed in explicitly (instead of letting the scan
-; path infer "current planet"). If this greens the ground, then pointing the same call at any
-; OTHER planet's id greens that planet from here — the whole atomic loop.
-;   cgf "CompletePlanetSurveyQuest.TestDirectGreen"
-Function TestDirectGreen() global
-    Planet currentPlanet = Game.GetPlayer().GetCurrentPlanet()
-    If currentPlanet == None || Game.GetPlayer().IsInInterior()
-        Debug.Notification("Direct green: land on a planet surface first")
-        Return
-    EndIf
-    Form planetForm = currentPlanet as Form
-    ObjectReference playerRef = Game.GetPlayer() as ObjectReference
-    CompletePlanetSurveyNative.MarkResourcesForPlanet(planetForm, 100)   ; ensure survey entry exists
-    int n = CompletePlanetSurveyNative.EnumeratePlanetSpecies(planetForm)
-    int greened = 0
-    int i = 0
-    While i < n
-        int  fid = CompletePlanetSurveyNative.GetPlanetSpeciesFormIdAt(i)
-        Form sf  = Game.GetForm(fid)
-        If sf != None
-            ObjectReference r = playerRef.PlaceAtMe(sf, 1, false, true, true, None, None, true)
-            If r != None
-                ; tree write (ID_52161, planet explicit) PLUS the count completion driven with the
-                ; planet EXPLICIT (ID_52158-direct, via CompleteTypeForPlanet) — the exact pair the
-                ; galaxy loop uses. Validates the explicit-planet count greens (target == current here).
-                CompletePlanetSurveyNative.GreenTypeForPlanet(r, planetForm)
-                CompletePlanetSurveyNative.CompleteTypeForPlanet(r, planetForm, sf)
-                r.Disable(false)
-                r.Delete()
-                greened += 1
-            EndIf
-        EndIf
-        i += 1
-    EndWhile
-    CompletePlanetSurveyNative.ScanNearbyRefs()
-    CompletePlanetSurveyNative.DebugLog("TestDirectGreen: tree + count completion for " + greened + " species on planet 0x" + planetForm)
-    Debug.Notification("Direct green: " + greened + " types — open scanner / walk a patch")
-EndFunction
-
 ; Called by the C++ scan hook on every species/resource scan. Reads the
 ; Settings > Gameplay toggle, short-circuits if disabled or planet already
 ; complete, then QUEUES CompleteSurvey. C++ poller dispatches it once the
