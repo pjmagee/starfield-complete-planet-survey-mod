@@ -12,6 +12,9 @@ set_encodings("utf-8")
 -- add rules
 add_rules("mode.debug", "mode.releasedbg")
 
+-- zlib: inflate compressed PNDT records when reading Starfield.esm at runtime
+add_requires("zlib")
+
 -- include commonlibsf
 includes("extern/CommonLibSF")
 
@@ -19,6 +22,7 @@ includes("extern/CommonLibSF")
 target("CompletePlanetSurvey", function()
     -- add commonlibsf deps
     add_deps("commonlibsf")
+    add_packages("zlib")
     add_rules("commonlib.plugin")
 
     -- plugin metadata

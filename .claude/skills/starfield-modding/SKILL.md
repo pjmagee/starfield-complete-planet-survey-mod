@@ -59,7 +59,7 @@ Do not speculate about offsets, function signatures, or what's currently deploye
 - **Authoring records / ESMs / quests in the Creation Kit (the official data path)** → [references/creation-kit.md](references/creation-kit.md)
 - **Editing ESM/ESP or merging plugins** → [references/data-plugins.md](references/data-plugins.md)
 - **Packaging an installer / shipping to Nexus** → [references/packaging.md](references/packaging.md)
-- **Writing to the planet-survey knowledge DB** → [references/planet-survey-internals.md](references/planet-survey-internals.md) (1.16.236.0 offsets, ID_124898/97853, BSComponentDB2 keys)
+- **Writing to the planet-survey knowledge DB** → [references/planet-survey-internals.md](references/planet-survey-internals.md) (1.16.236.0 offsets, BSComponentDB2 keys). Note the **two layers**: the survey **DATA** (% / slate / counts — fully ref-free via ID_124898/97853) vs the **green VISUAL** outline. The green is a **persistent, per-TYPE** red-black tree at `subobj+0x60`, *saved* in the DB — a completed planet's flora/fauna spawn green on a fresh game launch, never individually scanned. Set it via the engine's type-completion writer **ID_52161** (a real scan, or driven directly with an explicit target planet); do NOT hand-stamp a key read from the per-instance `db+0x3d8` catalog (that key never matches). "Can't paint unloaded objects" is **wrong** — they read the saved record on load.
 
 ---
 

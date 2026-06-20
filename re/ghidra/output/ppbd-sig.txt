@@ -1,0 +1,5 @@
+Instructions referencing scalar 0x44425050:
+  14076f64c  CMP EAX,0x44425050   in ID_51401@14076f4f0
+
+Distinct containing functions:
+  14076f4f0

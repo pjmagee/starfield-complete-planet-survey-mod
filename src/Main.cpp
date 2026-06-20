@@ -1,5 +1,9 @@
 #include "PCH.h"
 
+#include "EsmReader.h"
+
+#include <unordered_map>
+
 // Address Library IDs for Starfield 1.16.236.0 — discovered via Ghidra.
 // See memory/re_progress.md for the derivation and the knowledge-DB architecture.
 //
@@ -47,6 +51,25 @@ namespace Engine
     inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
     inline REL::Relocation<fn_set_percent_t>     SetPercentByte {REL::ID(124899)};
     inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
+    // ID_52161: the engine's per-TYPE completion writer (resolves the species' canonical key
+    //   from a LIVE instance, then writes the planet's "scanned species" tree — the green state).
+    //   Normally fed the current planet by the scan path; we drive it directly with an EXPLICIT
+    //   target planet so any planet can be greened from one spot. Context: {uint32 planetId @0x00,
+    //   uint32 liveInstanceFormID @0x10}; param_2 -> &db. The instance must be live + dynamic-id.
+    using fn_type_scan_inner_t = void (*)(void* ctx, std::uintptr_t* dbPtr);
+    inline REL::Relocation<fn_type_scan_inner_t> TypeScanInner {REL::ID(52161)};
+
+    // ID_52158: the per-species COUNT completion — the OTHER half of the green (paired with the
+    //   tree write ID_52161). It sets the +0x21 scan-flag / +0x20 percent for (planet, species)
+    //   and runs the biome propagation. Normally reached via ID_52157, which resolves the planet
+    //   from the ref's location (ID_52188 = "the planet you're on"). We drive it DIRECTLY with an
+    //   EXPLICIT target planet in the context so the count completes for ANY planet from one spot.
+    //   Context confirmed from ID_52157's stack build: {uint32 planetId @0x00, uint32 species @0x04,
+    //   byte delta @0x08, void* ref @0x10, byte* outScanned @0x18, byte* outPercent @0x20,
+    //   byte flag @0x28}; param_2 -> &db. (NB: ID_52158 reads the CURRENT biome at ID_937609+0x160
+    //   for its propagation, so the biome half may no-op for a never-visited target.)
+    using fn_progress_inner_t = void (*)(void* ctx, std::uintptr_t* dbPtr);
+    inline REL::Relocation<fn_progress_inner_t> PlanetProgressInner {REL::ID(52158)};
 
     // ID_1016657: per-planet survey aggregator constructor.
     //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
@@ -72,16 +95,6 @@ namespace Engine
     using fn_survey_notify_t = void (*)(void* ctx);
     inline REL::Relocation<fn_survey_notify_t> SurveyCheckNotify {REL::ID(97853)};
 
-    // ID_52174: GetOrCreate the per-planet BSGalaxy::PlayerKnowledge entry.
-    //   Args: ({uint32 planetId, uint32 value}, &db). On a lookup-miss it builds a
-    //   fresh component internally (ID_51421) and enqueues a BSComponentDB2
-    //   create command (ID_52204 → CreateAndDeleteCommand<…,PlayerKnowledge>).
-    //   We call it with value=0 solely to MATERIALISE the entry for an undiscovered
-    //   planet so the ref-free survey writers have something to write to. The
-    //   create is asynchronous — the command is processed a frame or two later.
-    using fn_ensure_entry_t = void (*)(std::uint32_t* planetIdAndValue, std::uintptr_t* dbPtr);
-    inline REL::Relocation<fn_ensure_entry_t> EnsurePlanetEntryNative {REL::ID(52174)};
-
     // ID_102650: the engine's ref-free "scan & fully survey a planet" entry point —
     // what a starmap/orbital scan ultimately drives. It resolves the knowledge DB
     // itself, then (via ID_102651) sets the surveyed bit, CREATES the entry if
@@ -101,7 +114,7 @@ namespace Engine
     constexpr std::uint8_t kBiomeScanCategory    = 0x0d;   // category byte for ScanRefNative / PlanetProgressNative
 
     // BSTHashMap lookup sentinel: out[3] value when the key is not found.
-    constexpr std::uintptr_t kDbLookupNotFound     = 0xfe0;
+    constexpr std::uintptr_t kDbLookupNotFound     = 0xfe0;   // db+0x268 survey-container miss sentinel (ID_126806)
     // Invalid/sentinel form ID used in aggregator arrays for empty slots.
     constexpr std::uint32_t  kInvalidFormId         = 0xFFFFFFFFu;
     // Default delta for scan-flag increment (marks species fully scanned in one pass).
@@ -236,6 +249,89 @@ namespace Engine
         return 1;
     }
 
+    // Green a single species TYPE on an EXPLICIT target planet by driving the engine's own
+    // type-completion writer (ID_52161) directly. `ref` must be a LIVE, dynamic-id instance of
+    // the species (spawned via PlaceAtMe) — ID_52161 resolves the species' canonical key off it
+    // and writes `planetId`'s scanned-species tree (the green state). Because the planet is an
+    // explicit ARGUMENT here (not "wherever the player is"), one live instance can green that
+    // species on ANY planet. The planet's survey entry must already exist (discover/MarkResources).
+    void GreenTypeForPlanet(RE::TESObjectREFR* ref, std::uint32_t planetId)
+    {
+        if (!ref || !planetId)
+            return;
+        const auto db = GetKnowledgeDB();
+        if (!db)
+            return;
+        // Context ID_52161 consumes: planetId @0x00, live-instance FormID @0x10.
+        struct alignas(8) TypeScanCtx
+        {
+            std::uint32_t planetId;    // +0x00
+            std::uint32_t pad04 {0};
+            std::uint64_t pad08 {0};   // +0x08
+            std::uint32_t instanceId;  // +0x10
+            std::uint32_t pad14 {0};
+        } ctx {planetId, 0, 0, ref->GetFormID(), 0};
+        std::uintptr_t dbPtr = db;
+        TypeScanInner(&ctx, &dbPtr);
+    }
+
+    // Complete a species TYPE's COUNT on an EXPLICIT target planet by driving ID_52158 directly,
+    // bypassing ID_52157's ID_52188 "current planet" resolution. Pairs with GreenTypeForPlanet:
+    // in testing, the tree write ALONE stayed blue (#6); tree write + this count completion (#7)
+    // greened the planet, fresh instances included. `ref` is the live spawned instance (ID_52158
+    // reads it for biome propagation + notify; the count itself credits `planetId`). The planet's
+    // survey entry must already exist (the data sweep creates it) or ID_52158 early-returns.
+    void CompleteTypeForPlanet(std::uint32_t planetId, std::uint32_t species, RE::TESObjectREFR* ref)
+    {
+        if (!planetId || !species || !ref)
+            return;
+        const auto db = GetKnowledgeDB();
+        if (!db)
+            return;
+        std::uint8_t outScanned = 0;  // ID_52158 writes "was-unscanned" flag here (param_1+6)
+        std::uint8_t outPercent = 0;  // ID_52158 writes the new percent byte here (param_1+8)
+        struct alignas(8) ProgressCtx
+        {
+            std::uint32_t planetId;   // +0x00
+            std::uint32_t species;    // +0x04
+            std::uint8_t  delta;      // +0x08  (ID_52157 passes 1)
+            std::uint8_t  pad09[7];
+            void*         ref;         // +0x10
+            std::uint8_t* outScanned;  // +0x18
+            std::uint8_t* outPercent;  // +0x20
+            std::uint8_t  flag28;      // +0x28  (ID_52157 passes param_5; UpdatePlanetProgress=0)
+            std::uint8_t  pad29[7];
+        } ctx {planetId, species, 1, {}, ref, &outScanned, &outPercent, 0, {}};
+        std::uintptr_t dbPtr = db;
+        PlanetProgressInner(&ctx, &dbPtr);
+    }
+
+    // One species TYPE fully greened on one target planet: the tree write (ID_52161) + the count
+    // completion (ID_52158), both with the planet handed in explicitly. This is the per-(planet,
+    // species) unit of the atomic galaxy green — the same pair that greened in test #7, but aimed
+    // at an arbitrary planet instead of "the one you're standing on".
+    void GreenAndCompleteTypeForPlanet(RE::TESObjectREFR* ref, std::uint32_t planetId, std::uint32_t species)
+    {
+        GreenTypeForPlanet(ref, planetId);
+        CompleteTypeForPlanet(planetId, species, ref);
+    }
+
+    // Inverse of Esm::GetPlanetSpecies() (planetId -> [speciesFid]): speciesFid -> [planetId].
+    // Built once and cached. The atomic galaxy green spawns ONE live instance per unique species,
+    // then greens it on every planet that hosts it — this map is that "every planet" list.
+    const std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& GetSpeciesToPlanets()
+    {
+        static std::unordered_map<std::uint32_t, std::vector<std::uint32_t>> inv;
+        static std::once_flag                                               once;
+        std::call_once(once, [] {
+            for (const auto& [planetId, species] : Esm::GetPlanetSpecies())
+                for (const auto fid : species)
+                    inv[fid].push_back(planetId);
+            spdlog::info("GetSpeciesToPlanets: {} unique species -> planet lists", inv.size());
+        });
+        return inv;
+    }
+
     // Iterate every form ID the engine's aggregator tracks for a planet.
     // Runs the aggregator, walks the four span pairs (two uint32[], two TESForm*[]),
     // calls `fn(formId)` for each valid entry, then frees the buffer.
@@ -289,51 +385,35 @@ namespace Engine
         SurveyBufferFree(buf);
     }
 
-    // Mark every species the game tracks for this planet as scanned by bumping each flag.
-    // Runs the game's own aggregator to enumerate form IDs — guaranteed to cover whatever
-    // categories the UI displays (flora / fauna / resources / traits) for this planet.
+    // Mark every species & resource the game tracks for this planet as scanned, by
+    // bumping each one's scan-flag byte. Uses the engine's own aggregator to enumerate
+    // the tracked form IDs. Traits are deliberately NOT touched here — they live in a
+    // separate "known" bitmask and are handled by the trait path (SetTraitKnown /
+    // Papyrus MarkTraits); a keyword's scan-flag byte is meaningless to the survey %.
     //
-    // Returns the number of form IDs marked.
-    int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta,
-                                const char* diagTag = nullptr, int* outSeen = nullptr)
+    // Returns the number of species/resource forms marked.
+    int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta)
     {
         if (!planetId)
             return 0;
 
         int marked = 0;
         int seen   = 0;
-        int traits = 0;
-        // diagTag (when set) logs the four aggregator span lengths — used by the
-        // galaxy sweep on a few sample planets to confirm the canonical species
-        // lists are actually populated (vs empty on never-loaded fresh planets).
         ForEachAggregatedFormId(planetId, [&](std::uint32_t fid)
         {
             ++seen;
-            // Planet TRAITS are BGSKeywords tracked by a separate per-planet
-            // "known" bitmask, NOT the per-species scan-flag byte. Bumping their
-            // scan flag is a no-op (they show 0/1 on the survey screen forever),
-            // so a keyword must go through SetTraitKnown (ID_52155) instead —
-            // the same call the per-planet path makes via Papyrus MarkTraits.
             auto* form = RE::TESForm::LookupByID(fid);
             if (form && form->GetFormType() == RE::FormType::kKYWD)
-            {
-                SetTraitKnownNative(planetId, reinterpret_cast<std::uintptr_t>(form), true);
-                ++traits;
-            }
-            else if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
-            {
+                return;  // trait keyword — handled by the trait path, not as a species
+            if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
                 ++marked;
-            }
-        }, diagTag);
-        if (outSeen)
-            *outSeen = seen;
-        // seen > marked+traits => DB lookup missed some forms; seen == 0 =>
-        // aggregator returned nothing for this planet. debug-level: the galaxy
-        // sweep calls this 1798x, so keep it out of the default log; the sweep's
-        // aggregate markedTotal is the number that matters there.
-        spdlog::debug("MarkEverythingForPlanet: planetId=0x{:08X} seen={} marked={} traits={}",
-                      planetId, seen, marked, traits);
-        return marked + traits;
+        });
+        // seen > marked => the DB lookup missed some forms; seen == 0 => the aggregator
+        // returned nothing for this planet. debug-level: the galaxy sweep calls this
+        // ~1798x, so keep it out of the default log.
+        spdlog::debug("MarkEverythingForPlanet: planetId=0x{:08X} seen={} marked={}",
+                      planetId, seen, marked);
+        return marked;
     }
 
     // Fire the survey check/notify routine. Triggers the completion event that
@@ -356,48 +436,51 @@ namespace Engine
         SurveyCheckNotify(&ctx);
     }
 
-    // Cheap test for "does this planet have a per-planet knowledge-DB entry yet?"
-    // (i.e. has the player discovered/scanned it). Same (disc, planetId) lookup
-    // the engine's writers do; returns false on the not-found sentinel. Lets the
-    // galaxy sweep touch only discovered planets and skip the rest with no work.
-    bool PlanetHasKnowledgeEntry(std::uint32_t planetId)
+    // Write a planet's ref-free survey STATE: the attribute "known" bits (magneto-
+    // sphere / resources / atmosphere / gravity / temperature / water) + every
+    // species & resource scan flag the engine tracks. This is the player-independent
+    // core of "complete a planet" — no refs, no spawn. It does NOT fire the
+    // completion event; callers choose when (the slate timing matters at scale).
+    // Returns the number of species/resource forms marked.
+    int WritePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta)
     {
-        if (!planetId)
-            return false;
-        const auto db = GetKnowledgeDB();
-        if (!db)
-            return false;
-        const std::uint16_t disc = *TraitDiscriminator.get();
-        const std::uint64_t key =
-            (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(planetId) << 16);
-        std::uintptr_t out[4]    = {0, 0, 0, kDbLookupNotFound};
-        auto           container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
-        DbLookup(container, out, &key);
-        return !(out[3] == kDbLookupNotFound && out[2] == 0);
+        SetPlanetAttributeBits(planetId);
+        return MarkEverythingForPlanet(planetId, delta);
     }
 
-    // Complete one planet's survey ref-free (no teleport, no spawn): mark every
-    // tracked form scanned + fire the survey-complete check. Assumes the entry
-    // already exists (caller checks / has just created it).
-    void CompletePlanetRefFree(std::uint32_t planetId, std::uint8_t delta)
+    // Fully complete one planet's survey ref-free: write the state, then fire the
+    // survey-complete event so the "<Planet> Survey Data" slate drops. This is the
+    // single shared "complete one planet" entry point used by BOTH the on-planet
+    // path (MarkResourcesForPlanet) and the galaxy sweep's per-planet finalize
+    // (FinalizeSweptPlanet). Returns the marked-form count. Idempotent.
+    int CompletePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta)
     {
-        MarkEverythingForPlanet(planetId, delta);
+        const int marked = WritePlanetSurveyState(planetId, delta);
         NotifySurveyProgress(planetId);
+        return marked;
     }
 
-    // Materialise the per-planet knowledge entry for an undiscovered planet.
-    // ID_52174 builds the PlayerKnowledge component and enqueues the create
-    // command; processing is deferred (see the two-phase poller below).
-    void CreatePlanetEntry(std::uint32_t planetId)
+    // Mark a planet's canonical flora/fauna (authored in Starfield.esm's PNDT PPBD data,
+    // see EsmReader) as scanned. This is the ONE thing the runtime can't give us for a
+    // never-visited planet — the engine materialises its biome species only on landing —
+    // so we read them from the ESM and pre-write their scan flags. When the player later
+    // lands, those species spawn already-scanned (green) and the survey reads a true 100%.
+    // planetId == the planet's FormID == the key in the ESM map. Returns species marked.
+    int MarkEsmSpeciesForPlanet(std::uint32_t planetId)
     {
-        if (!planetId)
-            return;
-        const auto db = GetKnowledgeDB();
-        if (!db)
-            return;
-        std::uint32_t  arg[2] {planetId, 0};  // {planetId, value=0}
-        std::uintptr_t dbPtr = db;
-        EnsurePlanetEntryNative(arg, &dbPtr);
+        const auto& m  = Esm::GetPlanetSpecies();
+        const auto  it = m.find(planetId);
+        if (it == m.end())
+            return 0;  // barren / resource-only body — no authored flora/fauna
+        int marked = 0;
+        for (const auto speciesFormId : it->second)
+            // Survey scan flag (+0x21/+0x20) — drives the % count + "scanned" readout.
+            // NOTE: the GREEN outline is NOT set here — it reads a per-species tree
+            // (subobj+0x80) only the real scan populates, which is why the galaxy sweep
+            // completes the data but greening needs the on-planet spawn-and-scan pass.
+            if (MarkSpeciesScannedForPlanet(planetId, speciesFormId, kDefaultScanDelta) == 1)
+                ++marked;
+        return marked;
     }
 
     // The engine's global form registry — a BSTScatterTable<FormID, TESForm*>.
@@ -468,16 +551,15 @@ namespace Engine
     int CompleteAllPlanetsSurveyData_Phase1(std::uint8_t /*delta*/)
     {
         std::vector<std::uint32_t> sweptForms;
-        std::string                formIds;  // sample, for the log
-        int                        idsLogged = 0;
-        int                        total             = 0;
-        int                        completed         = 0;
-        int                        skipped           = 0;
-        int                        markedTotal       = 0;  // species/resource scan flags set
-        int                        seenTotal         = 0;  // total species the aggregator returned
-        int                        planetsWithSpecies = 0; // planets whose canonical lists were non-empty
-        int                        sampleLogged      = 0;  // span-length dumps emitted
-        int                        bitsSet           = 0;  // planets that got attribute "known" bits set
+        int                        total       = 0;
+        int                        completed   = 0;
+        int                        skipped     = 0;
+        int                        markedTotal = 0;  // species/resource scan flags set
+        int                        esmTotal    = 0;  // ESM-authored flora/fauna marked
+
+        // Parse Starfield.esm up front (cached) so the per-planet flora/fauna lookups
+        // below are cheap. This is the only source of a never-visited planet's species.
+        Esm::GetPlanetSpecies();
 
         // Enumerate every planet (PNDT) form from the global form registry —
         // TESDataHandler::formArrays[kPNDT] is empty in Starfield (galaxy forms
@@ -493,42 +575,20 @@ namespace Engine
                 ++skipped;
                 return;
             }
-            // 1) Engine scan: creates the knowledge entry if missing, marks the
-            //    planet "scanned/known", fires the survey-complete event (slate).
+            // 1) Engine discover (ID_102650): create the per-planet knowledge entry
+            //    if missing + mark it discovered. The create is asynchronous, so a few
+            //    entries aren't ready this frame — the Papyrus finalize pass mops those
+            //    up (and fires each planet's completion event) a few frames later.
             ScanCompletePlanet(0, planetId, 1);
-            // 2) Fill in the actual per-species survey data (flora/fauna/resource
-            //    scan flags) — what drives the % bar. ID_102650 does NOT do this,
-            //    so a from-scratch planet stays at 0% without it. The entry now
-            //    exists (step 1 created it), so the DB writes land.
-            int  seen = 0;
-            char sampleTag[48];
-            const char* diagTag = nullptr;
-            if (sampleLogged < 10)
-            {
-                std::snprintf(sampleTag, sizeof(sampleTag), "sweep-sample[0x%08X]", form->GetFormID());
-                diagTag = sampleTag;
-                ++sampleLogged;
-            }
-            markedTotal += MarkEverythingForPlanet(planetId, Engine::kDefaultScanDelta, diagTag, &seen);
-            seenTotal += seen;
-            if (seen > 0)
-                ++planetsWithSpecies;
-            // 3) Set the planet-level "attribute known" bits (magnetosphere / resources /
-            //    atmosphere / gravity / temperature / water). These gate a large cluster of
-            //    GetSurveyPercent's categories and are what a barren body (no species) needs to
-            //    reach 100%. We never set them before — which is why a barren moon with traits
-            //    done still capped around 50%.
-            if (SetPlanetAttributeBits(planetId))
-                ++bitsSet;
+            // 2) Write the ref-free survey state (attribute bits + species/resource
+            //    scan flags). Slate dispatch is deferred to the finalize pass.
+            markedTotal += WritePlanetSurveyState(planetId, kDefaultScanDelta);
+            // 3) Mark the planet's authored flora/fauna (from Starfield.esm) as scanned —
+            //    the species the runtime can't give us for an unvisited planet. The finalize
+            //    pass re-applies this once async entries flush, so stragglers are covered.
+            esmTotal += MarkEsmSpeciesForPlanet(planetId);
             sweptForms.push_back(form->GetFormID());
             ++completed;
-            if (idsLogged < 24)
-            {
-                char buf[16];
-                std::snprintf(buf, sizeof(buf), "0x%08X ", form->GetFormID());
-                formIds += buf;
-                ++idsLogged;
-            }
         });
 
         {
@@ -536,21 +596,10 @@ namespace Engine
             g_sweepPlanetForms = std::move(sweptForms);
         }
 
-        spdlog::info("CompleteAllPlanetsSurveyData: {} PNDT forms, {} scan-completed, {} species/resource flags set, {} over cap (skipped)",
-                     total, completed, markedTotal, skipped);
-        spdlog::info("CompleteAllPlanetsSurveyData: {} planets had non-empty species lists, {} total species seen ({} avg per planet w/ species)",
-                     planetsWithSpecies, seenTotal,
-                     planetsWithSpecies ? seenTotal / planetsWithSpecies : 0);
-        spdlog::info("CompleteAllPlanetsSurveyData: {} planets got attribute-known bits set", bitsSet);
-        if (!formIds.empty())
-            spdlog::info("CompleteAllPlanetsSurveyData: scan-completed planet form IDs (sample): {}", formIds);
+        spdlog::info("CompleteAllPlanetsSurveyData: {} PNDT forms, {} processed, {} species/resource flags set, {} ESM flora/fauna marked, {} over cap (skipped)",
+                     total, completed, markedTotal, esmTotal, skipped);
         return completed;
     }
-
-    // Galaxy completion is now synchronous (ID_102650 self-contains create +
-    // complete), so there's no deferred phase. Retained as a no-op hook so the
-    // per-frame poller's call site stays valid.
-    void PumpGalaxyComplete(std::uint8_t /*delta*/) {}
 
     // Walk a cell's references directly (bypassing CommonLibSF's ForEachReference
     // which uses a lock at cell+0x120 that isn't a BSReadWriteLock on 1.16.236.0
@@ -673,11 +722,15 @@ namespace Papyrus
     static std::vector<std::uint32_t> g_planetSpeciesCache;
     static std::mutex                 g_speciesCacheMtx;
 
-    // Enumerate all flora + fauna species tracked for the planet. Uses the engine
-    // aggregator (ID_1016657) which returns form IDs across all biomes — broader
-    // than Papyrus's GetBiomeFlora/GetBiomeActors which only return the player's
-    // current biome. Cache the FLOR + NPC_ form IDs; Papyrus fetches them via
-    // GetPlanetSpeciesAt(index).
+    // Enumerate every flora + fauna species for the planet, for spawn-and-scan.
+    //
+    // PRIMARY source is the authored Starfield.esm PPBD list (Esm::GetPlanetSpecies):
+    // it is COMPLETE even for a planet the player has never visited. The engine
+    // aggregator (ID_1016657) only returns species the player has already discovered,
+    // so on a fresh planet it is empty — which is why the old spawn-and-scan greened
+    // nothing on never-visited worlds. We union the aggregator in too, in case it
+    // tracks something the PPBD parse missed. Cache the FLOR + NPC_ form IDs; Papyrus
+    // fetches them via GetPlanetSpeciesAt(index) and PlaceAtMe's each one.
     std::int32_t EnumeratePlanetSpecies(std::monostate, RE::TESForm* planetForm)
     {
         std::lock_guard lock(g_speciesCacheMtx);
@@ -686,22 +739,39 @@ namespace Papyrus
         const auto planetId = Engine::ReadPlanetId(planetForm);
         if (!planetId) return 0;
 
-        // Diagnostic tallies: how many aggregated IDs resolve, and into which
-        // form types. `noform` > 0 implicates LookupByID (CommonLibSF); `other`
-        // > 0 means species are tracked under a type the FLOR/NPC_ filter drops.
-        int total = 0, noform = 0, flora = 0, fauna = 0, other = 0;
-        Engine::ForEachAggregatedFormId(planetId, [&](std::uint32_t fid) {
-            ++total;
+        int esm = 0, agg = 0, noform = 0, other = 0;
+
+        // Add a species FormID if it resolves to a spawnable FLOR/NPC_ and isn't
+        // already cached. Lists are small (tens per planet), so a linear dedup is
+        // fine and avoids pulling in a set container.
+        const auto consider = [&](std::uint32_t fid, int& tally) {
+            if (!fid)
+                return;
+            for (const auto have : g_planetSpeciesCache)
+                if (have == fid)
+                    return;
             auto* form = RE::TESForm::LookupByID(fid);
             if (!form) { ++noform; return; }
             const auto ft = form->GetFormType();
-            if (ft == RE::FormType::kFLOR) { ++flora; g_planetSpeciesCache.push_back(fid); }
-            else if (ft == RE::FormType::kNPC_) { ++fauna; g_planetSpeciesCache.push_back(fid); }
-            else { ++other; }
+            if (ft == RE::FormType::kFLOR || ft == RE::FormType::kNPC_) {
+                g_planetSpeciesCache.push_back(fid);
+                ++tally;
+            } else {
+                ++other;
+            }
+        };
+
+        const auto& esmMap = Esm::GetPlanetSpecies();
+        if (const auto it = esmMap.find(planetId); it != esmMap.end())
+            for (const auto fid : it->second)
+                consider(fid, esm);
+
+        Engine::ForEachAggregatedFormId(planetId, [&](std::uint32_t fid) {
+            consider(fid, agg);
         }, "EnumeratePlanetSpecies");
 
-        spdlog::info("EnumeratePlanetSpecies: planet=0x{:08X} aggregated={} flora={} fauna={} other={} noform={} kept={}",
-                     planetForm->GetFormID(), total, flora, fauna, other, noform, g_planetSpeciesCache.size());
+        spdlog::info("EnumeratePlanetSpecies: planet=0x{:08X} esm={} agg(extra)={} other={} noform={} kept={}",
+                     planetForm->GetFormID(), esm, agg, other, noform, g_planetSpeciesCache.size());
         return static_cast<std::int32_t>(g_planetSpeciesCache.size());
     }
 
@@ -746,21 +816,21 @@ namespace Papyrus
             return 0;
         const auto planetId = Engine::ReadPlanetId(planetForm);
         const auto d        = static_cast<std::uint8_t>(delta <= 0 ? Engine::kDefaultScanDelta : (delta > Engine::kMaxScanDelta ? Engine::kMaxScanDelta : delta));
-        const auto n        = Engine::MarkEverythingForPlanet(planetId, d);
-        // Fire the completion check so the engine dispatches the survey-complete event
-        // (generates the "Survey Data" slate, updates UI, etc.).
-        Engine::NotifySurveyProgress(planetId);
+        // Shared single-planet completion: attribute bits + species/resource scan
+        // flags + the survey-complete event (drops the "<Planet> Survey Data" slate).
+        // Same core the galaxy sweep's per-planet finalize uses.
+        const auto n = Engine::CompletePlanetSurveyState(planetId, d);
         spdlog::info("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
-                     planetForm->GetFormID(),
-                     planetId,
-                     d,
-                     n);
+                     planetForm->GetFormID(), planetId, d, n);
         return n;
     }
 
-    // Complete the survey for every DISCOVERED planet in the save (ref-free: no
-    // teleport, no spawn). Undiscovered planets are skipped for now. Returns the
-    // count completed. Console: cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
+    // Sweep every planet/moon in the galaxy and complete its survey ref-free (no
+    // teleport, no spawn): discover it (creating the knowledge entry), then write the
+    // attribute bits + species/resource scan flags. The Papyrus finalize pass mops up
+    // the few async-create stragglers and fires each planet's completion event (slate).
+    // Returns the number of planets processed. Console:
+    //   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
     std::int32_t CompleteAllPlanetsSurveyData(std::monostate)
     {
         return Engine::CompleteAllPlanetsSurveyData_Phase1(Engine::kDefaultScanDelta);
@@ -783,6 +853,107 @@ namespace Papyrus
         return static_cast<std::int32_t>(Engine::g_sweepPlanetForms[index]);
     }
 
+    // Re-apply the attribute "known" bits + per-species scan flags for one swept
+    // planet (resolved from its form ID). The C++ sweep creates the knowledge entry
+    // via ID_102650 ASYNCHRONOUSLY, so a few planets' entries aren't ready when the
+    // sweep writes in the same frame (ResolvePlanetSubobj returns null -> skipped).
+    // The Papyrus pass calls this per planet across later frames, by which point the
+    // deferred creates have flushed — catching those stragglers. Idempotent.
+    // Returns 1 if the attribute bits are now set, else 0.
+    std::int32_t FinalizeSweptPlanet(std::monostate, std::int32_t formId)
+    {
+        auto* form = RE::TESForm::LookupByID(static_cast<std::uint32_t>(formId));
+        if (!form)
+            return 0;
+        const auto planetId = Engine::ReadPlanetId(form);
+        if (!planetId)
+            return 0;
+        // Re-run the shared single-planet completion now the knowledge entry is ready.
+        // The sweep's ID_102650 create is async, so a few entries weren't ready during
+        // the same-frame C++ pass; this Papyrus pass runs a few frames later and catches
+        // them. It also (re-)fires the survey-complete event POST-completion — the sweep's
+        // ID_102650 fires it at discover time, before our writes finish the planet, so the
+        // slate wouldn't otherwise drop. The engine awards a planet's survey reward once,
+        // so re-firing is idempotent (one slate per planet).
+        const auto marked = Engine::CompletePlanetSurveyState(planetId);
+        // Re-apply the ESM-authored flora/fauna now the entry is guaranteed ready (catches
+        // the async-create stragglers the C++ sweep couldn't write).
+        Engine::MarkEsmSpeciesForPlanet(planetId);
+        return marked;
+    }
+
+    // Green one species TYPE on an explicit target planet using a live spawned instance as the
+    // handle (drives ID_52161 directly). The planet is an argument, so the caller can green any
+    // planet from one spot — the basis for the atomic galaxy green.
+    void GreenTypeForPlanet(std::monostate, RE::TESObjectREFR* ref, RE::TESForm* planetForm)
+    {
+        if (!ref || !planetForm)
+            return;
+        Engine::GreenTypeForPlanet(ref, Engine::ReadPlanetId(planetForm));
+    }
+
+    // Drive the per-species COUNT completion (ID_52158) for an EXPLICIT target planet — the
+    // second half of the green, alongside GreenTypeForPlanet. Used by TestDirectGreen to validate
+    // the explicit-planet count on the current planet before the galaxy loop relies on it.
+    void CompleteTypeForPlanet(std::monostate, RE::TESObjectREFR* ref, RE::TESForm* planetForm, RE::TESForm* speciesForm)
+    {
+        if (!ref || !planetForm || !speciesForm)
+            return;
+        Engine::CompleteTypeForPlanet(Engine::ReadPlanetId(planetForm), speciesForm->GetFormID(), ref);
+    }
+
+    // Cache of every UNIQUE flora/fauna species across all planets (the keys of the species->
+    // planets inversion). The atomic galaxy green spawns ONE live instance per entry, then calls
+    // GreenSpeciesEverywhere to green it on every planet that hosts it.
+    static std::vector<std::uint32_t> g_allSpeciesCache;
+    static std::mutex                 g_allSpeciesMtx;
+
+    std::int32_t EnumerateAllSpecies(std::monostate)
+    {
+        std::lock_guard lock(g_allSpeciesMtx);
+        g_allSpeciesCache.clear();
+        const auto& inv = Engine::GetSpeciesToPlanets();
+        g_allSpeciesCache.reserve(inv.size());
+        for (const auto& [fid, planets] : inv)
+        {
+            // Only spawnable FLOR/NPC_ forms — the live handle is a PlaceAtMe of this form.
+            auto* form = RE::TESForm::LookupByID(fid);
+            if (!form)
+                continue;
+            const auto ft = form->GetFormType();
+            if (ft == RE::FormType::kFLOR || ft == RE::FormType::kNPC_)
+                g_allSpeciesCache.push_back(fid);
+        }
+        spdlog::info("EnumerateAllSpecies: {} unique flora/fauna species across all planets",
+                     g_allSpeciesCache.size());
+        return static_cast<std::int32_t>(g_allSpeciesCache.size());
+    }
+
+    std::int32_t GetAllSpeciesFormIdAt(std::monostate, std::int32_t index)
+    {
+        std::lock_guard lock(g_allSpeciesMtx);
+        if (index < 0 || static_cast<std::size_t>(index) >= g_allSpeciesCache.size())
+            return 0;
+        return static_cast<std::int32_t>(g_allSpeciesCache[index]);
+    }
+
+    // Green ONE species type on EVERY planet that hosts it, using `ref` (a live spawned instance
+    // of that species) as the handle. Per planet it drives the tree write (ID_52161) + the count
+    // completion (ID_52158), both with the planet explicit — so the whole galaxy's green for this
+    // species is written from one spot, no visiting. Returns the number of planets greened.
+    std::int32_t GreenSpeciesEverywhere(std::monostate, RE::TESObjectREFR* ref, std::int32_t speciesFid)
+    {
+        if (!ref || speciesFid == 0)
+            return 0;
+        const auto  fid = static_cast<std::uint32_t>(speciesFid);
+        const auto& inv = Engine::GetSpeciesToPlanets();
+        const auto  it  = inv.find(fid);
+        if (it == inv.end())
+            return 0;
+        for (const auto planetId : it->second)
+            Engine::GreenAndCompleteTypeForPlanet(ref, planetId, fid);
+        return static_cast<std::int32_t>(it->second.size());
+    }
 
     void Register()
     {
@@ -818,6 +989,26 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GreenTypeForPlanet"sv, &GreenTypeForPlanet,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CompleteTypeForPlanet"sv, &CompleteTypeForPlanet,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "EnumerateAllSpecies"sv, &EnumerateAllSpecies,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetAllSpeciesFormIdAt"sv, &GetAllSpeciesFormIdAt,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GreenSpeciesEverywhere"sv, &GreenSpeciesEverywhere,
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "ScanNearbyRefs"sv, &ScanNearbyRefs, std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
@@ -835,10 +1026,15 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "GetSweepPlanetFormIdAt"sv, &GetSweepPlanetFormIdAt,
             std::optional<bool> {true}, false);
 
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "FinalizeSweptPlanet"sv, &FinalizeSweptPlanet,
+            std::optional<bool> {true}, false);
+
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, MarkResourcesForPlanet, "
                      "EnumeratePlanetSpecies, GetPlanetSpeciesFormIdAt, UpdatePlanetProgressForSpecies, "
-                     "ScanNearbyRefs, QueueCompleteSurvey, CompleteAllPlanetsSurveyData, "
-                     "GetSweepPlanetCount, GetSweepPlanetFormIdAt");
+                     "GreenTypeForPlanet, CompleteTypeForPlanet, EnumerateAllSpecies, GetAllSpeciesFormIdAt, "
+                     "GreenSpeciesEverywhere, ScanNearbyRefs, QueueCompleteSurvey, CompleteAllPlanetsSurveyData, "
+                     "GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet");
     }
 }  // namespace Papyrus
 
@@ -957,10 +1153,6 @@ namespace Hook
             return;
         }
         task->AddPermanentTask([]() {
-            // Galaxy-complete phase 2 runs independent of the scanner menu gate —
-            // it's pure DB work (no PlaceAtMe, no scanner-UI race).
-            Engine::PumpGalaxyComplete(Engine::kDefaultScanDelta);
-
             auto* ui = RE::UI::GetSingleton();
             const bool menusOpen = ui && ui->menusVisible;
 

@@ -34,13 +34,45 @@ int  Function ScanNearbyRefs() global native
 ; period, then dispatches Papyrus CompleteSurvey from a clean state.
 Function QueueCompleteSurvey() global native
 
-; Complete the survey for every DISCOVERED planet in the save (ref-free: no
-; teleport, no spawn). Returns the count completed. Undiscovered planets — those
-; without a knowledge-DB entry yet — are skipped (entry creation is a later step).
+; Sweep every planet/moon in the galaxy and complete its survey ref-free (no
+; teleport, no spawn): discover each, then write its attribute bits + species/
+; resource scan flags. Records the planets it touched for the finalize pass.
+; Returns the number of planets processed.
 int Function CompleteAllPlanetsSurveyData() global native
 
-; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep
-; scan-completed, so the Papyrus trait pass can re-resolve each as a Planet and
-; mark its traits via the proven GetKeywordTypeList(44) -> MarkTraitKnownForPlanet.
+; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep touched,
+; so the finalize pass can re-resolve each as a Planet (and mark its traits via
+; GetKeywordTypeList(44) -> MarkTraitKnownForPlanet).
 int Function GetSweepPlanetCount() global native
 int Function GetSweepPlanetFormIdAt(int aiIndex) global native
+
+; Fully complete one swept planet (by form ID): write its survey state (attribute
+; bits + species/resource flags) and fire the survey-complete event so its Survey
+; Data slate drops. Called from the finalize pass, which runs across later frames —
+; by then the sweep's asynchronous knowledge-entry creates have flushed, so this
+; also catches the few planets whose entry wasn't ready during the C++ pass.
+; Returns the number of species/resource forms marked.
+int Function FinalizeSweptPlanet(int aiFormId) global native
+
+; Green one species TYPE on an EXPLICIT target planet, using a live spawned instance as the
+; handle (drives the engine's type-completion writer ID_52161 directly). The planet is an
+; argument — so one spawned instance can green that species on ANY planet, not just the one the
+; player is on. The target planet's survey entry must already exist (discover / MarkResources).
+Function GreenTypeForPlanet(ObjectReference akRef, Form akPlanet) global native
+
+; Drive the per-species COUNT completion (ID_52158) for an EXPLICIT target planet — the second
+; half of the green (the tree write alone stayed blue; tree + count greened). `akRef` is a live
+; spawned instance of the species. Used to validate the explicit-planet count before the galaxy
+; loop, and is what GreenSpeciesEverywhere drives per planet internally.
+Function CompleteTypeForPlanet(ObjectReference akRef, Form akPlanet, Form akSpecies) global native
+
+; Enumerate every UNIQUE flora/fauna species across ALL planets (from the ESM PPBD data).
+; Call once, then iterate 0..count-1 via GetAllSpeciesFormIdAt + Game.GetForm. The atomic galaxy
+; green spawns one live instance per entry as the handle for GreenSpeciesEverywhere.
+int Function EnumerateAllSpecies() global native
+int Function GetAllSpeciesFormIdAt(int aiIndex) global native
+
+; Green ONE species type on EVERY planet that hosts it, using `akRef` (a live spawned instance of
+; that species) as the handle. Per planet it writes the tree (ID_52161) + drives the count
+; completion (ID_52158), both with the planet explicit. Returns the number of planets greened.
+int Function GreenSpeciesEverywhere(ObjectReference akRef, int aiSpeciesFormId) global native

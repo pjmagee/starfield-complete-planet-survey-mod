@@ -1,0 +1,196 @@
+======== ID_51435 / ID_51435 @ 140773a70 ========
+
+void ID_51435(longlong param_1,undefined4 param_2,ulonglong param_3,undefined8 param_4,
+             undefined8 param_5)
+
+{
+  int *piVar1;
+  uint uVar2;
+  int iVar3;
+  longlong *plVar4;
+  undefined8 *puVar5;
+  longlong lVar6;
+  longlong local_28;
+  uint local_20;
+  int local_1c;
+  ulonglong local_18;
+  ulonglong uStack_10;
+  
+  lVar6 = *(longlong *)(param_1 + 0x30);
+  uStack_10 = param_3 & 0xffffffff;
+  local_18 = CONCAT44(param_2,(uint)ID_938158) | 0x10000;
+  puVar5 = (undefined8 *)ID_123895(lVar6 + 0x40,&local_28,0xa0,8);
+  puVar5[1] = ID_51534;
+  *puVar5 = BSComponentDB2::Detail::
+            CreateAndDeleteCommand<class_<lambda_ed1860e4f1c0285962af7667c97f6e95>,class_BSComponentDB2::Detail::EdgeKey_const&___ptr64,struct_BSGalaxy::CTPerBiomeData&___ptr64>
+            ::vftable;
+  ID_51395(puVar5 + 3,param_5);
+  puVar5[0x11] = local_18;
+  puVar5[0x12] = uStack_10;
+  puVar5[0x13] = param_1;
+  LOCK();
+  uVar2 = *(uint *)(local_28 + 0x10);
+  *(uint *)(local_28 + 0x10) = local_20;
+  UNLOCK();
+  if (uVar2 < *(uint *)(lVar6 + 0x1a4)) {
+    *(uint *)((ulonglong)uVar2 + 0x44 + local_28) = local_20;
+  }
+  else {
+    *(uint *)(local_28 + 0x14) = local_20;
+  }
+  LOCK();
+  piVar1 = (int *)(local_28 + 0xc);
+  iVar3 = *piVar1;
+  *piVar1 = *piVar1 + local_1c;
+  UNLOCK();
+  lVar6 = *(longlong *)(param_1 + 0x30);
+  plVar4 = *(longlong **)(lVar6 + 0x238);
+  if (plVar4 != (longlong *)0x0) {
+    (**(code **)(*plVar4 + 0x10))(plVar4,plVar4,iVar3);
+    lVar6 = *(longlong *)(param_1 + 0x30);
+  }
+  if (*(longlong **)(lVar6 + 0x238) != (longlong *)0x0) {
+    (**(code **)(**(longlong **)(lVar6 + 0x238) + 0x10))();
+  }
+  return;
+}
+
+
+
+======== ID_51431 / ID_51431 @ 1407737d0 ========
+
+void ID_51431(longlong param_1,undefined4 param_2)
+
+{
+  int *piVar1;
+  uint uVar2;
+  int iVar3;
+  longlong lVar4;
+  longlong *plVar5;
+  undefined8 *puVar6;
+  longlong local_18;
+  uint local_10;
+  int local_c;
+  
+  lVar4 = *(longlong *)(param_1 + 0x30);
+  puVar6 = (undefined8 *)ID_123895(lVar4 + 0x40,&local_18,0x28);
+  puVar6[1] = ID_51520;
+  *puVar6 = BSComponentDB2::Detail::
+            CreateAndDeleteCommand<class_<lambda_a27c0be5f4b64ddccd8bc50e045d9555>,struct_BSComponentDB2::ID&___ptr64,unsigned_short&___ptr64>
+            ::vftable;
+  *(undefined2 *)((longlong)puVar6 + 0x14) = 0;
+  *(undefined4 *)(puVar6 + 3) = param_2;
+  puVar6[4] = param_1;
+  LOCK();
+  uVar2 = *(uint *)(local_18 + 0x10);
+  *(uint *)(local_18 + 0x10) = local_10;
+  UNLOCK();
+  if (uVar2 < *(uint *)(lVar4 + 0x1a4)) {
+    *(uint *)((ulonglong)uVar2 + 0x44 + local_18) = local_10;
+  }
+  else {
+    *(uint *)(local_18 + 0x14) = local_10;
+  }
+  LOCK();
+  piVar1 = (int *)(local_18 + 0xc);
+  iVar3 = *piVar1;
+  *piVar1 = *piVar1 + local_c;
+  UNLOCK();
+  plVar5 = *(longlong **)(*(longlong *)(param_1 + 0x30) + 0x238);
+  if (plVar5 != (longlong *)0x0) {
+    (**(code **)(*plVar5 + 0x10))(plVar5,local_10,iVar3);
+  }
+  return;
+}
+
+
+
+======== ID_51434 / ID_51434 @ 140773980 ========
+
+void ID_51434(longlong param_1,undefined4 param_2,ulonglong param_3,undefined8 param_4,
+             undefined8 *param_5)
+
+{
+  int *piVar1;
+  uint uVar2;
+  int iVar3;
+  longlong *plVar4;
+  undefined8 uVar5;
+  undefined8 *puVar6;
+  longlong lVar7;
+  longlong local_28;
+  uint local_20;
+  int local_1c;
+  ulonglong local_18;
+  ulonglong uStack_10;
+  
+  lVar7 = *(longlong *)(param_1 + 0x30);
+  uStack_10 = param_3 & 0xffffffff;
+  local_18 = CONCAT44(param_2,(uint)ID_938335) | 0x10000;
+  puVar6 = (undefined8 *)ID_123895(lVar7 + 0x40,&local_28,0x48);
+  puVar6[1] = ID_51548;
+  *puVar6 = BSComponentDB2::Detail::
+            CreateAndDeleteCommand<class_<lambda_84c8d09383ae2389d797bf13d8f74e50>,class_BSComponentDB2::Detail::EdgeKey_const&___ptr64,struct_BSGalaxy::CTPlanetOverlayData&___ptr64>
+            ::vftable;
+  uVar5 = param_5[1];
+  puVar6[3] = *param_5;
+  puVar6[4] = uVar5;
+  puVar6[5] = param_5[2];
+  puVar6[6] = local_18;
+  puVar6[7] = uStack_10;
+  puVar6[8] = param_1;
+  LOCK();
+  uVar2 = *(uint *)(local_28 + 0x10);
+  *(uint *)(local_28 + 0x10) = local_20;
+  UNLOCK();
+  if (uVar2 < *(uint *)(lVar7 + 0x1a4)) {
+    *(uint *)((ulonglong)uVar2 + 0x44 + local_28) = local_20;
+  }
+  else {
+    *(uint *)(local_28 + 0x14) = local_20;
+  }
+  LOCK();
+  piVar1 = (int *)(local_28 + 0xc);
+  iVar3 = *piVar1;
+  *piVar1 = *piVar1 + local_1c;
+  UNLOCK();
+  lVar7 = *(longlong *)(param_1 + 0x30);
+  plVar4 = *(longlong **)(lVar7 + 0x238);
+  if (plVar4 != (longlong *)0x0) {
+    (**(code **)(*plVar4 + 0x10))(plVar4,plVar4,iVar3);
+    lVar7 = *(longlong *)(param_1 + 0x30);
+  }
+  if (*(longlong **)(lVar7 + 0x238) != (longlong *)0x0) {
+    (**(code **)(**(longlong **)(lVar7 + 0x238) + 0x10))();
+  }
+  return;
+}
+
+
+
+======== ID_1015127 / ID_1015127 @ 1403dd7d0 ========
+
+void ID_1015127(int *param_1,longlong param_2)
+
+{
+  int iVar1;
+  longlong lVar2;
+  int local_res8 [2];
+  
+  iVar1 = *param_1;
+  if (((0x7fe < iVar1 - 1U) && (param_2 != 0)) && (0xfffffe < iVar1 + 0x1000000U)) {
+    lVar2 = ID_1015183(param_2 + 0x1e0,iVar1);
+    if (lVar2 == 0) {
+      lVar2 = param_2;
+    }
+    local_res8[0] = iVar1;
+    ID_1015184(lVar2,local_res8);
+    *param_1 = local_res8[0];
+    return;
+  }
+  *param_1 = iVar1;
+  return;
+}
+
+
+
