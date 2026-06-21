@@ -35,6 +35,12 @@ target("CompletePlanetSurvey", function()
         })
     end)
 
+    -- Catch C++ exceptions AND structured faults (access violations) at the Papyrus
+    -- boundary: every bound native is wrapped in try/catch (GuardedNative in src/Main.cpp).
+    -- /EHa lets catch(...) trap SEH, so a wrong/garbage offset deref logs + disables the
+    -- feature instead of a silent CTD crossing into the Papyrus VM.
+    add_cxflags("/EHa")
+
     -- source files
     add_files("src/**.cpp")
     add_includedirs("include")

@@ -2,6 +2,8 @@
 
 #include "EsmReader.h"
 
+#include <exception>
+#include <type_traits>
 #include <unordered_map>
 
 // Address Library IDs for Starfield 1.16.236.0–1.16.244.0 — discovered via Ghidra.
@@ -663,6 +665,12 @@ namespace Engine
     inline int g_scanSweepCountdown {0};
     inline int g_completeSurveyCountdown {0};
 
+    // Latched true when a bound native catches a fault (a C++ exception, or — because src/ is
+    // built /EHa — an access violation), almost always a wrong/garbage offset deref. Once set,
+    // the guarded natives short-circuit to safe defaults so the feature disables cleanly instead
+    // of re-faulting on the same bad offset every call. Cleared only by a game restart.
+    inline std::atomic<bool> g_degraded {false};
+
     // Patch the scanner's per-species required-count GMSTs so each individual scan
     // counts as a full completion. Matches the "Instant Scan" mod's approach (Nexus
     // mods/759) — just two SetGS calls, no ESM, no CCR dependency.
@@ -689,6 +697,48 @@ namespace Engine
 
 namespace Papyrus
 {
+    // Every bound native is registered through GuardedNative<>::call (see the CPS_GUARDED macro
+    // used in Register) rather than bound directly. This traps any C++ exception OR — because
+    // src/ is compiled /EHa — any structured fault such as an access violation, logs it, and
+    // returns a safe default. An uncaught fault crossing into the Papyrus VM's C call frame is
+    // undefined behaviour / a silent CTD with no log line. After the first fault we latch
+    // Engine::g_degraded so later natives bail to defaults instead of re-faulting on a bad offset.
+    template <class T, T fn>
+    struct GuardedNative;
+
+    template <class Ret, class... Args, Ret (*fn)(std::monostate, Args...)>
+    struct GuardedNative<Ret (*)(std::monostate, Args...), fn>
+    {
+        static Ret call(std::monostate self, Args... args)
+        {
+            if (Engine::g_degraded.load(std::memory_order_acquire))
+            {
+                if constexpr (!std::is_void_v<Ret>)
+                    return Ret {};
+                else
+                    return;
+            }
+            try
+            {
+                return fn(self, args...);
+            }
+            catch (const std::exception& e)
+            {
+                Engine::g_degraded.store(true, std::memory_order_release);
+                spdlog::error("[native] caught exception: {} — disabling further native calls this session", e.what());
+            }
+            catch (...)
+            {
+                Engine::g_degraded.store(true, std::memory_order_release);
+                spdlog::error("[native] caught access violation / unknown fault — disabling further native calls this session");
+            }
+            if constexpr (!std::is_void_v<Ret>)
+                return Ret {};
+        }
+    };
+
+#define CPS_GUARDED(FN) (&GuardedNative<decltype(&FN), &FN>::call)
+
     // Mark a trait keyword as known on the planet. Fires the trait progress event
     // (so UI notifications behave like a natural scan discovery).
     bool MarkTraitKnownForPlanet(std::monostate, RE::TESForm* planetForm, RE::BGSKeyword* keyword)
@@ -946,60 +996,60 @@ namespace Papyrus
         auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "DebugLog"sv, &DebugLog, std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "DebugLog"sv, CPS_GUARDED(DebugLog), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, &MarkTraitKnownForPlanet,
+            "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, CPS_GUARDED(MarkTraitKnownForPlanet),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "MarkResourcesForPlanet"sv, &MarkResourcesForPlanet,
+            "CompletePlanetSurveyNative"sv, "MarkResourcesForPlanet"sv, CPS_GUARDED(MarkResourcesForPlanet),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "EnumeratePlanetSpecies"sv, &EnumeratePlanetSpecies,
+            "CompletePlanetSurveyNative"sv, "EnumeratePlanetSpecies"sv, CPS_GUARDED(EnumeratePlanetSpecies),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "GetPlanetSpeciesFormIdAt"sv, &GetPlanetSpeciesAt,
+            "CompletePlanetSurveyNative"sv, "GetPlanetSpeciesFormIdAt"sv, CPS_GUARDED(GetPlanetSpeciesAt),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "UpdatePlanetProgressForSpecies"sv, &UpdatePlanetProgressForSpecies,
+            "CompletePlanetSurveyNative"sv, "UpdatePlanetProgressForSpecies"sv, CPS_GUARDED(UpdatePlanetProgressForSpecies),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "EnumerateAllSpecies"sv, &EnumerateAllSpecies,
+            "CompletePlanetSurveyNative"sv, "EnumerateAllSpecies"sv, CPS_GUARDED(EnumerateAllSpecies),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "GetAllSpeciesFormIdAt"sv, &GetAllSpeciesFormIdAt,
+            "CompletePlanetSurveyNative"sv, "GetAllSpeciesFormIdAt"sv, CPS_GUARDED(GetAllSpeciesFormIdAt),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "GreenSpeciesEverywhere"sv, &GreenSpeciesEverywhere,
+            "CompletePlanetSurveyNative"sv, "GreenSpeciesEverywhere"sv, CPS_GUARDED(GreenSpeciesEverywhere),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "ScanNearbyRefs"sv, &ScanNearbyRefs, std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "ScanNearbyRefs"sv, CPS_GUARDED(ScanNearbyRefs), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "QueueCompleteSurvey"sv, &QueueCompleteSurvey, std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "QueueCompleteSurvey"sv, CPS_GUARDED(QueueCompleteSurvey), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "CompleteAllPlanetsSurveyData"sv, &CompleteAllPlanetsSurveyData,
+            "CompletePlanetSurveyNative"sv, "CompleteAllPlanetsSurveyData"sv, CPS_GUARDED(CompleteAllPlanetsSurveyData),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "GetSweepPlanetCount"sv, &GetSweepPlanetCount,
+            "CompletePlanetSurveyNative"sv, "GetSweepPlanetCount"sv, CPS_GUARDED(GetSweepPlanetCount),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "GetSweepPlanetFormIdAt"sv, &GetSweepPlanetFormIdAt,
+            "CompletePlanetSurveyNative"sv, "GetSweepPlanetFormIdAt"sv, CPS_GUARDED(GetSweepPlanetFormIdAt),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "FinalizeSweptPlanet"sv, &FinalizeSweptPlanet,
+            "CompletePlanetSurveyNative"sv, "FinalizeSweptPlanet"sv, CPS_GUARDED(FinalizeSweptPlanet),
             std::optional<bool> {true}, false);
 
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, MarkResourcesForPlanet, "
@@ -1008,6 +1058,8 @@ namespace Papyrus
                      "GreenSpeciesEverywhere, ScanNearbyRefs, QueueCompleteSurvey, CompleteAllPlanetsSurveyData, "
                      "GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet");
     }
+
+#undef CPS_GUARDED
 }  // namespace Papyrus
 
 namespace Hook
