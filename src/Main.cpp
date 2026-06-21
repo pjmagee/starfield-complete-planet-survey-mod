@@ -2,6 +2,7 @@
 
 #include "EsmReader.h"
 
+#include <chrono>
 #include <exception>
 #include <type_traits>
 #include <unordered_map>
@@ -552,6 +553,7 @@ namespace Engine
     // Papyrus trait pass).
     int CompleteAllPlanetsSurveyData_Phase1(std::uint8_t /*delta*/)
     {
+        const auto                 t0 = std::chrono::steady_clock::now();
         std::vector<std::uint32_t> sweptForms;
         int                        total       = 0;
         int                        completed   = 0;
@@ -598,8 +600,11 @@ namespace Engine
             g_sweepPlanetForms = std::move(sweptForms);
         }
 
-        spdlog::info("CompleteAllPlanetsSurveyData: {} PNDT forms, {} processed, {} species/resource flags set, {} ESM flora/fauna marked, {} over cap (skipped)",
-                     total, completed, markedTotal, esmTotal, skipped);
+        const auto phase1Ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  std::chrono::steady_clock::now() - t0)
+                                  .count();
+        spdlog::info("CompleteAllPlanetsSurveyData: Phase 1 swept {} PNDT forms, {} processed, {} species/resource flags set, {} ESM flora/fauna marked, {} over cap (skipped) in {} ms",
+                     total, completed, markedTotal, esmTotal, skipped, phase1Ms);
         return completed;
     }
 
@@ -1254,6 +1259,10 @@ namespace
 SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
 {
     SFSE::Init(a_sfse, {.trampoline = true, .trampolineSize = 64});
+    // Pin a timestamped log format (date + ms) so phase durations read straight from the log,
+    // e.g. "[2026-06-21 14:31:50.598] [tid] [I] …". CommonLibSF already timestamps by default;
+    // this makes the format explicit and adds the date for cross-session clarity.
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%t] [%L] %v");
     spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
 
     const auto* messaging = SFSE::GetMessagingInterface();

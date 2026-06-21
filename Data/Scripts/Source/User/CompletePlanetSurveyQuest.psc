@@ -61,9 +61,15 @@ Function CompleteAllPlanetsSurveyData() global
         recallMsg.Show()
     EndIf
 
+    ; Phase timings via Utility.GetCurrentRealTime (real seconds) so the log shows how long each
+    ; phase actually takes. tStart is captured AFTER the popup closes, so it excludes the player's
+    ; reading time and measures pure compute. Phase 1 also logs precise ms on the C++ side.
+    float tStart = Utility.GetCurrentRealTime()
+
     ; 1) C++ sweep: discover every planet + write its survey state (attribute bits +
     ;    species/resource flags), and record the planets it touched.
     int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData()
+    float tAfterSweep = Utility.GetCurrentRealTime()
 
     ; 2) Finalize + trait pass. This loop runs across later frames, by which point the
     ;    sweep's async knowledge-entry creates have flushed. Per planet it re-applies the
@@ -86,13 +92,28 @@ Function CompleteAllPlanetsSurveyData() global
         EndIf
         i += 1
     EndWhile
+    float tAfterFinalize = Utility.GetCurrentRealTime()
 
     CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
 
     ; 3) Green pass: every planet now has its survey entry, so paint all flora/fauna green for the
     ;    whole galaxy from here — one live handle per species, tree + count completion per planet.
-    ;    (No toast here — the modal popup at the top carries the narrative; counts go to the log.)
     GreenAllPlanets()
+    float tEnd = Utility.GetCurrentRealTime()
+
+    ; Explicit per-phase durations (seconds) — so "how long did it take" is in the log directly,
+    ; not a manual subtraction of timestamps.
+    float secSweep    = tAfterSweep - tStart
+    float secFinalize = tAfterFinalize - tAfterSweep
+    float secGreen    = tEnd - tAfterFinalize
+    float secTotal    = tEnd - tStart
+    CompletePlanetSurveyNative.DebugLog("Timing(s): phase1(sweep)=" + secSweep + " phase2(finalize)=" + secFinalize + " phase3(green)=" + secGreen + " total=" + secTotal)
+
+    ; Unmissable completion signal — a MODAL Debug.MessageBox, NOT a toast. Toasts queue behind
+    ; the ~1798 "Survey Data" slate notifications (which drain over minutes), so the old "Green all"
+    ; toast surfaced long after the work finished, buried. A message box appears immediately and
+    ; the cascade cannot bury it.
+    Debug.MessageBox("Planetary survey complete.  " + count + " worlds catalogued — survey data, traits, and all flora & fauna scanned.  Completed in " + (secTotal as int) + " seconds.")
 EndFunction
 
 ; Atomically green every planet's flora/fauna from one spot — no visiting. For each UNIQUE species
@@ -109,6 +130,7 @@ Function GreenAllPlanets() global
     EndIf
     ObjectReference playerRef = player as ObjectReference
 
+    float tGreenStart = Utility.GetCurrentRealTime()
     int speciesCount = CompletePlanetSurveyNative.EnumerateAllSpecies()
     int greenedPlanets = 0
     int spawned = 0
@@ -132,8 +154,11 @@ Function GreenAllPlanets() global
         i += 1
     EndWhile
 
-    CompletePlanetSurveyNative.DebugLog("GreenAllPlanets: " + spawned + " species spawned, " + greenedPlanets + " planet-types greened")
-    Debug.Notification("Green all: " + spawned + " species across " + greenedPlanets + " planet-types")
+    ; No toast here — it would queue behind the Survey Data slate cascade and surface minutes
+    ; later, buried. The galaxy command shows a modal Debug.MessageBox when everything is done;
+    ; a standalone GreenAllPlanets run reports via the log line below (with its duration).
+    float secGreen = Utility.GetCurrentRealTime() - tGreenStart
+    CompletePlanetSurveyNative.DebugLog("GreenAllPlanets: " + spawned + " species spawned, " + greenedPlanets + " planet-types greened in " + secGreen + "s")
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
