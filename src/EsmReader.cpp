@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -30,6 +31,12 @@ namespace
     constexpr std::uint32_t kSigXXXX = 0x58585858;  // 'XXXX' (large-subrecord size override)
 
     constexpr std::uint32_t kMaxListLen = 0x10000;  // sanity bound on a PPBD sub-array
+
+    // Sanity ceiling on a single PNDT record's *decompressed* size, read straight from the file
+    // before we allocate for it. A real planet record inflates to tens of KB; this 64 MiB cap
+    // turns a corrupt/hostile decompSize (e.g. 0xFFFFFFFF) into a skipped record instead of a
+    // multi-GiB bad_alloc / DoS on game launch.
+    constexpr std::uint32_t kMaxDecompSize = 64u * 1024u * 1024u;
 
     // Resolve <game-root>/Data/Starfield.esm from the running executable path.
     std::filesystem::path ResolveEsmPath()
@@ -173,6 +180,12 @@ namespace
                     continue;
                 std::uint32_t decompSize;
                 std::memcpy(&decompSize, data, 4);
+                if (decompSize == 0 || decompSize > kMaxDecompSize)
+                {
+                    spdlog::warn("EsmReader: PNDT 0x{:08X} decompSize {} out of range (max {}); skipping record",
+                                 formid, decompSize, kMaxDecompSize);
+                    continue;
+                }
                 decomp.assign(decompSize, 0);
                 uLongf destLen = decompSize;
                 if (uncompress(decomp.data(), &destLen,
@@ -256,7 +269,23 @@ namespace Esm
     {
         static PlanetSpeciesMap map;
         static std::once_flag   once;
-        std::call_once(once, [] { BuildMap(map); });
+        // Never let a parse failure escape: a throw out of call_once leaves the once_flag UNSET
+        // (so every later call retries the failing parse) and would propagate across the Papyrus
+        // native boundary. Degrade to an empty map + one error line instead.
+        std::call_once(once, [] {
+            try
+            {
+                BuildMap(map);
+            }
+            catch (const std::exception& e)
+            {
+                spdlog::error("EsmReader: BuildMap failed ({}); flora/fauna species map left empty", e.what());
+            }
+            catch (...)
+            {
+                spdlog::error("EsmReader: BuildMap failed (unknown); flora/fauna species map left empty");
+            }
+        });
         return map;
     }
 }
