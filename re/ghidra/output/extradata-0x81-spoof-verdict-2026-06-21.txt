@@ -1,0 +1,271 @@
+################################################################################
+## SUPERSEDED ON THE PLANET-BINDING / "GREEN IS REF-KEYED PLANET-FREE" CLAIM
+## (2026-06-21, late) by COMPLETE-scan-to-green-trace-2026-06-21.txt. This file
+## inherits the wrong premise from green-spoof-verdict: that the green is the per-ref
+## ScannableComponent +0x28 with "no planet field to redirect." FALSE. The render
+## green for biome flora/fauna is read by ID_52159(PLAYER, species) (via outline
+## deciders ID_90491/ID_90548), keyed by the PLAYER's planet (ID_52188(player)). The
+## persistent green is the per-(planet,species) +0x21 SCAN-FLAG (Record B), and IS
+## writable ref-free for a target planet (ID_124898/ID_124899). The 0x81 ExtraLocation
+## finding (honored first, +0x28 = planetId) is still CORRECT as a WRITE-planet
+## redirect, but it is redundant with a direct +0x21 write (which IS the green). See
+## COMPLETE-scan-to-green-trace-2026-06-21.txt Q2/Q3.
+################################################################################
+
+================================================================================
+EXTRADATA 0x81 (ExtraLocation) PER-REF PLANET SPOOF — VERDICT (2026-06-21)
+
+GOAL TESTED: make a scanned ref APPEAR to be on a TARGET planet by writing to the
+REF ITSELF (an ExtraData of type 0x81 on its ExtraDataList), so the REAL scan
+(SetScanned/ID_83008 + UpdatePlanetProgress/ID_52157) credits that target planet
+AND writes the PERSISTENT green there.
+
+Anchored to test-confirmed FACTS (NOT contradicted below):
+  F1 real scan (PlaceAtMe on CURRENT planet + ObjectReference.SetScanned +
+     UpdatePlanetProgress) greens the CURRENT planet, persists across full
+     restart, greens fresh instances. ✓
+  F2 the persistent green is per-(planet,species) and bound to "the planet the
+     scanned ref is on." ✓
+  F3 overwriting the GLOBAL ID_937609+0x80 (uint32 current-planet-id) around the
+     real scan did NOT redirect the green — other planets stayed BLUE. (That
+     global is only the FALLBACK.) ✓
+
+Citations: re/ghidra/output/*.txt (Starfield 1.16.236):
+  planet-resolver.txt / resolve-planet.txt (ID_52188, ID_56990, ID_37878)
+  scanned-state.txt (ID_83007 reader, ID_83008 writer)
+  real-scan-chain.txt (ID_83008/83038, ID_52157/52158, ID_124898/124899)
+  spoof-globals.txt (ID_83009), green-spoof-verdict-2026-06-21.txt (Record A/B model)
+  extern/CommonLibSF/include/RE/E/ExtraDataTypes.h (0x81 = kLocation = ExtraLocation)
+  extern/CommonLibSF/include/RE/T/TESObjectREFR.h (extraDataList @ +0xC8 == +200)
+  extern/CommonLibSF/include/RE/E/ExtraDataList.h (AddExtra), IDs.h (BaseExtraList::AddExtra=44736)
+
+================================================================================
+TL;DR  ——  VERDICT: NO (for the persistent green). PARTIAL YES (for survey DATA).
+================================================================================
+ExtraData type 0x81 IS honored, and it IS checked FIRST (before ID_56990 and
+before the ID_937609+0x80 global). That part of the prior RE is CONFIRMED. So
+attaching a 0x81 to the ref DOES let you aim ID_52188 at a target planet without
+loading it.
+
+BUT ID_52188 only feeds the SURVEY-DATA / per-(planet,species) path
+(ID_52157 -> ID_52158 -> ID_124898/124899, the +0x21 scan-flag / +0x20 percent).
+That path is the SAME greenless "biome complete" DATA the mod already writes
+ref-free with MarkSpeciesScannedForPlanet (this is exactly F2/F3's data-vs-green
+split). Spoofing 0x81 buys you nothing the ref-free DATA writer doesn't already.
+
+The PERSISTENT GREEN for biome flora/fauna is written by ID_83008's bit-0x2a-CLEAR
+branch, which calls ID_83038 ONLY. ID_83038 NEVER calls ID_52188, NEVER reads the
+ref's ExtraData 0x81, and takes NO planet input — it is keyed purely by
+(ID_939118 << 48 | refFormID << 16) into db+0x268. Therefore NO planet field —
+neither the global ID_937609+0x80 NOR the per-ref ExtraData 0x81 — is on the green
+write path at all. There is nothing to redirect. This closes the per-ref spoof for
+the persistent green, with the same decompiled proof that closed the global spoof.
+
+================================================================================
+Q1 — HOW ID_52188 RESOLVES A SCANNED REF'S PLANET, IN ORDER (decompiled)
+================================================================================
+ID_52188(ref, &outPlanet, &outSecondary)  [planet-resolver.txt:1]:
+
+STEP 0 (the FIRST thing it does, before anything else):
+    lVar2 = ID_37878(*(undefined8 *)(param_1 + 200), 0x81);
+  param_1+200 == param_1+0xC8 == TESObjectREFR::extraDataList (CONFIRMED by
+  CommonLibSF TESObjectREFR.h: BSTSmartPointer<ExtraDataList> extraDataList @ 0xC8).
+  ID_37878(list, type) [resolve-planet.txt:1] is GetExtraData(type): it tests the
+  presence bitfield (list+0x18 bit (type>>3,type&7)) and walks the singly-linked
+  BSExtraData chain (node+0x8 = next, node+0x12 = type byte) returning the node
+  whose +0x12 == 0x81, else 0.
+  => YES: the ref's ExtraDataList is consulted FIRST, for an ExtraData of type 0x81.
+
+  IF a 0x81 node is present AND *(int*)(node+0x28) != 0:
+      *param_2 (outPlanet)    = *(int *)(lVar2 + 0x28);          // primary id
+      if (*(longlong*)(lVar2 + 0x30) != 0)
+          *param_3 (outSecondary) = *(int*)(*(lVar2+0x30) + 0x28);
+      local_38  = *(u64*)(lVar2 + 0x18);   // forwarded coords/aux (lo)
+      uStack_30 = *(u64*)(lVar2 + 0x20);   // forwarded coords/aux (hi)
+      uVar4 = 1;                            // "resolved"
+  After this, *param_2 is non-zero, so STEP 1 is SKIPPED. The 0x81 value WINS.
+
+STEP 1 (only if no usable 0x81 — i.e. *param_2 still 0):
+    piVar3 = ID_56990(&tmp, &local_38, ref, 0);  *param_2 = *piVar3;
+  ID_56990 [resolve-planet.txt:39] is the LOCATION/place resolver. In order it:
+    (a) ALSO re-checks ID_37878(ref+0xC8, 0x81) first (same 0x81 node) and returns
+        node+0x28 if present — redundant belt-and-suspenders with STEP 0.
+    (b) else walks the ref's PHYSICAL parent: param_4 = *(ref + 0xB0) == parentCell
+        (TESObjectREFR.h: TESObjectCELL* parentCell @ 0xB0), then the cell's
+        place/worldspace at cell+0x110 / cell+0x58+0x70, iterates the place's
+        ref/keyword arrays (ID_62706/ID_62155/ID_47401) to find the owning body.
+    (c) FINAL FALLBACK ("the planet the player is standing on"):
+            *param_1 = *(int *)(ID_937609 + 0x80);            // current-planet id
+            active place = **(longlong**)(ID_937609 + 0x78);
+  => So absent a 0x81, the resolver reads the ref's PHYSICAL parent cell/worldspace,
+     and only as the LAST resort the ID_937609+0x80 global. This is consistent with
+     F3 (global is the fallback, not the lever) AND with the prior RE's claim.
+
+STEP 2 (post-resolve coordinate fixups, planet-resolver.txt:54-94): if the resolved
+  planet == ID_937609+0x80 (you ARE on it) it computes precise coords via ID_51773;
+  otherwise it looks the planet up in the biome map DB (ID_42691/ID_124846). Pure
+  geometry; does not change WHICH planet was chosen.
+
+ANSWER TO Q1: ID_52188 reads, IN THIS ORDER:
+  (1) the ref's ExtraDataList type-0x81 (ExtraLocation) node  — HONORED FIRST;
+  (2) the ref's PHYSICAL parent cell / worldspace            — via ID_56990;
+  (3) the global ID_937609+0x80 current-planet id            — final fallback.
+The prior RE ("0x81 checked FIRST, global only fallback") is CONFIRMED. It is NOT
+purely "physical cell" — a 0x81 override genuinely short-circuits the cell read.
+
+================================================================================
+Q2 — STRUCTURE OF THE TYPE-0x81 EXTRADATA (ExtraLocation), AS READ BY ID_52188
+================================================================================
+Type 0x81 == RE::ExtraDataType::kLocation == "ExtraLocation"
+  (CONFIRMED: ExtraDataTypes.h line 136: kLocation, // 0x81 - ExtraLocation).
+
+ExtraLocation derives BSExtraData, so the first 0x18 bytes are the base
+(vtable@0x00, next@0x08, flags@0x10, type byte@0x12). The resolver reads, relative
+to the ExtraData node base (lVar2):
+
+  node + 0x18  (u64)  -> forwarded as local_38  (coordinate/aux pair, lo 8 bytes)
+  node + 0x20  (u64)  -> forwarded as uStack_30 (coordinate/aux pair, hi 8 bytes)
+  node + 0x28  (u32)  -> *param_2  THE PRIMARY PLANET/LOCATION ID  <<< THE LEVER
+  node + 0x30  (ptr)  -> if non-null, *(int*)(ptr + 0x28) -> *param_3 (secondary id)
+
+So the value that becomes "the planet" is a UINT32 at node+0x28. ID_56990's 0x81
+branch reads the IDENTICAL layout (node+0x28 -> *param_1, node+0x18/0x20 ->
+*param_2[0/1]), so the two resolvers agree on the structure.
+
+INTERPRETATION OF +0x28: it is consumed everywhere downstream EXACTLY as the global
+ID_937609+0x80 is — as a planetId/NumericID (lower-32 of a BSResource::ID), fed
+straight into the db+0x268 key (disc<<48 | planetId<<16). It is NOT a TESForm*,
+NOT a BGSLocation* (those are 8-byte pointers; this is a 4-byte id read with
+*(int*)), NOT raw coordinates (coords ride in +0x18/+0x20 and are only used by the
+geometry fixups). +0x30 is an optional pointer to a related record whose +0x28
+yields a secondary id (the "system"/parent component); not required to set the
+planet — leaving it 0 makes *param_3 = 0, which the callers tolerate.
+
+NET for a spoof: an ExtraLocation whose +0x28 == targetPlanetId is sufficient to
+make ID_52188 return targetPlanetId as the ref's planet, with +0x18/+0x20/+0x30
+zeroable (the precise-coords path is only entered when the planet == the one you're
+standing on, which a spoofed target is not).
+
+================================================================================
+Q3 — CONSTRUCT + ATTACH A TYPE-0x81 EXTRADATA FROM A CommonLibSF PLUGIN
+================================================================================
+Types available in CommonLibSF:
+  RE::BSExtraData              (B/BSExtraData.h): vtable@0x00, next@0x08,
+                               flags@0x10 (u16), type@0x12 (TEnum<ExtraDataType,u8>).
+                               sizeof == 0x18.
+  RE::ExtraDataType::kLocation (E/ExtraDataTypes.h) == 0x81.
+  RE::ExtraDataList            (E/ExtraDataList.h): refcounted; .AddExtra(BSExtraData*)
+                               and GetByType<T>()/GetByType(type). Owns a
+                               BaseExtraList @ +0x08.
+  RE::BaseExtraList::AddExtra  engine fn at REL::ID(44736) (IDs.h:103) — the real
+                               inserter (sets the presence bit + appends to chain).
+  RE::TESObjectREFR::extraDataList  BSTSmartPointer<ExtraDataList> @ +0xC8 (==+200),
+                               i.e. EXACTLY the pointer ID_52188 dereferences.
+
+CommonLibSF does NOT ship an ExtraLocation class or a constructor for it. There are
+two ways to get a node the engine will read as type 0x81:
+
+OPTION A — hand-rolled minimal node (simplest, sufficient for the resolver):
+  The resolver only needs: a heap BSExtraData-shaped block with type byte 0x81 at
+  +0x12 and a uint32 targetPlanetId at +0x28, linked into the ref's ExtraDataList
+  via BaseExtraList::AddExtra (which also flips the presence bit ID_37878 checks).
+  Layout to allocate (>= 0x38 bytes, zeroed):
+      +0x00 vtable   (can be left 0 for the resolver; see CAVEAT)
+      +0x08 next     (AddExtra overwrites)
+      +0x10 flags    (0)
+      +0x12 type     = 0x81
+      +0x18 u64      = 0   (coords aux lo — unused for a non-current target)
+      +0x20 u64      = 0   (coords aux hi)
+      +0x28 u32      = targetPlanetId          <<< the only load-bearing field
+      +0x30 ptr      = 0   (no secondary record)
+  Then: ref->extraDataList->AddExtra(reinterpret_cast<RE::BSExtraData*>(node));
+  (If extraDataList is null, the engine factory must create it first; flora refs
+  PlaceAtMe'd usually have one. AddExtra at ID 44736 operates on BaseExtraList, so
+  call ref->extraDataList->AddExtra(...) which wraps it under the RW lock.)
+  CAVEAT: a null/garbage vtable is safe ONLY while the node is merely *read* by
+  ID_37878/ID_52188 (they never call its virtuals). It becomes UNSAFE if anything
+  ever destroys/serializes the ExtraDataList (save, cell unload) — the dtor virtual
+  fires. For a transient "attach -> scan -> detach-before-anything-else" window this
+  is acceptable; for anything persisted it will crash. Given the verdict below this
+  option is moot anyway.
+
+OPTION B — engine-created ExtraLocation (correct, but no CommonLibSF helper):
+  Find the engine ctor/factory for ExtraLocation (BSExtraData subclass with type
+  0x81) by its vtable in IDs_VTABLE.h / RTTI, allocate via the engine and set its
+  location/planet field, then AddExtra. Not needed for this investigation because
+  the verdict is NO regardless of how cleanly the node is built.
+
+================================================================================
+Q4 — VERDICT: DOES A TYPE-0x81 ON THE REF REDIRECT THE PERSISTENT GREEN?
+================================================================================
+NO. Decompiled proof, in three load-bearing facts:
+
+(1) THE GREEN WRITE DOES NOT GO THROUGH ID_52188 AT ALL.
+    The real scan is ID_83008 (scanned-state.txt:118). For biome flora/fauna the
+    species base form has map-marker bit 0x2a CLEAR, so ID_83008 takes the
+    cVar==0 branch (line 133):
+        ID_83038(playerKnowledge, &scannedByte, &refFormId);   // line 139
+        if (scannedByteOut != 0) ID_52157(ref, scannedByteOut, cat); // line 141
+    ID_83038 (real-scan-chain.txt:477) is THE persistent-green writer. It builds the
+    key  (ID_939118 << 48) | (refFormID << 16)  [line 508], resolves db+0x268, and
+    writes the ScannableComponent's +0x28 "scanned" byte [line 515-516]. It takes
+    NO planet, never calls ID_52188, never touches the ref's ExtraData. The GREEN
+    is keyed by the REF FORMID and rolls up to the species (ID_83009, +0x24 canonical
+    id, spoof-globals.txt:171) — it is PLANET-AGNOSTIC. (This is the Record A model
+    in green-spoof-verdict-2026-06-21.txt, and it is consistent with F1's "fresh
+    instances green per-TYPE on reload".)
+    => There is NO planet input on the green write to redirect. A 0x81 on the ref
+       changes the green write by exactly nothing.
+
+(2) ID_52188 IS REACHED ONLY ON THE DATA/SURVEY PATH — WHICH F2 PROVED IS GREENLESS.
+    The ONLY consumer of ID_52188 in the scan is ID_52157 (real-scan-chain.txt:1,
+    called at ID_83008 line 141 AFTER the green write):
+        cVar4 = ID_52188(ref, &planetId, &secondary);   // line 43
+        ... ID_52158(...)                                 // line 75
+    ID_52158 (real-scan-chain.txt:108) resolves the per-(planet,species) survey
+    subobj from db+0x268 keyed by THAT planetId and writes ID_124898 (+0x21 scan
+    flag) / ID_124899 (+0x20 percent). That is Record B — the survey % / "biome
+    complete" DATA. F2 already established writing +0x21/+0x20 yields data-complete-
+    but-BLUE. So redirecting ID_52188 via 0x81 redirects only the greenless DATA.
+    The READER side confirms the split: ID_83007 (scanned-state.txt:1), the outline
+    green decider, on the SAME bit-0x2a-CLEAR branch reads the ScannableComponent
+    +0x28 (line 41-50) WITHOUT calling ID_52188; it only calls ID_52188 on the
+    bit-0x2a-SET branch (line 74, map-marker species), which biome flora/fauna are
+    not.
+
+(3) THE 0x81 LEVER IS REAL BUT POINTS AT THE WRONG RECORD.
+    0x81 genuinely beats both the physical cell and the global (Q1), so it WOULD let
+    the mod credit a target planet's survey DATA from an unloaded planet without the
+    ID_937609+0x80 global trick. But that capability is identical in effect to the
+    already-shipped ref-free MarkSpeciesScannedForPlanet (which writes the same
+    +0x21/+0x20 directly). It does not, and cannot, move the green, because the
+    green write (ID_83038) is upstream of and parallel to ID_52188, not downstream.
+
+CONCLUSION: Attaching ExtraData 0x81 (ExtraLocation, +0x28 = targetPlanetId) to a
+spawned ref BEFORE SetScanned does NOT make the real scan write the target planet's
+persistent green. It only re-aims the per-(planet,species) survey DATA, which is the
+greenless layer the mod can already write ref-free. The persistent green for biome
+flora/fauna is ref-keyed (refFormID -> ScannableComponent +0x28) and PLANET-FREE;
+there is no planet field on that record for any spoof (global OR per-ref) to
+redirect. This is the decompiled blocker, and it does not contradict F1/F2/F3.
+
+  => Per-ref ExtraData spoof for the GREEN: CLOSED (same root cause as the global).
+  => Per-ref ExtraData spoof for the DATA: works, but redundant with the existing
+     ref-free DATA writer; no spawn/scan needed.
+
+================================================================================
+WHAT THIS LEAVES (consistent with green-spoof-verdict-2026-06-21.txt)
+================================================================================
+The persistent green is per-SPECIES (ScannableComponent, ref-keyed, rolled up by
+the +0x24 canonical species id), produced ONLY by the genuine ID_83008 cVar==0
+write on a LIVE instance. The faithful galaxy-green recipe is therefore:
+  * GREEN  (Record A): real SetScanned/ID_83008 on ONE live instance per UNIQUE
+    species (PlaceAtMe). No planet input; greens that species galaxy-wide on reload.
+    Neither the ID_937609+0x80 global NOR a per-ref ExtraData 0x81 affects it.
+  * DATA   (Record B): per-planet survey % — write ref-free via the +0x21/+0x20
+    writer (MarkSpeciesScannedForPlanet); a 0x81 override is an alternative way to
+    aim ID_52157 at a target planet but is not required.
+The open in-game test (scan ONE instance of a species on planet A via real
+SetScanned, then check whether planet B's instances of that species render green on
+reload) remains the cheap way to confirm the per-TYPE green is truly galaxy-wide.
+================================================================================

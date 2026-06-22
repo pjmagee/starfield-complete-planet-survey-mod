@@ -1,0 +1,247 @@
+################################################################################
+## WRONG / SUPERSEDED (2026-06-21 evening) — DISPROVEN BY IN-GAME TEST.
+## This file's central claim — that the persistent green is the per-(planet,
+## species) +0x21 SCAN-FLAG, writable via ID_124898 — is FALSE. In-game FACT 2:
+## writing +0x21/+0x20 directly makes the planet read "BIOME COMPLETE" but the
+## flora/fauna stay BLUE and re-scanning still awards XP. +0x21 is the survey
+## DATA (read by ID_97851), NOT the green. The persistent green is the per-ref
+## ScannableComponent (type ID_939118) +0x28 flag, read by ID_83007's
+## bit-0x2a-CLEAR branch. See green-spoof-verdict-2026-06-21.txt for the correct
+## mechanism. Do NOT trust the +0x21 = green claim below.
+################################################################################
+
+================================================================================
+PERSISTENT GALAXY-WIDE GREEN — DEFINITIVE VERDICT (2026-06-21, supersedes
+green-verdict-2026-06-21.txt on the persistence question)
+
+Resolves: ground truth ("a really-scanned planet greens FRESH instances after a
+full quit-to-desktop restart") vs the prior verdict ("ref-free green impossible;
+key is per-instance timestamp; catalog rebuilt empty per load").
+
+Both were RIGHT about different code paths. The prior verdict analyzed ONLY the
+dynamic-id writer/reader pair (ID_52161 / ID_52162, the DisposableInstancedFormDB
+catalog path) and MISSED the path the real scan actually uses for the persistent
+state. This file traces the real path with fresh decompiles.
+
+All citations: re/ghidra/output/*.txt (Starfield 1.16.236). New decompiles this
+session: real-scan-chain.txt, scan-gate-and-readers.txt, db-callers.txt.
+RTTI type names verified directly in the Ghidra program DB (see "TYPE PROOF").
+================================================================================
+
+--------------------------------------------------------------------------------
+TL;DR
+--------------------------------------------------------------------------------
+* YES, a persistent, re-derivable green key exists. It is the per-(planet,species)
+  SCAN-FLAG byte in the BSGalaxy::PlayerKnowledge component at db+0x268, slot
+  +0x21, keyed by the bare SPECIES formID (FNV-1a over the 4 formID bytes). It is
+  a SAVED galaxy component; fresh instances re-derive their key deterministically
+  from their base-form (species) formID on reload — no timestamp, no catalog.
+* The prior verdict's "per-instance timestamp key" (ID_137052) and "catalog
+  rebuilt empty per load" are CORRECT — but ONLY for the db+0x3d8
+  DisposableInstancedFormDB path (ID_52161/ID_52162). That path is the DYNAMIC-id
+  branch and is genuinely transient. It is NOT the path that persists green.
+* REF-FREE WRITABILITY: the persistent flag is FULLY writable for an ARBITRARY
+  target planet WITHOUT being on it. ID_124898(subobj, speciesFormID, delta)
+  writes it directly; subobj is resolved purely from the target planetId via the
+  db+0x268 lookup. No live instance, no current-planet binding required for the
+  DATA/flag write. (This is what the mod's UpdatePlanetProgress/direct-flag path
+  already does.) The ONLY thing bound to "the planet you stand on" is ID_52188's
+  ref->planet resolution, which the ref-free path bypasses by supplying planetId.
+
+--------------------------------------------------------------------------------
+THE TWO STATE LAYERS AND THEIR THREE COMPONENT DBs (TYPE PROOF)
+--------------------------------------------------------------------------------
+The knowledge manager (ID_126578() -> +0x8b0 = db) owns three BSComponentDB2
+containers. RTTI type descriptors confirmed in the program DB:
+
+  db+0x268  BSGalaxy::PlayerKnowledge          <- PERSISTENT (saved galaxy knowledge)
+  db+0x3d8  DisposableInstancedFormDB::DBTraits <- TRANSIENT ("Disposable")
+  (939118)  ScannableComponent                  <- TRANSIENT per-instance record
+
+"Disposable" is in the type name. That is the catalog the prior verdict found to
+be per-instance and rebuilt-empty; the name is the proof it is transient.
+"PlayerKnowledge" is a saved galaxy component; it is the survey knowledge that
+persists across save/load. (ID_52204 / ID_52153 / ID_46756 build their writes as
+BSComponentDB2 CreateAndDeleteCommand objects targeting these containers; the
+PlayerKnowledge container is the one the save serializes.)
+
+--------------------------------------------------------------------------------
+THE FORK THE PRIOR VERDICT MISSED: ID_83007 (reader) and ID_83008 (writer)
+--------------------------------------------------------------------------------
+Both the scanner's "is this scanned / draw green?" reader (ID_83007,
+scanned-state.txt:1) and the SetScanned writer (ID_83008, scanned-state.txt:118)
+branch on the SAME base-form bit:
+
+    cVar = ID_36022(*(refr + 0xc8), 0x2a)   // property-bit 0x2a on the base form
+
+READER ID_83007:
+  * cVar == 0  (bit clear):  PERSISTENT branch.
+        resolve db+0x268 subobj for the ref's planet; return
+        1 + (scanflag byte at entry +0x28-path != 0).   (scanned-state.txt:43-50)
+        -> reads PlayerKnowledge. PERSISTENT.
+  * cVar != 0  (bit set):    then split on the ref's OWN formID:
+        - DYNAMIC id (iVar1 + 0x1000000U < 0xffffff)  -> ID_52162
+              (scanned-state.txt:71-110) -> db+0x3d8 catalog -> subobj+0x60 RB-tree.
+              TRANSIENT (this is the prior verdict's whole analysis).
+        - STATIC  id (else)                            -> ID_52159
+              (scanned-state.txt:112) -> reads the PERSISTENT species SCAN-FLAG
+              at subobj+0x60 slot +0x21 keyed by species formID. PERSISTENT.
+
+WRITER ID_83008 mirrors it:
+  * cVar == 0 -> ID_83038 (write per-instance +0x28 flag) THEN ID_52157 -> ID_52158
+        (write the PERSISTENT per-species flag). PERSISTENT.   (scanned-state.txt:138-141)
+  * cVar != 0 (and flag set) -> ID_52160 -> ID_52161 (write db+0x3d8 catalog +
+        subobj+0x60 RB-tree). TRANSIENT.                       (scanned-state.txt:144-146)
+
+So the dynamic-id catalog/tree pair (ID_52161/ID_52162) the prior verdict proved
+"per-instance, blue on reload" is REAL, but it is only the cosmetic intra-session
+path. The persistent green is the OTHER two branches, both of which read/write the
+saved PlayerKnowledge per-species flag.
+
+--------------------------------------------------------------------------------
+Q1 — THE PERSISTENT PATH (what the real scan writes that survives restart)
+--------------------------------------------------------------------------------
+Real scan: SetScanned -> ID_83008 -> (ID_83038 + ID_52157) -> ID_52158.
+
+ID_52158 (real-scan-chain.txt:108) is the persistent writer. It does NOT touch
+db+0x3d8 and does NOT call ID_124902 (tree insert) or ID_46756 (catalog write) or
+ID_137052 (the timestamp minter). It:
+  1. ID_126806(db+0x268, key=(938333<<48 | planetId<<16))  -> per-planet entry.
+  2. lVar26 = entry + 0x20  (the "subobj": species hashmap @+0x18, slots @+0x40).
+  3. ID_124901(subobj+0x18, &speciesFormID)  -> slot index by SPECIES formID.
+  4. ID_124898(subobj, speciesFormID, delta)  (real-scan-chain.txt:184)
+        -> writes/saturating-increments the SCAN-FLAG byte at slot +0x21.
+  5. ID_124899(subobj, speciesFormID, percent) (real-scan-chain.txt:211)
+        -> writes the percent byte at slot +0x20.
+
+ID_124901 (real-scan-chain.txt:709) hashes param_2[0..3] = the 4 bytes of the
+SPECIES formID via FNV-1a. The key is the bare species formID. Fully deterministic,
+per-(planet,species). No instance, no timestamp.
+
+Offset reconciliation (these are the SAME structure, just different bases):
+  ID_52158 uses lVar26 = entry+0x20 ; hashmap lVar26+0x18 (=entry+0x38) ; slots
+        lVar26+0x40 (=entry+0x60) ; flag +0x21.
+  ID_52159 (reader) uses lVar5 = entry ; hashmap entry+0x38 ; slots entry+0x60 ;
+        flag +0x21.
+  => writer ID_52158 and reader ID_52159 hit the IDENTICAL hashmap+slot+flag.
+     (species-scanned-check.txt:126-136 vs real-scan-chain.txt:174-211.)
+
+This is in the BSGalaxy::PlayerKnowledge component (db+0x268) = the SAVED galaxy
+knowledge. That is why it survives quit-to-desktop.
+
+--------------------------------------------------------------------------------
+Q2 — THE KEY ON RELOAD (how a fresh instance resolves green)
+--------------------------------------------------------------------------------
+A fresh instance on reload resolves its green WITHOUT any per-instance state:
+
+  * ID_36022(base+0xc8, 0x2a) is a property of the BASE FORM (the species), not
+    the instance. Identical for every instance of a species.
+  * If bit clear: ID_83007 reads the PlayerKnowledge per-planet flag for the ref's
+    planet (resolved from the ref's location) -> the SAVED scan-flag the real scan
+    wrote -> GREEN, for any instance, fresh or not.
+  * If bit set + static id: ID_52159 reads the SAME saved per-species flag at
+    subobj+0x60 slot +0x21, keyed by ID_124901(speciesFormID). Deterministic;
+    every instance of that species on that planet resolves to the same slot ->
+    GREEN.
+
+ID_137052 (the per-call timestamp minter, canonical-key.txt:1) is reached ONLY
+from ID_52161 (the dynamic-id catalog/tree writer), and only when the base form
+returns {0,0,0} from vtable[0x15]. The REAL persistent scan path (ID_52158) NEVER
+calls ID_137052. So the "different timestamp per instance" problem the prior
+verdict identified simply does not arise for the persistent flag. The deterministic
+key source is ID_124901(speciesFormID) — the species formID itself.
+
+This is fully consistent with the public gameplay model and the ground truth:
+scan N separate instances -> the per-(planet,species) flag saturates to 100% ->
+the SAVED flag greens ALL instances of that species on that planet, now and on any
+future launch, including brand-new spawns.
+
+--------------------------------------------------------------------------------
+Q3 — REF-FREE WRITABILITY FOR A TARGET PLANET
+--------------------------------------------------------------------------------
+WRITABLE. The persistent green flag is producible ref-free for an arbitrary target
+planet. It is NOT location-bound.
+
+Why the prior "on-planet only" claim does not apply to the persistent flag:
+  * ID_52188 (planet-resolver.txt / planet-survey-internals.md) resolves a planet
+    from a ref's LOCATION (ExtraData 0x81, else position). That binding only
+    matters when you drive the scan THROUGH a ref (ID_52157/ID_52160 call ID_52188
+    to learn which planet to credit) -> credits the planet you stand on.
+  * The persistent writer ID_124898 takes (subobj, speciesFormID, delta). subobj
+    is resolved purely from the planetId you put in the db+0x268 key. Supply the
+    TARGET planetId and you write the target planet's saved flag directly — no ref,
+    no ID_52188, no current-planet binding.
+
+CONCRETE REF-FREE RECIPE (no spawn, no being-on-planet) for one target planet:
+  1. manager = ID_126578();  db = *(manager + 0x8b0).
+  2. key = ((uint64)ID_938333 << 48) | ((uint64)targetPlanetId << 16).
+  3. ID_126806(db + 0x268, out[4], &key) -> resolve per-planet entry. If miss
+     (out[3]==0xfe0 && out[2]==0): the planet has no knowledge component yet; you
+     must first create it. The engine creates it lazily on first write via the
+     CreateAndDeleteCommand path (ID_52204 / ID_124898's "insert if missing" arm).
+     ID_124898 itself creates the slot if absent (real-scan-chain.txt:575-615).
+     For a never-touched planet, drive one write through the engine's own
+     create path or call the same ID_1016657/ID_97851 population the mod already
+     uses, then write the flags.
+  4. subobj = entry + 0x20.
+  5. For each species formID S on the target planet (enumerated from the ESM /
+     from the ID_1016657 aggregator buffer):
+        ID_124898(subobj, S, 0xFF)        // saturate scan-flag at slot +0x21
+        (optionally ID_124899(subobj, S, 100) for the percent byte at +0x20)
+  6. Fire ID_97853(ctx) so the completion event/slate transitions (see internals).
+
+This writes the EXACT saved per-(planet,species) flag the real scan writes. On
+the next cell load of that planet, every flora/fauna instance whose base form is
+that species resolves through ID_83007 (bit clear) or ID_52159 (bit set + static)
+to this saved flag and renders GREEN — fresh instances included. That is the
+ground-truth behavior, reproduced ref-free.
+
+CAVEAT — the cosmetic dynamic-id tree (ID_52162 path) is NOT writable ref-free and
+does NOT need to be. It is the DisposableInstancedFormDB catalog + subobj+0x60
+RB-tree, keyed by a per-instance timestamp via ID_137052, rebuilt per load. The
+prior verdict is correct that you cannot hand-stamp it for fresh instances. But it
+is transient and only affects the CURRENT session's already-spawned dynamic refs;
+it is regenerated by the engine on each load FROM the per-species data the renderer
+gates on. The persistent green does not depend on it.
+
+--------------------------------------------------------------------------------
+CORRECTING green-verdict-2026-06-21.txt
+--------------------------------------------------------------------------------
+That file's Q4 "NO — ref-free green impossible ... per-instance by design" is WRONG
+as a general statement. It is TRUE only of the ID_52161/ID_52162
+DisposableInstancedFormDB path it analyzed. It explicitly did not analyze the
+ID_83008 cVar==0 branch (ID_83038 + ID_52157 -> ID_52158) nor the ID_52159
+static-id reader, which are the persistent path. Its claims:
+  - "the catalog db+0x3d8 is rebuilt empty per load"  -> TRUE (it's Disposable),
+    but IRRELEVANT to persistent green, which lives in db+0x268 PlayerKnowledge.
+  - "fresh instances mint different keys -> no match -> blue" -> TRUE only on the
+    dynamic-id tree path; the persistent flag uses the deterministic species key.
+  - "vtable[0x15]={0,0,0} so per-instance mint" -> TRUE but only governs the
+    transient tree; the persistent flag never consults vtable[0x15].
+Net: the prior verdict mistook the cosmetic transient layer for the whole system.
+
+The planet-survey-internals.md notes are essentially CORRECT about the existence of
+a saved per-type green and ref-free writability, EXCEPT they over-attribute the
+persistent green to "the subobj+0x60 RB-tree written by ID_52161." The decompile
+shows the REAL scan's persistent writer is ID_52158 writing the per-species
+SCAN-FLAG (slot +0x21), read back by ID_52159 / the ID_83007 bit-clear branch — NOT
+ID_52161's RB-tree. ID_52161's tree is the transient dynamic-id cosmetic layer.
+(The notes already say "Setting +0x21 alone completes DATA but stays blue" — that
+observation was made while testing the ID_52162 dynamic path on already-spawned
+refs in-session; it does not contradict this, because the persistent green for
+FRESH instances on RELOAD comes through ID_52159/bit-clear which DO read +0x21.)
+
+================================================================================
+BOTTOM LINE
+================================================================================
+Persistent galaxy-wide flora/fauna green IS achievable ref-free. The persistent,
+re-derivable key is the per-(planet,species) SCAN-FLAG (BSGalaxy::PlayerKnowledge,
+db+0x268, subobj slot +0x21, keyed by species formID via ID_124901's FNV-1a). It
+is saved, deterministic, and writable for any target planet with
+ID_124898(subobj, speciesFormID, 0xFF) after resolving subobj from the target
+planetId — no live ref and no on-planet presence required. The per-instance
+timestamp key (ID_137052) and the "rebuilt-empty catalog" (db+0x3d8
+DisposableInstancedFormDB) are real but belong to the TRANSIENT cosmetic layer
+(ID_52161/ID_52162), which the engine regenerates each load and which does not
+gate persistent green.
+================================================================================

@@ -1,0 +1,137 @@
+================================================================================
+WHY lop / lopb / TakeOffToSpace SILENTLY NO-OP FROM THE CONSOLE
+Starfield.exe 1.16.236 (Ghidra project "Starfield", Address Library ID_<n> labels)
+================================================================================
+
+ROOT CAUSE (one line)
+---------------------
+All three console commands are registered with an executeFunction that is a
+2-byte stub:  ID_35677 @ 1402b7950  =  "MOV AL,1 ; RET"  (return true, do nothing).
+There is NO precondition that fails -- there is simply NO execute-time
+implementation. The console run-path calls a function that does nothing and
+reports success. (See stub-35677.txt.)
+
+STRUCT LAYOUT CONFIRMATION (extern/CommonLibSF/.../RE/S/Script.h, SCRIPT_FUNCTION, sizeof 0x58)
+---------------------------------------------------------------------------------------------
+  +0x00 functionName        (const char*)
+  +0x08 shortName / alias   (const char*)
+  +0x18 helpString          (const char*)
+  +0x22 numParams           (u16)
+  +0x28 params              (SCRIPT_PARAMETER*)
+  +0x30 executeFunction     (ExecuteFunction_t)   <-- the one the console calls
+  +0x38 compileFunction
+  +0x40 conditionFunction
+
+The registrar ID_67259 @ 140c8d550 copies exactly 0x58 bytes per entry into the
+runtime BSTArray (singleton getter ID_67262 @ 140c8d880, backing array ID_945979,
+reserves 0x613 entries * 0x58). Stride 0x58 verified. (See cmd-registrar.txt.)
+
+PER-COMMAND FACTS  (registrar ID_7980 @ 1400b22f0; raw asm in reg-asm-7980.txt)
+------------------------------------------------------------------------------
+LandOnPlanet  (alias "lop")   struct base RBP+0x8120
+  +0x00 functionName  = 144b56488 "LandOnPlanet"
+  +0x08 alias         = 144bbbd88 "lop"
+  +0x18 help          = 144bbbd48 "Land on a planet. (lop <planetname> <lon> <lat> <deg or rad>)"
+  +0x22 numParams     = 4
+  +0x28 params        = 1459153d0 (ID_823901): String, Float(opt), Float(opt), String(opt)
+  +0x30 executeFunc   = 1402b7950  == ID_35677  == MOV AL,1; RET   <-- NO-OP
+  +0x38 compileFunc   = 140c17680  == ID_65846  (generic ScriptCompiler::StandardCompile)
+
+TakeOffToSpace  (alias "tots")  struct base RBP+0x8178
+  +0x00 functionName  = 144bbbd98 "TakeOffToSpace"
+  +0x08 alias         = 144bbbd8c "tots"
+  +0x18 help          = 144bbbdc0 "Take off to space."
+  +0x22 numParams     = 0
+  +0x30 executeFunc   = 1402b7950  == ID_35677  == MOV AL,1; RET   <-- NO-OP
+  +0x38 compileFunc   = 140c17680  == ID_65846
+
+LandOnPlanetBiome  (alias "lopb") struct base RBP+0x8fe8
+  +0x00 functionName  = 144bbccc0 "LandOnPlanetBiome"
+  +0x08 alias         = 144bbccb4 "lopb"
+  +0x18 help          = 144bbccf0 "Land on a planet's biome. (lopb <planetname> <biome index> [(centered)0/1])"
+  +0x22 numParams     = 3
+  +0x28 params        = 145912f28 (ID_823315): String, Integer(opt), Integer(opt)
+  +0x30 executeFunc   = 1402b7950  == ID_35677  == MOV AL,1; RET   <-- NO-OP
+  +0x38 compileFunc   = 140c17680  == ID_65846
+
+SIBLING (proves the pattern): LandOnPlanetAtMarker, registrar ID_7963 @ 1400b1ba0
+  +0x00 functionName  = 144bb22e8 "LandOnPlanetAtMarker"
+  +0x18 help          = 144bb22b0 "Land on a planet at the specified marker"
+  +0x30 executeFunc   = 1402b7950  == ID_35677  == MOV AL,1; RET   <-- NO-OP  (reg-asm-7963.txt)
+
+THE STUB IS A SHARED PLACEHOLDER (not unique to travel)
+-------------------------------------------------------
+ID_35677 is referenced as DATA (stored as a function pointer into command structs)
+from MANY console-command registrars: ID_7980, ID_7982, ID_2763/2764/2765,
+ID_21654, ID_71807, ... (stub-xrefs.txt). It is the engine's default
+"do-nothing execute" used by every console command whose behaviour is implemented
+through another subsystem rather than the SCRIPT_FUNCTION execute path.
+
+WHY THE COMMAND APPEARS TO "PARSE BUT DO NOTHING"
+------------------------------------------------
+- compileFunction = ID_65846 (StandardCompile) DOES run and validates the args.
+  -> malformed args ("lop" with a bad form / wrong type) would print an error.
+  -> well-formed args ("lop Kreet 0 0 deg") compile fine, then execute = no-op.
+  That is exactly the user's symptom: typed correctly, zero feedback, nothing happens.
+
+WHERE THE REAL LANDING/TAKEOFF LOGIC LIVES (UI / menu / event path, NOT console)
+-------------------------------------------------------------------------------
+The actual flows run through the Star Map / ship menu + movement-message system,
+entirely separate from the console command table. Evidence (landing-impl-xrefs.txt):
+  - "TakeoffMenu", "TakeoffMenu_Launch", "TakeoffMenu_ExitShip" (UI menu events)
+  - "FlightTakeOffHandler", "SpaceshipTakeOffFinishedHandler",
+    "TakeOffInitiateCompleteHandler"  (handler ID_103932 @ 141ae2910)
+  - "SpaceshipTakeoffMode" global (refs in ID_162/164/171/175/119788)
+  - PathingRequestFlyTakeOff / MovementMessageTakeOff factory machinery
+  - "PreventPlayerLandingAtMarker_DO", landing-marker plumbing
+None of these are reachable by invoking the stubbed console executeFunction.
+
+VERDICT: CAN THESE BE DRIVEN PROGRAMMATICALLY FROM AN SFSE PLUGIN?
+-----------------------------------------------------------------
+Calling the console command (or its executeFunction at +0x30) from a plugin is
+POINTLESS -- it is MOV AL,1; RET. There is no global to set and no precondition to
+satisfy that would "unlock" it, because there is no command body at all.
+
+To actually land/take off from a plugin you must drive the SAME path the Star Map
+uses, NOT the console command:
+  * Preferred / robust: trigger it from Papyrus, where real functions exist
+    (e.g. Actor/Spaceship/Planet land/takeoff and FastTravel script functions and
+    the Takeoff menu events). An SFSE plugin can call into Papyrus or post the
+    same UI/menu events (TakeoffMenu_Launch, etc.).
+  * Native: replicate handler ID_103932 @ 141ae2910 (Flight/Takeoff handlers) and
+    the SpaceshipTakeoffMode / PathingRequestFlyTakeOff machinery, or call the
+    same native landing entry the Star Map "Land here" button calls. This is
+    feasible from CommonLibSF but requires RE of those handlers + the player/ship
+    state they expect (player piloting, ship space-borne, valid target body in the
+    current system) -- those checks live in the UI/handler path, not in any console
+    precondition you can pre-set.
+
+Bottom line: the bare console invocation fails because the command is an
+intentional no-op stub, not because of an unmet precondition. A plugin cannot
+"fix" the console command; it must invoke the Star-Map/menu landing path
+(easiest via Papyrus functions / Takeoff menu events) instead.
+
+OUTPUT FILES (under re/ghidra/output/)
+--------------------------------------
+  stub-35677.txt            ID_35677 disasm = MOV AL,1; RET
+  reg-asm-7980.txt          ID_7980 registrar asm (lop/lopb/tots struct builds)
+  reg-asm-7963.txt          ID_7963 registrar asm (LandOnPlanetAtMarker)
+  travel-cmd-handlers.txt   ID_7980 + ID_4698 full decompiles
+  travel-exec-resolved.txt  resolved param arrays (signatures) + help-string region
+  travel-execfn-1402b7950.txt  ID_35677 (stub) + ID_65846 (StandardCompile) decompiles
+  cmd-registrar.txt         ID_67259 (Add, stride 0x58) + ID_67262 (array getter)
+  table-head.txt            static ID_896666 table is zero-filled (populated at runtime)
+  landing-impl-xrefs.txt    real takeoff/landing UI/menu/handler strings + xrefs
+  stub-xrefs.txt            ID_35677 used as default executeFunction by many registrars
+  console-travel-commands.txt / console-travel-table.txt  (earlier exploratory passes)
+
+SCRIPTS ADDED (re/ghidra/scripts/)
+----------------------------------
+  DumpConsoleCommandExec.java   string -> SCRIPT_FUNCTION base -> exec decompile
+  DumpConsoleCommandTable.java  walk ID_896666 SCRIPT_FUNCTION[] (stride 0x58)
+  DumpTableHead.java            dump first N table entries
+  ResolveIds.java               resolve ID_<n> to addr; decompile-or-dump-data
+  DecompileAddrs.java           decompile function at a raw hex address + call targets
+  FindStringsXref.java          substring string search + referencing functions
+  XrefsToId.java                all xrefs to an ID_<n> symbol
+================================================================================

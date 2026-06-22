@@ -1,0 +1,275 @@
+################################################################################
+## SUPERSEDED ON THE PLANET-BINDING QUESTION (2026-06-21, late) by
+## COMPLETE-scan-to-green-trace-2026-06-21.txt. THIS FILE'S CENTRAL CLAIM — that
+## the persistent green is the per-ref ScannableComponent (ID_939118 +0x28) and is
+## "PLANET-AGNOSTIC" — IS WRONG and contradicts SAVE FACT B (green is per-(planet,
+## species)). The error: this pass traced ID_83007 (the per-ref reader) and stopped;
+## it never traced the ACTUAL outline deciders ID_90491 / ID_90548, which call
+## ID_52159(PLAYER, species) -> ID_52188(PLAYER) and key the GREEN by the PLAYER's
+## planet. The persistent green IS the per-(planet,species) +0x21 SCAN-FLAG (Record
+## B); ScannableComponent +0x28 (Record A) is the intra-session per-instance flag,
+## NOT the persistent green. See COMPLETE-scan-to-green-trace-2026-06-21.txt PART IV
+## for the proof and the corrected F2 explanation/write recipe.
+################################################################################
+
+================================================================================
+PERSISTENT GREEN + "CURRENT-PLANET SPOOF" — VERDICT (2026-06-21, evening pass)
+
+Supersedes green-persistence-verdict-2026-06-21.txt, which is WRONG on its
+central claim (it says +0x21 IS the persistent green; in-game test FACT 2 proves
+it is NOT). This pass re-derives the mechanism from raw decompiles and anchors
+every conclusion to the three EMPIRICAL, test-confirmed facts.
+
+Citations: re/ghidra/output/*.txt (Starfield 1.16.236). New decompiles this pass:
+  spoof-investigation.txt (ID_56990, ID_52188, ID_83052, ID_52204, ID_97851,
+    ID_102651, ID_1016657, ID_38418, ID_126711)
+  spoof-globals.txt (ID_83004/05/06/09/59, ID_51760, ID_51773, ID_124846,
+    ID_97850, ID_1015213, ID_102650)
+Existing: real-scan-chain.txt, scanned-state.txt, scan-component-lifecycle.txt,
+  species-scanned-check.txt, knowledge-db.txt.
+
+ANCHOR FACTS (do not contradict):
+  F1 real scan (SetScanned + UpdatePlanetProgress on the CURRENT planet) =
+     PERSISTENT green, survives quit-to-desktop, greens BRAND-NEW instances.
+  F2 writing +0x21/+0x20 (ID_124898/ID_124899) directly for a target planet =
+     "BIOME COMPLETE" survey DATA but NO green; after reload flora/fauna are BLUE
+     and re-scanning STILL awards XP. So +0x21 is NOT persistent green.
+  F3 driving the tree writer ID_52161 + ID_52158 with an explicit target planetId
+     = TRANSIENT/in-session green only.
+
+================================================================================
+TL;DR
+================================================================================
+(a) THE PERSISTENT GREEN IS THE PER-INSTANCE "ScannableComponent" (type ID_939118)
+    stored in the SAVED knowledge container db+0x268, keyed by the SCANNED REF's
+    formID, holding (+0x24) the resolved/known SPECIES id and (+0x28) the scanned
+    flag. The green RENDER reader (ID_83007, bit-0x2a CLEAR branch) reads THIS
+    component's +0x28 byte. +0x21 (the per-(planet,species) survey hashmap) is a
+    SEPARATE record that only drives the survey %/"biome complete" DATA — which is
+    exactly why F2 sees data-complete-but-blue. The verdict file this supersedes
+    mislabeled +0x21 as the green; it is not.
+
+(b) THE "CURRENT PLANET" GLOBAL the scan reads is ID_937609 (the Tes/player world
+    singleton). ID_52188 -> ID_56990 resolve the scanned ref's planet from the
+    ref's LOCATION; the un-landed/standing fallback reads the current planet id at
+    *(int*)(ID_937609 + 0x80) and the active "place" object at *(ID_937609 + 0x78).
+    The value at +0x80 is a uint32 PLANET-ID (a NumericID/BSResource::ID lower 32),
+    not a pointer. (ID_937609+0x160 is the live-biome materializer used only for the
+    in-session biome-actor propagation half of ID_52158, not for the planet identity.)
+
+(c) THE SPOOF DOES NOT WORK as posed, and it is NOT because of planet identity.
+    Overwriting ID_937609+0x80 (or the ExtraData-0x81 location) WOULD make the real
+    scan CREDIT the target planet's survey DATA. But it would NOT move the PERSISTENT
+    GREEN to the target planet, because the persistent green is NOT keyed by planet
+    at all — it is keyed by the SCANNED REF's formID and resolves to the SPECIES, and
+    it is rendered by matching a FRESH instance on the target planet back to the SAME
+    species id. The spoof writes a green ScannableComponent for the species, but that
+    component is PLANET-AGNOSTIC: greening a species on planet B by spoofing the global
+    would equally green that species' instances ON ANY planet (including ones that
+    should stay blue), and conversely cannot be "aimed" at planet B's instances except
+    by virtue of them being the same species. The thing that is genuinely per-planet
+    (the +0x21 hashmap) is the DATA layer F2 already proved is greenless. So the
+    global to overwrite exists and is writable, but overwriting it does not achieve
+    the goal — see Q3 for the precise decompiled reason and what DOES reproduce F1.
+
+================================================================================
+THE TWO RECORDS, AND WHY ONE IS GREEN AND THE OTHER IS DATA
+================================================================================
+Everything hinges on bit 0x2a of the species BASE form, read by ID_36022(base+0xc8,
+0x2a) at the TOP of BOTH the reader ID_83007 (scanned-state.txt:26) and the writer
+ID_83008 (scanned-state.txt:132). This bit selects which record represents "scanned"
+for that species:
+
+  bit 0x2a CLEAR  -> the ScannableComponent path (type ID_939118), keyed by REF id.
+  bit 0x2a SET    -> the +0x21 per-(planet,species) survey hashmap (type ID_938333),
+                     keyed by species id (static) or the transient db+0x3d8 tree
+                     (dynamic id).
+
+Biome flora/fauna take the CLEAR branch (F1+F2 jointly force this: writing the +0x21
+hashmap, which is the SET branch's record, yields data-complete-but-blue; the green
+the real scan produces must therefore be the CLEAR-branch record).
+
+RECORD A — ScannableComponent (type ID_939118) = THE PERSISTENT GREEN
+  * Container: db+0x268 (the SAME saved container as the survey hashmap; ID_52204,
+    spoof-investigation.txt:333, builds CreateAndDeleteCommand<...PlayerKnowledge>
+    into +0x268 -> this container is the SAVED galaxy knowledge).
+  * Key: (ID_939118 << 48) | (refFormID << 16). The key's middle 32 bits are the
+    SCANNED REF's OWN formID — *(param_1 + 0x28) — NOT the planet, NOT the species.
+    (scanned-state.txt:41 reader; 134/139 writer via ID_83038.)
+  * Created by ID_83004 (scan-component-lifecycle.txt:1) and ID_83005
+    (spoof-globals.txt:26): both stamp a StoredComponent<1, ScannableComponent>
+    (RTTI string in the decompile) into db+0x268. ID_83005 writes:
+       +0x18/+0x1c  the ref formID and a SECOND id uVar9 = *(param_2 + 0x28)
+                    (a related/owner ref), and crucially
+       enum ScannableUtils::InitialScanStatus  (the +0x14 byte param_3).
+    ID_83004 sets puVar5[4] = CONCAT44(canonicalId, refId): the component stores
+    BOTH the raw ref id (+0x20) and a CANONICAL/known species id (+0x24).
+  * Scanned flag: ID_83038 (real-scan-chain.txt:477) writes *(entry + 0x28) =
+    *param_2 (the scanned byte) and, when set, copies the canonical id from +0x24
+    into *param_2[1] (the out-param ID_83008 then feeds to ID_52157). So +0x28 of
+    the ScannableComponent = the boolean "this thing is scanned" the renderer reads.
+  * Render reader: ID_83007 bit-CLEAR branch (scanned-state.txt:43-50):
+       resolve db+0x268 by (939118, refId); return 1 + (entry+0x28 byte != 0).
+    Return 2 = scanned/green, 1 = known-but-unscanned/blue, 0 = not a biome ref.
+    This is the value the outline renderer keys green on.
+
+RECORD B — survey hashmap slot (type ID_938333) = THE DATA / SURVEY %
+  * Container: db+0x268, key (ID_938333 << 48) | (planetId << 16) (per-planet entry).
+  * subobj = entry + 0x20; species hashmap @ subobj+0x18, slots @ subobj+0x40,
+    PERCENT byte +0x20, SCAN-FLAG byte +0x21, keyed by SPECIES id (FNV-1a, ID_124901).
+  * Written by ID_124898/ID_124899 (what the mod's MarkSpeciesScannedForPlanet does).
+  * Read by GetSurveyPercent / ID_97851 (spoof-investigation.txt:383): ID_97851 walks
+    the planet's flora/trait/resource id arrays and counts species whose +0x21 byte
+    >= threshold -> the "X% surveyed / BIOME COMPLETE" number. NOTHING in ID_97851
+    reads or sets the ScannableComponent +0x28. This is why F2's +0x21 write makes the
+    planet read complete but renders nothing green and re-scanning still awards XP:
+    the XP/green gate is Record A, untouched.
+
+NET: Record A (per-ref ScannableComponent, +0x28) = the GREEN. Record B (per-planet
+species hashmap, +0x21) = the survey DATA. They are different records, different keys,
+different readers. The superseded verdict conflated them.
+
+================================================================================
+Q1 — HOW A FRESH INSTANCE (NEW formID) RESOLVES TO GREEN AFTER RESTART (F1)
+================================================================================
+This is the subtle part and it is the reason the spoof fails. Record A is keyed by
+the SCANNED ref's formID, but a freshly-spawned instance on reload has a DIFFERENT
+formID, so a naive per-ref lookup would miss. It does not miss, because the resolve
+is SPECIES-mediated, in two layers:
+
+  1. The ScannableComponent stores at +0x24 the CANONICAL/known species id (ID_83004
+     puVar5[4]=CONCAT44(canonicalId,refId); ID_83009 spoof-globals.txt:171 returns
+     entry+0x24 as the "scanned species id" for a ref). On a fresh instance, the
+     engine re-derives the ref->species and looks up the saved ScannableComponent for
+     instances of that species.
+  2. ID_83011 / ID_83013 (scan-component-lifecycle.txt:139/206) iterate a planet's
+     live refs, map each via ID_47401(refId)->base, take the ScannableComponent's
+     +0x24 canonical id, then look up the species in the +0x38/+0x60 hashmap reading
+     the +0x20 byte. This is the per-species "have I scanned ANY instance of this
+     species" rollup that lets a fresh instance render from prior scans.
+
+The decisive property: the persistent green is, functionally, PER-SPECIES (galaxy-
+wide), not per-(planet,species). A scanned species greens its instances wherever they
+appear, because the gate is "is this species' ScannableComponent present+flagged",
+re-derived from the base form on reload. That matches F1 (fresh instances green) and
+explains the "green PERSISTS per-TYPE" memory note. It also means the planet the ref
+was physically on, at scan time, does NOT key the green — it only keys the Record B
+survey DATA via ID_52188.
+
+================================================================================
+Q2 — THE TARGET-PLANET RESOLUTION + THE WRITABLE "CURRENT PLANET" GLOBAL
+================================================================================
+ID_52188 (spoof-investigation.txt:192) determines which planet a scanned ref belongs
+to, in priority order:
+  (a) ExtraData type 0x81 on the ref (ID_37878(ref+0xc8, 0x81)): if present, planetId
+      = *(extra + 0x28). This is a per-ref LOCATION override. (lines 212-234)
+  (b) else ID_56990 (spoof-investigation.txt:1): walks the ref's parent
+      cell/space/"place" and, as the final fallback for "the planet the player is
+      standing on", reads:
+         *param_1 = *(int *)(ID_937609 + 0x80);              (line 165)
+         active place object = **(longlong**)(ID_937609 + 0x78). (line 158/162)
+      i.e. ID_937609+0x80 is THE CURRENT-PLANET id global; ID_937609+0x78 the active
+      place. ID_52188's own fallback (lines 248-255) likewise compares against
+      *(int*)(ID_937609 + 0x80) and resolves coords via ID_51773(ID_937609, ...).
+
+WRITABLE CURRENT-PLANET GLOBAL:  ID_937609 + 0x80  (uint32 planet id).
+TYPE OF VALUE:  a planet-id (NumericID / lower-32 of a BSResource::ID), NOT a form
+  pointer and NOT a biome pointer. (Confirmed: every consumer treats it as an int and
+  feeds it as the planetId into the db+0x268 (938333<<48 | planetId<<16) key.)
+BIOME global:  ID_937609 + 0x160 is the live materialized biome used by ID_52158's
+  propagation half (real-scan-chain.txt:251 ID_56887(*(ID_937609+0x160)+0x20, ...));
+  it is EMPTY for an un-landed planet, which is why ID_52158's biome-actor cascade
+  no-ops off-planet. ID_922868 (real-scan-chain.txt:247, ID_101322 arg) is an EVENT
+  bus / dispatcher target, not the planet identity.
+
+So: to make the scan path believe "current planet = TARGET", you overwrite
+ID_937609+0x80 with the target planetId (and/or attach an ExtraData-0x81 with
+extra+0x28 = target planetId to the spawned ref, which ID_52188 checks FIRST and is
+the cleaner hook). Either makes ID_52157/ID_52158 credit the TARGET in Record B.
+
+================================================================================
+Q3 — THE SPOOF: VERDICT = NOT VIABLE FOR PERSISTENT GREEN (decompiled blocker)
+================================================================================
+Question restated: temporarily set the current-planet global to TARGET, run the
+genuine real scan on a sample instance spawned at the player on the CURRENT planet,
+restore the global — does the real scan write PERSISTENT green for the TARGET planet?
+
+ANSWER: No — not in the sense intended ("green that target planet specifically").
+The blocker is structural, not a missing-biome problem:
+
+1. The real scan's PERSISTENT-green write (ID_83038 -> ScannableComponent +0x28,
+   scanned-state.txt:139) does NOT consult ID_52188 and does NOT consult
+   ID_937609+0x80 AT ALL. It is keyed purely by (939118, refId) and rolls up to the
+   SPECIES. Spoofing the current-planet global changes NOTHING about that write —
+   the green it produces is the species' galaxy-wide green, identical whether the
+   global is spoofed or not.
+   => Overwriting ID_937609+0x80 cannot REDIRECT the green to a target planet,
+      because the green was never bound to a planet to begin with. (Confirmed:
+      ID_83008 cVar==0 branch, scanned-state.txt:133-142 — the ID_83038 call takes
+      no planet; only the SUBSEQUENT ID_52157 (Record B/data) takes a planet, and
+      that planet comes from ID_52188 on the ref, which the spoof would move.)
+
+2. What the spoof DOES move is ID_52157/ID_52158 -> Record B (the +0x21 survey DATA).
+   But F2 already proved Record B is greenless. So the spoof buys exactly the
+   data-complete-but-blue state the mod can already write ref-free with
+   ID_124898/ID_124899 — no spawn, no spoof needed.
+
+3. The "does it need the biome materialized?" sub-question: ID_52158's biome half
+   (real-scan-chain.txt:251-308) reads ID_937609+0x160, which is empty for an
+   un-landed target, so that half no-ops — but that half is in-session propagation,
+   not persistence, so it is moot for green either way.
+
+CONCLUSION ON VIABILITY: The current-planet global (ID_937609+0x80) is real, found,
+and writable, and spoofing it WILL redirect the per-planet survey DATA credit. It
+will NOT redirect the persistent green, because the persistent green (the ID_939118
+ScannableComponent) is per-SPECIES, ref-keyed, and planet-agnostic — there is no
+planet field on it to redirect. The decompiled blocker is: ID_83038 (the green
+writer) takes no planet input and is not downstream of ID_52188/ID_937609+0x80.
+
+================================================================================
+WHAT ACTUALLY REPRODUCES F1 GALAXY-WIDE (the correct lever)
+================================================================================
+Because the persistent green is per-SPECIES (Record A, ScannableComponent +0x28,
+keyed by ref id, rolled up by the +0x24 canonical species id), the genuine,
+F1-faithful way to green a species EVERYWHERE is to make its ScannableComponent
+present+flagged ONCE — which the real SetScanned on ONE live instance already does,
+and which then greens that species on every planet that hosts it on reload (per-TYPE
+persistence, per the memory note). You do NOT need to be on, or spoof, each target
+planet for the GREEN; you need it once per SPECIES.
+
+Concretely, to fully complete a planet the mod must write BOTH layers:
+  * Record B (DATA / survey %): ref-free, per planet — ID_124898/ID_124899 +
+    attribute bits (already done by MarkSpeciesScannedForPlanet / WritePlanetSurveyState).
+  * Record A (GREEN): per SPECIES — produce the ScannableComponent for each species.
+    The only engine entry that writes Record A is the real SetScanned/ID_83008
+    cVar==0 path (-> ID_83038 -> ID_83005's CreateAndDeleteCommand<...ScannableComponent>),
+    which requires a LIVE instance of the species (PlaceAtMe). One live instance per
+    UNIQUE species, scanned once, greens that species galaxy-wide. This is precisely
+    the EnumerateAllSpecies -> spawn-one -> GreenSpeciesEverywhere shape already in
+    src/Main.cpp, EXCEPT the green must come from the genuine ID_83008 ScannableComponent
+    write (Record A), NOT from ID_52161 (transient tree, F3) and NOT from ID_124898
+    (+0x21 data, F2). The current GreenTypeForPlanet/CompleteTypeForPlanet drive the
+    F2/F3 records and therefore green only transiently — consistent with F3.
+
+OPEN ITEM TO CONFIRM IN-GAME (cheap test): scan ONE instance of a species via the real
+SetScanned on planet A, then travel to planet B that also hosts that species (never
+visited), reload, and check whether B's instances of that species are green. The
+decompile predicts YES (per-type galaxy-wide green) — if confirmed, the mod's galaxy
+green reduces to "spawn one live instance per unique species + genuine SetScanned",
+with the per-planet DATA done ref-free as today. If in-game shows green is actually
+scoped per planet, then Record A must additionally be filtered by planet somewhere
+downstream of the renderer that this static analysis did not surface, and the only
+faithful path remains "real scan on each target planet" (no global spoof helps).
+
+================================================================================
+MARKING THE SUPERSEDED FILE
+================================================================================
+green-persistence-verdict-2026-06-21.txt is WRONG where it states (its TL;DR and Q1):
+"the persistent green is the per-(planet,species) SCAN-FLAG byte ... slot +0x21,
+keyed by species formID" and "ID_124898(subobj, speciesFormID, 0xFF) ... writes the
+EXACT saved per-(planet,species) flag the real scan writes ... renders GREEN". F2
+disproves this directly: +0x21 writes complete the survey DATA and stay BLUE. The
++0x21 hashmap is Record B (survey %, read by ID_97851), not the green. The green is
+Record A: the ID_939118 ScannableComponent's +0x28 flag, read by ID_83007's
+bit-0x2a-CLEAR branch. Do not re-assert the +0x21=green claim.
+================================================================================

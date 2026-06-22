@@ -1,0 +1,71 @@
+======== 140c8d550 [ID_67259] ========
+  function ID_67259 @ 140c8d550
+  --- call targets ---
+    @140c8d580 CALL -> ID_123859 [ID_123859]
+  --- decomp ---
+
+void ID_67259(longlong param_1,undefined8 *param_2)
+
+{
+  uint uVar1;
+  undefined8 *puVar2;
+  undefined **local_18;
+  longlong local_10;
+  
+  local_18 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+  local_10 = param_1;
+  uVar1 = ID_123859(param_1,&local_18,*(undefined4 *)(param_1 + 4),0x58);
+  if (uVar1 != 0xffffffff) {
+    puVar2 = (undefined8 *)((ulonglong)uVar1 * 0x58 + *(longlong *)(param_1 + 8));
+    *puVar2 = *param_2;
+    puVar2[1] = param_2[1];
+    *(undefined4 *)(puVar2 + 2) = *(undefined4 *)(param_2 + 2);
+    puVar2[3] = param_2[3];
+    *(undefined1 *)(puVar2 + 4) = *(undefined1 *)(param_2 + 4);
+    *(undefined2 *)((longlong)puVar2 + 0x22) = *(undefined2 *)((longlong)param_2 + 0x22);
+    puVar2[5] = param_2[5];
+    puVar2[6] = param_2[6];
+    *(undefined1 *)(puVar2 + 7) = *(undefined1 *)(param_2 + 7);
+    puVar2[8] = param_2[8];
+    puVar2[9] = param_2[9];
+    *(undefined1 *)(puVar2 + 10) = *(undefined1 *)(param_2 + 10);
+    *(undefined1 *)((longlong)puVar2 + 0x51) = *(undefined1 *)((longlong)param_2 + 0x51);
+  }
+  return;
+}
+
+
+
+======== 140c8d880 [ID_67262] ========
+  function ID_67262 @ 140c8d880
+  --- call targets ---
+    @140c8d8b6 CALL -> _Init_thread_header [ID_182809 / _Init_thread_header]
+    @140c8d8f8 CALL -> ID_36016 [ID_36016]
+    @140c8d90a CALL -> atexit [ID_182819 / atexit]
+    @140c8d917 CALL -> _Init_thread_footer [ID_182808 / _Init_thread_footer]
+  --- decomp ---
+
+undefined4 * ID_67262(void)
+
+{
+  undefined **local_18;
+  undefined4 *local_10;
+  
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_945978) {
+    _Init_thread_header(&ID_945978);
+    if (ID_945978 == -1) {
+      local_18 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+      local_10 = &ID_945979;
+      (*(code *)BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable[0])
+                (&local_18,0x613,0x58);
+      ID_945982 = 0;
+      atexit(ID_199461);
+      _Init_thread_footer(&ID_945978);
+      return &ID_945979;
+    }
+  }
+  return &ID_945979;
+}
+
+
+

@@ -1,0 +1,436 @@
+================================================================================
+COMPLETE END-TO-END SCAN -> PERSISTENT-GREEN TRACE (Starfield 1.16.236)
+2026-06-21 — THE DECISIVE TRACE. Resolves the hard contradiction.
+
+This file supersedes, on the PLANET-BINDING question, ALL of:
+  green-verdict-2026-06-21.txt
+  green-persistence-verdict-2026-06-21.txt
+  green-spoof-verdict-2026-06-21.txt
+  extradata-0x81-spoof-verdict-2026-06-21.txt
+Those four all concluded the persistent green is "planet-agnostic" (keyed only by
+ref formID / species, no planet input). SAVE FACT B proves that is WRONG, and this
+trace shows EXACTLY where the planet enters: it was missed because every prior pass
+traced ID_83007 (the per-ref ScannableComponent reader) and STOPPED, never tracing
+the actual outline deciders ID_90491 / ID_90548, which call ID_52159 — and ID_52159
+resolves the planet from the PLAYER (ID_922868) via ID_52188.
+
+New decompiles this pass (all in re/ghidra/output/):
+  green-render-path-2026-06-21.txt   (ID_52180, ID_124775, ID_52151, ID_52153,
+       ID_97853, ID_47401, ID_56887, ID_52209, ID_1015271, ID_139363)
+  outline-pipeline-2026-06-21.txt    (ID_90503, ID_90491, ID_118472, ID_90506,
+       ID_90536, ID_90518, ID_90974, ID_100770)
+  species-key-resolve-2026-06-21.txt (ID_52181, ID_83041, ID_121060, ID_64292,
+       ID_64290, ID_51930, ID_47326, ID_47327)
+Existing: scanned-state, real-scan-chain, species-scanned-check, outline-decider,
+  spoof-investigation, spoof-globals, scan-component-lifecycle, canonical-key.
+
+ANCHOR FACTS (ground truth, never contradicted):
+  A. A REAL scan (ObjectReference.SetScanned=ID_83008 on a PlaceAtMe'd instance +
+     UpdatePlanetProgress=ID_52157) greens the planet you are PHYSICALLY ON;
+     persists across full restart; greens FRESH instances on reload.
+  B. That green is PER-(PLANET, SPECIES). Scanning species X on planet A does NOT
+     green X on never-visited planet B (B is BLUE on reload).
+  F2. Writing +0x21/+0x20 directly (ID_124898/ID_124899) for a target planet made
+     the planet read "BIOME COMPLETE" but flora/fauna stayed BLUE and re-scanning
+     still awarded XP.  <-- this is the result that wrongly killed the correct model.
+
+================================================================================
+TL;DR (the answers)
+================================================================================
+1. THE PERSISTENT GREEN RECORD is the per-(planet,species) entry in
+   BSGalaxy::PlayerKnowledge (the SAVED galaxy component) at db+0x268, key
+   (ID_938333 << 48) | (planetId << 16). Inside that entry, subobj = entry+0x20;
+   the species table is a BSTHashMap at subobj+0x18 (== entry+0x38) with 0x30-stride
+   slots at subobj+0x40 (== entry+0x60), keyed by the SPECIES formID via FNV-1a
+   (ID_124901). The green is gated by the SCAN-FLAG byte at slot +0x21 (and the
+   percent byte at +0x20). This is Record B in the prior files — they correctly
+   found it but wrongly called it "DATA only, not green."
+
+2. WHERE THE PLANET ENTERS (the key question):
+   The render-time outline decider does NOT read the per-ref ScannableComponent for
+   biome flora/fauna. It calls ID_52159(ID_922868 /*the PLAYER*/, speciesId), and
+   ID_52159 internally calls ID_52188(player) to get the planet, then keys
+   (938333 | thatPlanet). THE PLANET IS THE PLAYER'S CURRENT PLANET, resolved from
+   the PLAYER REF, not the scanned ref. On planet B the decider keys planet B's
+   hashmap; species X's flag is only in planet A's hashmap; lookup MISSES -> BLUE.
+   That is SAVE FACT B, exactly. The planet enters at ID_52159 -> ID_52188(player)
+   -> ID_56990(player) -> player.parentCell (player+0xB0) / ID_937609+0x80.
+
+3. THE SPOOF / WRITE RECIPE: the persistent green IS ref-free writable for a target
+   planet. Write the +0x21 scan-flag (and +0x20 percent) into the TARGET planet's
+   db+0x268 entry via ID_124898/ID_124899 on the subobj resolved from the target
+   planetId. This is EXACTLY what the real scan's ID_52158 writes. It is NOT keyed
+   by any instance and needs no live ref. (See Q3 for why F2 nonetheless saw blue,
+   and the corrected recipe.)
+
+4. The green does NOT bind at render-time to the scanned ref's own parent cell. It
+   binds to the PLAYER's planet at READ time (ID_52188(player)) AND was written to
+   the scanned ref's planet at WRITE time (ID_52188(scannedRef)). For a normal scan
+   those are the same planet (you scan where you stand), which is why A and B both
+   hold. See Q4.
+
+================================================================================
+PART I — THE COMPLETE CALL TREE OF ID_83008 (SetScanned inner), BOTH BRANCHES
+================================================================================
+ID_83008(ref, scannedByte, category, flag)               [scanned-state.txt:118]
+  cVar1 = ID_36022(ref+0xC8 /*base form props*/, 0x2a)   // map-marker property bit
+  -------------------------------------------------------------------------------
+  BRANCH 1: bit 0x2a CLEAR  (biome flora/fauna take THIS branch — see PART IV)
+  -------------------------------------------------------------------------------
+    key28 = *(int*)(ref+0x28)                              // the REF's OWN formID
+    ID_83038(db, &scannedByte, &key28)                     [real-scan-chain.txt:477]
+       READS:  nothing planet-related
+       KEY:    (ID_939118 << 48) | (refFormID << 16)       // ScannableComponent key
+       WRITES: db+0x268 ScannableComponent entry +0x28 = scannedByte
+               (and copies entry+0x24 canonical id -> *param2[1] as outScanned)
+       => Record A. PER-REF. PLANET-FREE. This is a TRANSIENT/cosmetic per-instance
+          "this exact ref is currently scanned" flag (see PART IV for why it is NOT
+          the persistent green).
+    if (outScanned != 0) ID_52157(ref, outScanned, category)   [real-scan-chain.txt:1]
+       cVar4 = ID_52188(ref, &planetId, &secondary)        // PLANET FROM THE SCANNED REF
+       ID_1016657(...) ; ID_65318(...)                     // build progress context
+       ID_52158(&ctx{planetId, species, delta, ...}, &db)  [real-scan-chain.txt:108]
+          key   = (ID_938333 << 48) | (planetId << 16)     // PER-PLANET entry
+          ID_126806(db+0x268, &key) -> entry ; lVar26 = entry+0x20  (subobj)
+          ID_124901(subobj+0x18, &species) -> slot idx     // FNV-1a of SPECIES formID
+          ID_124898(subobj, species, delta)  -> slot +0x21 SCAN-FLAG  (saturating +=)
+          ID_124899(subobj, species, percent)-> slot +0x20 PERCENT
+          biome-cluster pass: reads ID_937609+0x160 (CURRENT biome) -> ID_56887 ->
+              ID_83025 / recursive ID_52157 for sibling species in the same biome
+          ID_97853(&ctx)                                   // fire completion event
+       => Record B. PER-(PLANET, SPECIES). SAVED in PlayerKnowledge. THIS IS THE
+          PERSISTENT GREEN (proven in PART IV).
+  -------------------------------------------------------------------------------
+  BRANCH 2: bit 0x2a SET  and scannedByte != 0  -> ID_52160(ref, category, flag)
+  -------------------------------------------------------------------------------
+    ID_52160                                               [real-scan-chain.txt:390]
+      iVar2 = *(int*)(ref+0x28)                            // ref formID
+      if (DYNAMIC id: iVar2 + 0x1000000 < 0xffffff):
+          ID_52188(ref,&planetId,&sec)                     // planet from ref
+          ID_52161(&{planetId, ref, refFormID}, &db)       [green-completion.txt:134]
+             pauVar4 = ID_126802(db+0x3d8 /*DisposableInstancedFormDB*/, &refFormID)
+             if catalog MISS: ask base form vtable[0xA8] for a key; if {0,0,0} ->
+                 ID_137052() MINT per-call TIMESTAMP key  [canonical-key.txt:1]
+                 ID_46756(db) persist refFormID->key into db+0x3d8
+             ID_126806(db+0x268, (938333|planetId)) -> entry
+             ID_124902(entry+0x80 /*== subobj+0x60 RB-tree*/, &{c0,c1,c2})  // tree insert
+          => the TRANSIENT db+0x3d8 catalog + subobj+0x60 RB-tree path. Per-instance
+             timestamp key, rebuilt empty per load. This is the path the FIRST verdict
+             (green-verdict) exhaustively (and correctly) proved is per-instance/blue
+             on reload. It is a MAP-MARKER / dynamic-ref path, NOT biome flora/fauna.
+      else (STATIC id):  ID_52157(ref, iVar2, ...)         // same Record-B path as Branch 1
+
+KEY STRUCTURAL FACT proven by the offsets (real-scan-chain.txt vs species-scanned-
+check.txt vs species-key-resolve): ID_52158 (writer), ID_52159 (render reader),
+ID_83041 (scan-success reader), ID_97851 (survey-% reader), ID_124898/124899
+(flag/percent writers) ALL hit the IDENTICAL structure:
+    entry = db+0x268 lookup of (938333 | planetId)
+    species hashmap @ entry+0x38   (== subobj+0x18, subobj=entry+0x20)
+    0x30-stride slots @ entry+0x60 (== subobj+0x40)
+    PERCENT byte @ slot+0x20 ; SCAN-FLAG byte @ slot+0x21
+    slot key = FNV-1a(species formID 4 bytes), ID_124901 / ID_124840
+Writer and all readers agree to the byte. (The mod's MarkSpeciesScannedForPlanet
+uses subobj=entry+0x20 then +0x18/+0x40/+0x21 — identical. Confirmed in src/Main.cpp
+ResolvePlanetSubobj + MarkSpeciesScannedForPlanet.)
+
+================================================================================
+PART II — THE COMPLETE CALL TREE OF THE READER SIDE (who decides GREEN at render)
+================================================================================
+There are TWO readers. The prior verdicts only traced the first and stopped.
+
+READER 1 — ID_83007(ref)   [scanned-state.txt:1]   (the per-ref "scanned?" reader)
+  cVar3 = ID_36022(ref+0xC8, 0x2a)
+  iVar1 = *(int*)(ref+0x28)                               // ref formID
+  if (bit 0x2a CLEAR):
+      key = (939118 | refFormID) ; ID_126806(db+0x268,&key)
+      return 1 + (entry+0x28 byte != 0)                   // reads Record A (per-ref)
+  else if (DYNAMIC id): ID_52162(...) -> db+0x3d8 tree   // Record-B-tree transient
+  else (STATIC id):     ID_52159(ref, refFormID)         // reads Record B +0x21
+  Callers (outline-callers.txt): ID_90503, ID_90548(x2), ID_118472, ID_90506,
+      ID_90536, ID_90974, ID_100770, ID_95011, ID_60738, ID_65656, ID_97254, ...
+  => ID_83007 is used as a coarse "is this a scannable & already-scanned ref" gate
+     in the scan pipeline. For biome flora/fauna (bit 0x2a CLEAR) it returns the
+     per-ref ScannableComponent +0x28 — which is set only AFTER you scan THAT exact
+     instance (ID_83005/ID_83038), i.e. an INTRA-SESSION per-ref flag, NOT a
+     persistent per-type record.
+
+READER 2 — ID_90491(ref) / ID_90548(menu)   THE ACTUAL OUTLINE / ICON DECIDER
+  ID_90491(refBeingRendered)   [outline-pipeline-2026-06-21.txt:79]
+     lVar2 = ID_922868                                    // THE PLAYER
+     resolve planet:
+        lVar5 = ID_37878(player+0xC8, 0x81)               // player's ExtraLocation
+        if present -> iVar10 = *(int*)(node+0x28)
+        else iVar10 = *ID_56990(&_, &_, PLAYER, 0)        // player's parentCell/place
+     cVar4 = ID_52159(ID_922868 /*player*/, *(int*)(ref+0x28) /*species id*/)
+     bVar12 = (cVar4 != 0)
+     if (cVar4 == 0):                                     // not directly scanned-for-planet
+        ID_52180(iVar10 /*PLAYER's planet*/, &speciesList) // per-planet species enum
+        bVar12 = (ref's species id IS in that planet's list)   // membership test
+     return bVar12                                        // <- the GREEN bit
+  ID_90548 (the menu/monocle scanner decider) [outline-decider.txt:1] mirrors this:
+     line 428: cVar14 = ID_52159(ID_922868, *(int*)(lVar17+0x28))
+     line 437: if (==0) ID_52180(iVar25 /*player planet from ID_56990(player)*/, ...)
+               membership test
+     line 536: param_1[0xf2c] = bVar28 + 1                // the scan-state -> outline color
+  => THE OUTLINE GREEN FOR BIOME FLORA/FAUNA IS DECIDED BY ID_52159(player, species),
+     which is PER-(player's planet, species). THIS is where SAVE FACT B lives.
+
+ID_52159(player, species)   [species-scanned-check.txt:86]
+   cVar4 = ID_52188(player, &planetId, &sec)              // PLANET FROM PLAYER REF
+   key = (938333 | planetId) ; ID_126806(db+0x268,&key) -> entry
+   lVar5 = entry ; ID_124901(entry+0x38, &species) -> idx
+   return *(byte*)(*(entry+0x60) + 0x21 + idx*0x30)       // raw SCAN-FLAG byte, !=0 => green
+   NOTE: returns the RAW +0x21 byte (boolean-tested by caller). NO threshold compare.
+   So ANY non-zero +0x21 for (player-planet, species) => GREEN via this path.
+
+ID_52188(ref,&planet,&sec)  [planet-resolver.txt:1] — planet resolution, in order:
+   (1) ID_37878(ref+0xC8, 0x81) ExtraLocation -> node+0x28 (if present, wins)
+   (2) ID_56990(ref): ref.parentCell (ref+0xB0) -> cell place/worldspace (cell+0x110,
+       cell+0x58+0x70), walk place refs; FINAL fallback *(int*)(ID_937609+0x80).
+   (3) post-resolve geometry via ID_51773 / ID_124846 (does not change WHICH planet).
+   For the RENDER read it is called with ref == ID_922868 (the PLAYER), so the planet
+   is the PLAYER's planet (where the player is standing), NOT the rendered flora ref's.
+
+================================================================================
+PART III — EXACTLY WHICH DB RECORD IS THE PERSISTENT GREEN
+================================================================================
+Container: BSGalaxy::PlayerKnowledge  (db+0x268)  — the SAVED galaxy knowledge
+   component (ID_52204 builds CreateAndDeleteCommand<...,struct BSGalaxy::
+   PlayerKnowledge> into +0x268; that is the container the save serializes).
+Record (the persistent green): the per-(planet,species) SCAN-FLAG.
+   KEY, decomposed:
+       discriminator = ID_938333  (the "survey/trait" type, 16-bit, @1461e9b94)
+       planetId      = target planet's NumericID (lower-32 of BSResource::ID)
+       full key u64  = (ID_938333 << 48) | (planetId << 16)
+   Within the resolved entry:
+       subobj   = entry + 0x20
+       species hashmap = subobj + 0x18   (keys; FNV-1a of species formID via ID_124901)
+       slots           = subobj + 0x40   (0x30 stride)
+       PERCENT byte    = slot + 0x20
+       SCAN-FLAG byte  = slot + 0x21      <<< THE PERSISTENT GREEN BIT (read by ID_52159)
+   The species sub-key is the bare SPECIES formID (4 bytes, FNV-1a). Fully
+   deterministic; fresh instances re-derive the same key from their base form on
+   reload. NO timestamp, NO instance id, NO db+0x3d8 catalog.
+
+The TRANSIENT/cosmetic records (NOT persistent green):
+   * Record A — ScannableComponent (type ID_939118) at db+0x268, key (939118|refFormID).
+     +0x28 = "this exact ref scanned" (set by ID_83005/ID_83038). Per-ref, intra-
+     session. Read by ID_83007 bit-clear. Greens the live instance you just scanned;
+     a fresh instance (new formID) misses it on reload. NOT the persistent green.
+   * db+0x3d8 DisposableInstancedFormDB + subobj+0x60 RB-tree (ID_52161/ID_52162,
+     ID_124902/ID_126802). Key minted per-instance by timestamp (ID_137052). Rebuilt
+     empty per load. This is the MAP-MARKER / dynamic-ref path, the one the first
+     verdict exhaustively proved blue-on-reload. NOT biome flora/fauna's green.
+
+================================================================================
+PART IV — PROOF biome flora/fauna use Record B (+0x21), reconciling A, B, AND F2
+================================================================================
+Q: Does the RENDER decider read Record A (per-ref, planet-free) or Record B
+   (per-planet +0x21) for biome flora/fauna?
+A: Record B. Proof chain:
+
+(i) The persistence + fresh-instance fact (A) RULES OUT Record A as the green source.
+    Record A is keyed by the SCANNED ref's formID. A fresh instance on reload has a
+    DIFFERENT formID -> Record A lookup misses -> would be BLUE. Yet A says fresh
+    instances are GREEN. Therefore the green a fresh instance reads CANNOT be Record A.
+    (This is the hole the four prior verdicts never closed; they asserted Record A is
+    the green and then could not explain fresh-instance green except by hand-waving a
+    "rollup".)
+
+(ii) The render deciders ID_90491 / ID_90548 read Record B, keyed by (player's
+     planet, species). ID_90491 does not even consult bit 0x2a or ID_83007 for the
+     color — it calls ID_52159(player, species) directly. ID_52159 returns the +0x21
+     byte for (player-planet, species). A fresh instance of a scanned species, on the
+     planet where it was scanned, re-derives the SAME (planet, species) key and reads
+     the SAME saved +0x21 -> GREEN. Deterministic, no per-instance state. This is
+     EXACTLY fact A, and it is per-(planet,species) = EXACTLY fact B.
+
+(iii) SAVE FACT B is the +0x21 reader keying on the PLAYER's planet. On planet B,
+     ID_52159(player=onB, speciesX) keys (938333|planetB). Species X's +0x21 was
+     written only under (938333|planetA). Planet B's entry has no X slot (or 0) ->
+     ID_52159 returns 0 -> ID_52180(planetB) membership likely also excludes X (X is
+     not authored on B) -> BLUE. PRECISELY fact B. The planet binding is the
+     ID_52188(player) call inside ID_52159.
+
+(iv) RECONCILING F2 ("writing +0x21 directly = data complete but BLUE").
+     This is the subtle part and it does NOT contradict (i)-(iii). Three independent
+     mechanisms can each produce F2 while the model above is correct; the live retest
+     must disambiguate, but the static evidence points hard at mechanism (a):
+
+     (a) WRONG SPECIES KEY DOMAIN. ID_52158 (the real scan) writes +0x21 keyed by
+         param_1[1] = a species id that the engine RESOLVED canonically (via the
+         scanned ref's base form / ScannableComponent +0x24 canonical id, ID_83006/
+         ID_83009). ID_52159 at render reads keyed by *(int*)(renderedForm + 0x28) =
+         the rendered FORM's formID. For green to light, the formID the RENDER hashes
+         must equal the formID the WRITE hashed. If the mod wrote +0x21 keyed by the
+         ESM "species form" id (the PNDT/PPBD authored id) but the renderer hashes the
+         actually-spawned base-object formID (a different FLOR/NPC_ base form the biome
+         materializes), the keys differ and +0x21 is set under the wrong slot ->
+         renderer reads 0 -> BLUE, even though GetSurveyPercent (ID_97851), which walks
+         the planet's OWN authored id arrays, counts it as complete. THIS EXACTLY
+         matches F2's signature "complete data + blue + re-scan still awards XP."
+         The real scan does not have this problem because it hashes the SAME canonical
+         id on both write and read. => The fix is to write +0x21 under the canonical
+         spawned-base-form id, i.e. the id ID_52159 will hash at render time, not the
+         ESM authored id (unless they coincide).
+
+     (b) THE +0x20 vs +0x21 / threshold confusion is NOT the cause: ID_52159 reads
+         +0x21 RAW (no ID_69506/69507 threshold). ID_97851 (survey %) is the one that
+         threshold-compares (ID_69506/69507). So a +0x21 of 100 IS "non-zero" for
+         ID_52159. (Ruled out as the F2 cause, but documents that +0x21 must be the
+         byte set, which the mod does.)
+
+     (c) ID_52159 first-pass ENTRY-MISSING: if the target planet has no db+0x268 entry
+         yet (never visited, never had its PlayerKnowledge component created), ID_52158/
+         ID_124898 CREATE the slot on write, but if the mod's write resolved a
+         DIFFERENT entry (e.g. created under a stale/zero planetId, or the entry the
+         renderer looks up is a freshly-created empty one because the planet's
+         component was (re)materialized on landing AFTER the mod's pre-write), the
+         render lookup can read the fresh empty entry. Less likely than (a) but worth
+         excluding by writing AFTER the planet's knowledge component exists.
+
+================================================================================
+Q1 — EXACT PERSISTENT GREEN RECORD (container + key, decomposed)
+================================================================================
+PERSISTENT GREEN  (survives restart, greens fresh instances):
+   Container : db+0x268  = BSGalaxy::PlayerKnowledge (SAVED)
+   Key u64   : (ID_938333 << 48) | (planetId << 16)
+               - bits 48..63 : ID_938333 (survey type discriminator)
+               - bits 16..47 : planetId (32-bit NumericID)
+               - bits 0..15  : 0
+   In entry  : subobj = entry+0x20 ; species hashmap subobj+0x18 ; slots subobj+0x40
+               (0x30 stride) ; species sub-key = FNV-1a(speciesFormID) ;
+               GREEN byte = slot+0x21 ; percent byte = slot+0x20.
+   Writers   : ID_124898 (+0x21), ID_124899 (+0x20), driven by ID_52158 (real scan)
+               or ref-free by the mod's MarkSpeciesScannedForPlanet.
+   Readers   : ID_52159 (outline, via ID_90491/ID_90548), ID_83041 (scan-success),
+               ID_97851 (survey %).
+
+TRANSIENT / COSMETIC (NOT persistent green):
+   Record A ScannableComponent : key (ID_939118<<48 | refFormID<<16), +0x28 byte.
+       Per-ref, intra-session, read by ID_83007 bit-clear. Greens the live scanned
+       instance only.
+   db+0x3d8 DisposableInstancedFormDB + subobj+0x60 RB-tree : key minted per-instance
+       by ID_137052 timestamp. Map-marker/dynamic path. Rebuilt empty per load.
+
+================================================================================
+Q2 — WHERE THE PLANET ENTERS (the precise point + value)
+================================================================================
+THE PLANET ENTERS AT THE READER, FROM THE PLAYER, via:
+    ID_90491/ID_90548  ->  ID_52159(ID_922868 /*PLAYER*/, speciesId)
+                       ->  ID_52188(PLAYER, &planetId, ...)
+                       ->  (a) PLAYER's ExtraLocation 0x81  (player+0xC8 type 0x81, +0x28)
+                           (b) ID_56990(PLAYER): PLAYER.parentCell (player+0xB0) ->
+                               cell place/worldspace -> body; FINAL fallback
+                               *(int*)(ID_937609+0x80) (current-planet id global).
+    The resolved planetId becomes the db+0x268 key (938333|planetId). The species
+    +0x21 slot is then looked up under THAT planet. If species X has no set +0x21
+    under the player's current planet -> ID_52159 returns 0 -> BLUE.
+
+AND AT THE WRITER, FROM THE SCANNED REF, via:
+    ID_52157 -> ID_52188(scannedRef) -> scannedRef.parentCell / ExtraLoc / global.
+    The real scan writes +0x21 under the SCANNED REF's planet.
+
+For a normal in-world scan, scannedRef.planet == player.planet (you scan where you
+stand), so write-planet == read-planet -> fact A. On a different planet B the read
+keys planet B -> miss -> fact B. The "physical parent cell" candidate from the task
+IS load-bearing — but it is the PLAYER's parent cell at READ time (and the scanned
+ref's parent cell at WRITE time), resolved by ID_56990 (ref+0xB0). The prior
+"planet-agnostic" claim was the missed call: it stopped at ID_83007 and never
+followed ID_90491/ID_90548 -> ID_52159 -> ID_52188(player).
+
+================================================================================
+Q3 — THE SPOOF / WRITE RECIPE (persistent green for a target planet, ref-free)
+================================================================================
+The persistent green for a TARGET planet IS writable ref-free, because it is the
++0x21 byte in db+0x268 keyed purely by (planetId, speciesId). You do NOT need to be
+on the planet and you do NOT need a live ref for the WRITE. Recipe:
+
+  1. manager = ID_126578() ; db = *(manager + 0x8B0).
+  2. For the TARGET planetId:
+        key = (ID_938333 << 48) | (targetPlanetId << 16)
+        out[4]; entry = ID_126806(db+0x268, out, &key)
+        if MISS (out[3]==0xfe0 && out[2]==0): the planet has no PlayerKnowledge entry
+            yet. Create it first by driving the engine's own create path once
+            (the mod's CompleteAllPlanetsSurveyData / ID_102650 path, or any
+            ID_124898 write which inserts the slot — ID_124898 creates if absent,
+            real-scan-chain.txt:575). Re-resolve entry.
+        subobj = entry + 0x20.
+  3. For EACH species S that the RENDERER will hash for that planet:
+        ID_124898(subobj, S, 0xFF)      // saturate the +0x21 SCAN-FLAG
+        ID_124899(subobj, S, 100)       // +0x20 percent (for the survey-% readers)
+     *** CRITICAL (this is the F2 fix) ***: S must be the SAME id ID_52159 hashes at
+     render time = the formID at (renderedForm + 0x28) for the species the biome
+     actually spawns. That is the canonical base-form / ScannableComponent +0x24
+     species id, NOT necessarily the ESM PNDT/PPBD authored "species form" id. If the
+     mod currently writes the ESM id and they differ, the data completes (ID_97851
+     walks the authored arrays) but the green stays blue (F2). To get green:
+        - Resolve the canonical id the renderer uses. Two reliable sources:
+          (a) On the planet, spawn one instance, read its ScannableComponent +0x24 via
+              ID_83009(ref) — that is the id ID_52159 will hash. Use that id for the
+              +0x21 write. (Couples the write to a one-time on-planet probe per species.)
+          (b) Off-planet, replicate the engine's ref->canonical mapping: for the
+              spawned base form, the canonical id == the value ID_83006/ID_83004 stamp
+              into +0x24 (from base-form vtable +0x228 -> ID_83006 -> +0x428). If the
+              ESM authored id already equals this (often true for FLOR where the
+              authored form IS the spawned base), no remap is needed and the existing
+              +0x21 write should green — in which case F2 was mechanism (c) (entry not
+              yet created / written under wrong planet), not (a).
+  4. (Optional) fire ID_97853(ctx) so the completion event/slate transitions.
+
+What does NOT help and why:
+  * Overwriting ID_937609+0x80 (current-planet global) around a real scan: it only
+    feeds ID_52188 as the LAST fallback, and at RENDER time ID_52188 is called on the
+    PLAYER whose parentCell wins before the global. It also cannot redirect the write
+    if the scanned ref's parentCell resolves first. (Matches F3.)
+  * ExtraLocation 0x81 on the scanned ref: redirects the WRITE planet (ID_52157 ->
+    ID_52188(scannedRef)) to the target, so you can write the target's +0x21 from
+    afar — but that is identical in effect to calling ID_124898 directly for the
+    target planet. It does nothing at RENDER time (the renderer reads the PLAYER's
+    0x81/cell, not the flora ref's). So 0x81 is a write-redirect convenience, not a
+    render lever. (Matches the extradata-0x81 verdict's "data yes, but redundant"
+    finding — corrected here: it's redundant because the +0x21 write IS the green,
+    not because +0x21 isn't the green.)
+
+================================================================================
+Q4 — DOES THE GREEN HAVE NO PLANET INPUT? (the reconciliation the task demands)
+================================================================================
+It HAS a planet input. The green is bound to a planet at BOTH ends:
+  * WRITE: the scanned ref's planet (ID_52188(scannedRef)) selects the db+0x268
+    entry that gets the +0x21 byte.
+  * READ (render): the PLAYER's planet (ID_52188(player) inside ID_52159, invoked by
+    ID_90491/ID_90548) selects the db+0x268 entry whose +0x21 byte is read.
+The binding is NOT "render-time via the rendered instance's own parent cell" — it is
+"render-time via the PLAYER's parent cell/planet" matched against "write-time via the
+scanned ref's planet." For ordinary play these coincide (scan where you stand), giving
+fact A; on any other planet they diverge, giving fact B. There is therefore NO
+contradiction with A or B once the correct reader (ID_52159 via the player) is traced.
+
+The four prior verdicts' "planet-agnostic" conclusion came from tracing ONLY ID_83007
+(Record A, per-ref ScannableComponent) and never following the outline deciders
+ID_90491/ID_90548 to ID_52159 -> ID_52188(player). Record A genuinely is planet-free,
+but Record A is the intra-session per-instance flag, not the persistent green. The
+persistent, per-(planet,species), fresh-instance-greening record is Record B (+0x21),
+read at render time keyed by the PLAYER's planet. That is the precise planet-binding
+point the prior passes missed.
+
+================================================================================
+WHAT TO CHANGE IN THE MOD
+================================================================================
+* The +0x21/+0x20 ref-free write (MarkSpeciesScannedForPlanet) IS the persistent-green
+  write — it was wrongly demoted to "data only" after F2. Re-promote it.
+* Fix the F2 blue: ensure the species id written to +0x21 is the canonical id the
+  renderer hashes (ID_52159 keys on the spawned base form's formID via renderedForm+
+  0x28 == ScannableComponent +0x24 canonical id), not (necessarily) the ESM PNDT/PPBD
+  authored id. Verify per species whether ESM-id == canonical-id; remap where not.
+* Keep CompleteAllPlanetsSurveyData (ID_102650) to ensure each target planet's
+  db+0x268 PlayerKnowledge entry EXISTS before writing flags (so the render lookup
+  hits a real, populated entry).
+* Stop chasing ID_52161 (db+0x3d8 RB-tree) for persistent green — it is the transient
+  map-marker/dynamic path and is correctly per-instance/blue-on-reload.
+* Cheap in-game disambiguation of the F2 cause: on a target planet, spawn ONE
+  instance, read ID_83009(ref) (+0x24 canonical id), compare to the ESM species id
+  used by MarkSpeciesScannedForPlanet. If they differ -> F2 was mechanism (a), write
+  +0x21 under the +0x24 id and re-test (predict GREEN). If they match -> F2 was
+  mechanism (c), ensure the planet's entry is created first, then re-test.
+================================================================================

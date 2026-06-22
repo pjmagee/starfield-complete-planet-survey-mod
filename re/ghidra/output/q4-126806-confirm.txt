@@ -1,0 +1,58 @@
+======== 142412a30 [ID_126806] ========
+  function ID_126806 @ 142412a30
+  --- call targets ---
+    @142412a67 CALL -> ID_38422 [ID_38422]
+  --- decomp ---
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined8 * ID_126806(longlong *param_1,undefined8 *param_2,ulonglong *param_3)
+
+{
+  undefined8 uVar1;
+  ulonglong uVar2;
+  longlong lVar3;
+  ulonglong uVar4;
+  ulonglong uVar5;
+  ulonglong uVar6;
+  
+  uVar4 = 0;
+  param_2[1] = 0xfc;
+  *param_2 = 0;
+  param_2[2] = 0;
+  param_2[3] = 0xfe0;
+  if (*param_1 != 0) {
+    lVar3 = ID_38422();
+    if (lVar3 < 1) {
+      lVar3 = param_2[2];
+      uVar6 = (ulonglong)*(uint *)(lVar3 + 4);
+      if (uVar6 != 0) {
+        do {
+          uVar5 = uVar6 + uVar4 >> 1;
+          uVar2 = uVar5 + 1;
+          if (*param_3 <=
+              *(ulonglong *)((ulonglong)*(ushort *)(lVar3 + 0x12 + uVar5 * 4) + 0x10 + lVar3)) {
+            uVar6 = uVar5;
+            uVar2 = uVar4;
+          }
+          uVar4 = uVar2;
+        } while (uVar4 < uVar6);
+      }
+      param_2[3] = uVar6;
+      if ((uVar6 < *(uint *)(lVar3 + 4)) &&
+         (*(ulonglong *)((ulonglong)*(ushort *)(lVar3 + 0x12 + uVar6 * 4) + 0x10 + lVar3) <=
+          *param_3)) {
+        return param_2;
+      }
+    }
+    uVar1 = _UNK_144f09628;
+    *param_2 = _ID_501138;
+    param_2[1] = uVar1;
+    param_2[2] = 0;
+    param_2[3] = 0xfe0;
+  }
+  return param_2;
+}
+
+
+
