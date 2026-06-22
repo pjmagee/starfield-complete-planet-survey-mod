@@ -1,0 +1,177 @@
+======== ID_126578 / ID_126578 @ 142401c50 ========
+
+undefined * ID_126578(void)
+
+{
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_952731) {
+    _Init_thread_header(&ID_952731);
+    if (ID_952731 == -1) {
+      ID_126544();
+      atexit(ID_218896);
+      _Init_thread_footer(&ID_952731);
+      return &ID_952732;
+    }
+  }
+  return &ID_952732;
+}
+
+
+
+======== ID_46756 / ID_46756 @ 1405b32b0 ========
+
+ulonglong ID_46756(longlong param_1,longlong param_2,int *param_3,undefined4 *param_4)
+
+{
+  int *piVar1;
+  uint *puVar2;
+  uint uVar3;
+  longlong lVar4;
+  longlong *plVar5;
+  int iVar6;
+  undefined8 *puVar7;
+  ulonglong uVar8;
+  longlong local_res10;
+  undefined4 local_78;
+  undefined4 local_74;
+  undefined4 local_70;
+  longlong local_68;
+  uint local_60;
+  int local_5c;
+  undefined8 *local_58;
+  longlong local_50;
+  uint local_48;
+  longlong local_40;
+  longlong local_38;
+  int *local_30;
+  
+  lVar4 = *(longlong *)(param_1 + 0x238);
+  local_res10 = param_2;
+  iVar6 = ID_46641();
+  if (iVar6 != *(int *)(lVar4 + 0x240)) {
+    lVar4 = *(longlong *)(param_1 + 0x30);
+    puVar7 = (undefined8 *)ID_123895(lVar4 + 0x40,&local_68,0x30);
+    puVar7[1] = ID_46822;
+    *puVar7 = BSComponentDB2::Detail::
+              CreateAndDeleteCommand<class_<lambda_8ee449afe10d933a75c65bdc18cda39b>&___ptr64,unsigned_int&___ptr64,struct_BSResource::ID_const&___ptr64>
+              ::vftable;
+    *(undefined4 *)((longlong)puVar7 + 0x14) = *param_4;
+    *(undefined4 *)(puVar7 + 3) = param_4[1];
+    *(undefined4 *)((longlong)puVar7 + 0x1c) = param_4[2];
+    *(int *)(puVar7 + 4) = *param_3;
+    puVar7[5] = param_1;
+    LOCK();
+    uVar3 = *(uint *)(local_68 + 0x10);
+    *(uint *)(local_68 + 0x10) = local_60;
+    UNLOCK();
+    if (uVar3 < *(uint *)(lVar4 + 0x1a4)) {
+      *(uint *)((ulonglong)uVar3 + 0x44 + local_68) = local_60;
+    }
+    else {
+      *(uint *)(local_68 + 0x14) = local_60;
+    }
+    LOCK();
+    piVar1 = (int *)(local_68 + 0xc);
+    iVar6 = *piVar1;
+    *piVar1 = *piVar1 + local_5c;
+    UNLOCK();
+    plVar5 = *(longlong **)(*(ulonglong *)(param_1 + 0x30) + 0x238);
+    if (plVar5 == (longlong *)0x0) {
+      return *(ulonglong *)(param_1 + 0x30);
+    }
+    uVar8 = (**(code **)(*plVar5 + 0x10))(plVar5,local_60,iVar6);
+    return uVar8;
+  }
+  ID_126668(param_1 + 0x238,&local_58);
+  local_78 = *param_4;
+  local_74 = param_4[1];
+  local_70 = param_4[2];
+  iVar6 = *param_3;
+  local_res10 = param_1;
+  ID_126718(&local_res10,&local_40,iVar6);
+  if ((local_38 != 0x7c) || (local_40 != 0)) {
+    if (local_30 == (int *)0xfffffffffffffffc) {
+      local_30 = (int *)0x0;
+    }
+    if (*local_30 == iVar6) goto LAB_1405b3404;
+  }
+  ID_126719(&local_res10,iVar6,&local_78);
+LAB_1405b3404:
+  puVar7 = local_58;
+  if ((local_48 < *(uint *)(local_50 + 4)) && (*(uint *)(local_50 + 4) = local_48, local_48 == 0)) {
+    LOCK();
+    *(uint *)(local_58 + 0x43) =
+         *(int *)(local_58 + 0x43) - (*(int *)(local_58 + 0x47) - 1U & 1 | 2);
+    UNLOCK();
+  }
+  iVar6 = *(int *)((longlong)local_58 + 0x234);
+  uVar3 = iVar6 - 1;
+  *(uint *)((longlong)local_58 + 0x234) = uVar3;
+  *(int *)(local_58 + 0x46) = *(int *)(local_58 + 0x46) + -1;
+  if (iVar6 == 1) {
+    *(undefined4 *)(local_58 + 0x48) = 0x40;
+    LOCK();
+    puVar2 = (uint *)((longlong)local_58 + 0x22c);
+    uVar3 = *puVar2;
+    *puVar2 = *puVar2 + 1;
+    UNLOCK();
+  }
+  uVar8 = (ulonglong)uVar3;
+  local_58 = (undefined8 *)0x0;
+  if (puVar7 != (undefined8 *)0x0) {
+    LOCK();
+    puVar2 = (uint *)(puVar7 + 1);
+    uVar3 = *puVar2;
+    uVar8 = (ulonglong)uVar3;
+    *puVar2 = *puVar2 - 1;
+    UNLOCK();
+    if (uVar3 == 1) {
+      uVar8 = (**(code **)*puVar7)(puVar7,1);
+    }
+  }
+  return uVar8;
+}
+
+
+
+======== ID_46822 / ID_46822 @ 1405b65b0 ========
+
+void ID_46822(undefined8 *param_1)
+
+{
+  ID_46791(param_1[5],param_1);
+                    /* WARNING: Could not recover jumptable at 0x0001405b65d2. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  (**(code **)*param_1)(param_1,0);
+  return;
+}
+
+
+
+======== ID_51538 / ID_51538 @ 140777c40 ========
+
+void ID_51538(undefined8 *param_1)
+
+{
+  ID_51485(param_1[0x12],param_1);
+                    /* WARNING: Could not recover jumptable at 0x000140777c65. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  (**(code **)*param_1)(param_1,0);
+  return;
+}
+
+
+
+======== ID_126901 / ID_126901 @ 142419590 ========
+
+void ID_126901(undefined8 *param_1)
+
+{
+  ID_126859(param_1[4],param_1);
+                    /* WARNING: Could not recover jumptable at 0x0001424195b2. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  (**(code **)*param_1)(param_1,0);
+  return;
+}
+
+
+

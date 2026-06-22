@@ -1,0 +1,2 @@
+Console command table base (ID_896666) = 145eb8e10  num=580 stride=0x58
+

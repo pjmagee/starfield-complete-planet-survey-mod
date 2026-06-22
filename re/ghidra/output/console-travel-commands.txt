@@ -1,0 +1,23 @@
+################################################################
+## COMMAND: LandOnPlanet
+################################################################
+  string "LandOnPlanet" @ 144b56488
+    ref @ 1400bdd0f inside function ID_7980 (skipped, not a table entry)
+    ref @ 1400bdd16 inside function ID_7980 (skipped, not a table entry)
+    ref @ 14005e4db inside function ID_4698 (skipped, not a table entry)
+    ref @ 14005e4e2 inside function ID_4698 (skipped, not a table entry)
+
+################################################################
+## COMMAND: LandOnPlanetBiome
+################################################################
+  string "LandOnPlanetBiome" @ 144bbccc0
+    ref @ 1400bf1c8 inside function ID_7980 (skipped, not a table entry)
+    ref @ 1400bf1cf inside function ID_7980 (skipped, not a table entry)
+
+################################################################
+## COMMAND: TakeOffToSpace
+################################################################
+  string "TakeOffToSpace" @ 144bbbd98
+    ref @ 1400bdd6f inside function ID_7980 (skipped, not a table entry)
+    ref @ 1400bdd76 inside function ID_7980 (skipped, not a table entry)
+

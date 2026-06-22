@@ -1,0 +1,4 @@
+################ vtable @ 144c49f10 [vftable / ID_434180] slot=0x428 ################
+  slot @ 144c4a338 -> 1450ae670 [RTTI_Complete_Object_Locator / ID_549099]
+  (no function at target)
+

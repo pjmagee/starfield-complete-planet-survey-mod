@@ -1,0 +1,153 @@
+"SpaceshipTakeoffMode" @ 144afb540 (5 refs)
+    <- 142108a22 in ID_119788@1421089d0 [ID_119788]
+    <- 140004b51 in ID_175@1400047e0 [ID_175]
+    <- 14000424f in ID_171@140003fb0 [ID_171]
+    <- 1400038a1 in ID_164@140003620 [ID_164]
+    <- 1400031f0 in ID_162@140002da0 [ID_162]
+"TakeOffFinished" @ 144b355a8 (1 refs)
+    <- 14003bf57 in ID_3139@14003bf50 [ID_3139]
+"bBoostpackInitialThrustOnlyOnTakeoff:BoostPack" @ 144b35ee8 (1 refs)
+    <- 14003cf27 in ID_3219@14003cf20 [ID_3219]
+"BoostpackInitialThrustOnlyOnTakeoffAV_DO" @ 144b36088 (1 refs)
+    <- 14003d3ef in ID_3239@14003d3e0 [ID_3239]
+"fPathingTakeOffDestZOffset:Pathing" @ 144b3c550 (3 refs)
+    <- 1438b4b75 in ID_195344@1438b4b30 [ID_195344]
+    <- 1438b4b69 in ID_195344@1438b4b30 [ID_195344]
+    <- 14590e1c8 in (no func)
+"MovementMessageTakeOff" @ 144b3da68 (0 refs)
+"PreventPlayerLandingAtMarker_DO" @ 144b41a70 (1 refs)
+    <- 14004fd6f in ID_4138@14004fd60 [ID_4138]
+"SpaceshipTakeoffCameraPath_DO" @ 144b66890 (1 refs)
+    <- 14008745f in ID_5522@140087450 [ID_5522]
+"SpaceshipTakeOffInitiateAction_DO" @ 144b668b0 (1 refs)
+    <- 14008741f in ID_5521@140087410 [ID_5521]
+"fTakeoffFadeEaseOutDuration:Interface" @ 144b68e90 (1 refs)
+    <- 14008be2c in ID_5832@14008be20 [ID_5832]
+"fTakeoffFadeDuration:Interface" @ 144b68eb8 (1 refs)
+    <- 14008bdfc in ID_5831@14008bdf0 [ID_5831]
+"fTakeoffFadeEaseInDuration:Interface" @ 144b68ed8 (1 refs)
+    <- 14008bdcc in ID_5830@14008bdc0 [ID_5830]
+"Action Flight Takeoff" @ 144ba0e88 (0 refs)
+"     Takeoff - %s" @ 144ba6d10 (1 refs)
+    <- 140be97fd in ID_65122@140be9490 [ID_65122]
+"Land on a planet at the specified marker" @ 144bb22b0 (2 refs)
+    <- 1400b1bc7 in ID_7963@1400b1ba0 [ID_7963]
+    <- 1400b1bce in ID_7963@1400b1ba0 [ID_7963]
+"Land on a planet. (lop <planetname> <lon> <lat> <deg or rad>)" @ 144bbbd48 (2 refs)
+    <- 1400bdd2b in ID_7980@1400b22f0 [ID_7980]
+    <- 1400bdd32 in ID_7980@1400b22f0 [ID_7980]
+"TakeOffToSpace" @ 144bbbd98 (2 refs)
+    <- 1400bdd6f in ID_7980@1400b22f0 [ID_7980]
+    <- 1400bdd76 in ID_7980@1400b22f0 [ID_7980]
+"Take off to space." @ 144bbbdc0 (2 refs)
+    <- 1400bdd8b in ID_7980@1400b22f0 [ID_7980]
+    <- 1400bdd92 in ID_7980@1400b22f0 [ID_7980]
+"Land on a planet's biome. (lopb <planetname> <biome index> [(centered)0/1])" @ 144bbccf0 (2 refs)
+    <- 1400bf1e4 in ID_7980@1400b22f0 [ID_7980]
+    <- 1400bf1eb in ID_7980@1400b22f0 [ID_7980]
+"16 optional (0/1) values. movement|fighting|pov|looking|sneaking|menu|activate|journal|vats|favorites|running|handscanner|takeoff|gravjump|fartravel|cruisemode ex: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1" @ 144bbfa00 (2 refs)
+    <- 1400c3c30 in ID_7982@1400bff20 [ID_7982]
+    <- 1400c3c37 in ID_7982@1400bff20 [ID_7982]
+"16 optional (0/1) values. movement|fighting|pov|looking|sneaking|menu|activate|journal|vats|favorites|running|handscanner|takeoff|gravjump|fartravel|cruisemode ex: 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0" @ 144bbfb10 (2 refs)
+    <- 1400c3ccf in ID_7982@1400bff20 [ID_7982]
+    <- 1400c3cd6 in ID_7982@1400bff20 [ID_7982]
+"SpaceShipCrewTakeOffInitiated" @ 144bddd90 (0 refs)
+"PathingRequestFlyTakeOff" @ 144c1f600 (0 refs)
+"TakeoffMenu" @ 144c44d68 (1 refs)
+    <- 1412aab02 in ID_82022@1412aaab0 [ID_82022]
+"TakeoffData" @ 144c78e18 (2 refs)
+    <- 14157835b in ID_89916@141578220 [ID_89916]
+    <- 144a56770 in (no func)
+"TakeoffMenu_CloseMenu" @ 144c95460 (1 refs)
+    <- 141678d6e in ID_93842@141678d40 [ID_93842]
+"TakeoffMenu_ExitShip" @ 144c954c0 (1 refs)
+    <- 14167900e in ID_93845@141678fe0 [ID_93845]
+"TakeoffMenu_Launch" @ 144c954d8 (1 refs)
+    <- 1416792ae in ID_93848@141679280 [ID_93848]
+"FlightTakeOffHandler" @ 144cc6e80 (1 refs)
+    <- 141ae433b in ID_103932@141ae2910 [ID_103932]
+"SpaceshipTakeOffFinishedHandler" @ 144cc7cd0 (1 refs)
+    <- 141ae74ac in ID_103932@141ae2910 [ID_103932]
+"TakeOffInitiateCompleteHandler" @ 144cc7cf0 (1 refs)
+    <- 141ae7392 in ID_103932@141ae2910 [ID_103932]
+"Takeoff" @ 144cefe30 (2 refs)
+    <- 141d316c7 in ID_109648@141d315a0 [ID_109648]
+    <- 141d31700 in ID_109648@141d315a0 [ID_109648]
+"DisableWithTakeOffOrLandingNoWait" @ 144d16a78 (2 refs)
+    <- 141f259dd in ID_115015@141f25410 [ID_115015]
+    <- 141f25a03 in ID_115015@141f25410 [ID_115015]
+"DisableWithTakeOffOrLanding" @ 144d16ad0 (2 refs)
+    <- 141f25971 in ID_115015@141f25410 [ID_115015]
+    <- 141f259a2 in ID_115015@141f25410 [ID_115015]
+"TakeOff" @ 144d17a08 (2 refs)
+    <- 141f27a8e in ID_115015@141f25410 [ID_115015]
+    <- 1422e54da in ID_124107@1422de050 [ID_124107]
+"IsTakeoffControlsEnabled" @ 144d2b730 (1 refs)
+    <- 14201579f in ID_117477@142013bc0 [ID_117477]
+"IsTakeoffEnabled" @ 144d2cd90 (1 refs)
+    <- 142028f8f in ID_117671@142028470 [ID_117671]
+"EnableTakeoff" @ 144d2ce98 (1 refs)
+    <- 142028973 in ID_117671@142028470 [ID_117671]
+"OnShipTakeOff" @ 144d48140 (1 refs)
+    <- 1401f84e7 in ID_25839@1401f84e0 [ID_25839]
+".?AVMovementMessageTakeOff@@" @ 145a18700 (0 refs)
+".?AU?$BSTDerivedCreator@VMovementMessageTakeOff@@VMovementMessage@@@@" @ 145a1b8a0 (0 refs)
+".?AU?$AutoRegisterPathing@VMovementMessageTakeOff@@V?$BSTSmartPointerPathingFactoryManager@VMovementMessage@@$0EA@@@@@" @ 145a1b900 (0 refs)
+".?AU?$AutoRegisterCreator@VMovementMessageTakeOff@@V?$BSTSmartPointerPathingFactoryManager@VMovementMessage@@$0EA@@@@@" @ 145a1b990 (0 refs)
+".?AV?$AutoRegisterFactory@U?$BSTDerivedCreator@VMovementMessageTakeOff@@VMovementMessage@@@@V?$BSTSmartPointerPathingFactoryManager@VMovementMessage@@$0EA@@@@@" @ 145a1ba20 (0 refs)
+".?AU?$AutoRegisterCreator@VPathingRequestFlyTakeOff@@V?$BSTSmartPointerPathingFactoryManager@VBSPathingRequest@@$0EA@@@@@" @ 145a9cde0 (0 refs)
+".?AV?$AutoRegisterFactory@U?$BSTDerivedCreator@VPathingRequestFlyTakeOff@@VBSPathingRequest@@@@V?$BSTSmartPointerPathingFactoryManager@VBSPathingRequest@@$0EA@@@@@" @ 145a9ce70 (0 refs)
+".?AU?$BSTDerivedCreator@VPathingRequestFlyTakeOff@@VBSPathingRequest@@@@" @ 145a9cf30 (0 refs)
+".?AU?$AutoRegisterSmartPtrDerivedPathingType@VPathingRequestFlyTakeOff@@VBSPathingRequest@@$0EA@@@" @ 145a9cf90 (0 refs)
+".?AVPathingRequestFlyTakeOff@@" @ 145a9d008 (0 refs)
+".?AVPathBuilderFlyTakeOffPath@PathBuilderFlight@@" @ 145a9df10 (0 refs)
+".?AV?$AutoRegisterPathBuilderFactory@VPathingRequestFlyTakeOff@@VPathBuilderFlyTakeOffPath@PathBuilderFlight@@@@" @ 145a9df60 (0 refs)
+".?AU?$MessageHandlerWrapper@VMovementMessageTakeOff@@@?$MovementMessageMap@VTESObjectREFR@@$0BA@@@" @ 145acdac0 (0 refs)
+".?AVTakeoffMenuEventShuttle@TakeoffMenuDataModel@@" @ 145b1d050 (0 refs)
+".?AV?$TUIDataToFlash@UTakeoffInfo@@@@" @ 145b1d098 (0 refs)
+".?AV?$TUIDataShuttleContainerMap@UTakeoffInfo@@@@" @ 145b1d0d0 (0 refs)
+".?AVTakeoffMenuDataModel@@" @ 145b1d118 (0 refs)
+".?AVTakeoffFadeDoneCallback@?4???R<lambda_99f9674ccabddde8d447bfe1ca6d40ec>@@QEBA@XZ@" @ 145b60680 (0 refs)
+".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VTakeoffMenu_Launch@@@@@@" @ 145b606f0 (0 refs)
+".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VTakeoffMenu_Launch@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@" @ 145b60750 (0 refs)
+".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VTakeoffMenu_ExitShip@@@@@@" @ 145b60810 (0 refs)
+".?AV?$BSTSingletonImplicit@U?$EventSource@VTakeoffMenu_ExitShip@@@BSTGlobalEvent@@@@" @ 145b61f00 (0 refs)
+".?AU?$EventSource@VTakeoffMenu_CloseMenu@@@BSTGlobalEvent@@" @ 145b61f70 (0 refs)
+".?AV?$BSTSingletonImplicit@U?$EventSource@VTakeoffMenu_CloseMenu@@@BSTGlobalEvent@@@@" @ 145b61fc0 (0 refs)
+".?AU?$EventSource@VTakeoffMenu_Launch@@@BSTGlobalEvent@@" @ 145b62340 (0 refs)
+".?AV?$BSTSingletonImplicit@U?$EventSource@VTakeoffMenu_Launch@@@BSTGlobalEvent@@@@" @ 145b62390 (0 refs)
+".?AU?$EventSource@VTakeoffMenu_ExitShip@@@BSTGlobalEvent@@" @ 145b62400 (0 refs)
+".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VTakeoffMenu_ExitShip@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@" @ 145b62a40 (0 refs)
+".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VTakeoffMenu_CloseMenu@@@@@@" @ 145b62b00 (0 refs)
+".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VTakeoffMenu_CloseMenu@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@" @ 145b62b60 (0 refs)
+".?AV?$BSTEventSink@VTakeoffMenu_CloseMenu@@@@" @ 145b62e68 (0 refs)
+".?AV?$BSTEventSource@VTakeoffMenu_Launch@@@@" @ 145b62ef8 (0 refs)
+".?AV?$BSTEventSource@VTakeoffMenu_ExitShip@@@@" @ 145b62f38 (0 refs)
+".?AV?$BSTEventSource@VTakeoffMenu_CloseMenu@@@@" @ 145b62f80 (0 refs)
+".?AVTakeoffMenu@@" @ 145b631d0 (0 refs)
+".?AV?$BSTEventSink@VTakeoffMenu_Launch@@@@" @ 145b631f8 (0 refs)
+".?AV?$BSTEventSink@VTakeoffMenu_ExitShip@@@@" @ 145b63238 (0 refs)
+".?AV?$TUIEventDispatcher@VTakeoffMenu_Launch@@@@" @ 145b63490 (0 refs)
+".?AVTakeoffMenu_ExitShip@@" @ 145b634d8 (0 refs)
+".?AV?$TUIEventDispatcher@VTakeoffMenu_ExitShip@@@@" @ 145b63510 (0 refs)
+".?AVTakeoffMenu_CloseMenu@@" @ 145b63558 (0 refs)
+".?AV?$TUIEventDispatcher@VTakeoffMenu_CloseMenu@@@@" @ 145b63590 (0 refs)
+".?AVTakeoffMenu_Launch@@" @ 145b636b8 (0 refs)
+".?AV?$BSTEventSink@UTakeOffEvent@Spaceship@@@@" @ 145b81408 (0 refs)
+".?AV?$AutoRegisterFactory@U?$BSTDerivedCreator@VSpaceshipTakeOffFinishedHandler@@V?$IHandlerFunctor@VTESObjectREFR@@VBSFixedString@@@@@@V?$BSTCreateFactoryManager@VBSFixedString@@V?$IHandlerFunctor@VTESObjectREFR@@VBSFixedString@@@@$0BAA@@@@@" @ 145bbd6f0 (0 refs)
+".?AU?$BSTDerivedCreator@VSpaceshipTakeOffFinishedHandler@@V?$IHandlerFunctor@VTESObjectREFR@@VBSFixedString@@@@@@" @ 145bbd920 (0 refs)
+".?AU?$AutoRegisterCreator@VSpaceshipTakeOffFinishedHandler@@V?$BSTCreateFactoryManager@VBSFixedString@@V?$IHandlerFunctor@VTESObjectREFR@@VBSFixedString@@@@$0BAA@@@@@" @ 145bbdaa0 (0 refs)
+".?AV?$AutoRegisterFactory@U?$BSTDerivedCreator@VTakeOffInitiateCompleteHandler@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@@@V?$BSTCreateFactoryManager@VBSFixedString@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@$0BAA@@@@@" @ 145bbde00 (0 refs)
+".?AU?$AutoRegisterCreator@VTakeOffInitiateCompleteHandler@@V?$BSTCreateFactoryManager@VBSFixedString@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@$0BAA@@@@@" @ 145bbdfb0 (0 refs)
+".?AU?$BSTDerivedCreator@VTakeOffInitiateCompleteHandler@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@@@" @ 145bbe060 (0 refs)
+".?AVSpaceshipTakeOffFinishedHandler@@" @ 145bcb418 (0 refs)
+".?AVTakeOffInitiateCompleteHandler@@" @ 145bcb450 (0 refs)
+".?AU?$BSTDerivedCreator@VFlightTakeOffHandler@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@@@" @ 145bcc2f0 (0 refs)
+".?AV?$AutoRegisterFactory@U?$BSTDerivedCreator@VFlightTakeOffHandler@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@@@V?$BSTCreateFactoryManager@VBSFixedString@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@$0BAA@@@@@" @ 145bcc360 (0 refs)
+".?AU?$AutoRegisterCreator@VFlightTakeOffHandler@@V?$BSTCreateFactoryManager@VBSFixedString@@V?$IHandlerFunctor@VActor@@VBSFixedString@@@@$0BAA@@@@@" @ 145bcc540 (0 refs)
+".?AVFlightTakeOffHandler@@" @ 145bce850 (0 refs)
+".?AV?$CombatBehaviorTreeNodeObjectBase@VCombatBehaviorTakeoff@@@@" @ 145c11c90 (0 refs)
+".?AV?$CombatBehaviorTreeNodeObject@VCombatBehaviorTakeoff@@@@" @ 145c11cf0 (0 refs)
+".?AU?$EventSource@UTakeOffEvent@Spaceship@@@BSTGlobalEvent@@" @ 145c7dbf0 (0 refs)
+".?AV?$BSTSingletonImplicit@U?$EventSource@UTakeOffEvent@Spaceship@@@BSTGlobalEvent@@@@" @ 145c7dc40 (0 refs)
+".?AV?$BSTEventSource@UTakeOffEvent@Spaceship@@@@" @ 145c7dcb0 (0 refs)

@@ -1,0 +1,199 @@
+================================================================================
+*** SUPERSEDED ON THE PERSISTENCE QUESTION — see
+*** green-persistence-verdict-2026-06-21.txt ***
+This file analyzed ONLY the DYNAMIC-id catalog/tree pair (ID_52161 / ID_52162,
+the db+0x3d8 DisposableInstancedFormDB). That pair IS per-instance/timestamp and
+transient — those findings stand for THAT path. But it is the cosmetic
+intra-session layer, NOT the persistent green. The REAL scan's persistent state
+is the per-(planet,species) SCAN-FLAG in BSGalaxy::PlayerKnowledge (db+0x268,
+slot +0x21), written by ID_52158 and read by ID_52159 / the ID_83007 bit-clear
+branch — deterministic, saved, and WRITABLE ref-free for any target planet.
+The Q4 "ref-free green impossible" conclusion below is WRONG as a general claim.
+Read green-persistence-verdict-2026-06-21.txt for the corrected, evidence-cited
+resolution.
+================================================================================
+REF-FREE GREEN — DEFINITIVE VERDICT (2026-06-21)
+Reconciling green-outline-attempts.md #8 ("GREEN confirmed never-visited")
+vs live finding ("galaxy green does NOT work on other worlds").
+All citations are to functions in re/ghidra/output/*.txt (Starfield 1.16.236).
+================================================================================
+
+--------------------------------------------------------------------------------
+Q1. THE OUTLINE DECIDER — what state decides GREEN vs BLUE for a spawned ref.
+--------------------------------------------------------------------------------
+Chain when a flora/fauna ref renders/activates:
+  ID_118472 (outline-callers) -> ID_83007 (scanned-state) -> [for dynamic refs]
+  ID_52159 (species-scanned-check) AND/OR ID_52162 (the green-tree reader).
+
+ID_52159 (species-scanned-check.txt:86) is the per-species SCANNED reader:
+  - cVar4 = ID_52188(param_1, &planetId, ...)   // planet from the REF'S LOCATION
+  - resolves the per-planet survey subobj from db+0x268 keyed (938333<<? | planet)
+  - lVar5 = subobj ; reads:
+      ID_124901(lVar5 + 0x38, &species)         // hash the species formID
+      uVar8 = *(u8*)(*(lVar5+0x60) + 0x21 + idx*0x30)   // the SCAN-FLAG byte
+    => "scanned" lives at the per-type table subobj+0x60, entry+0x21, keyed by
+       the SPECIES formID only. This is per-(planet,species), NOT per-instance.
+
+ID_52162 (species-scanned-check.txt:1) is the GREEN-TREE reader (the outline):
+  - local_res8 = param_1[4]  (the INSTANCE formID)
+  - ID_126802(*param_2 + 0x3d8, ..., &local_res8)   // db+0x3d8 CATALOG lookup
+        keyed by the instance formID -> a 3-component key {c0,c1,c2}
+  - ID_126806(*param_2 + 0x268, ...)                // resolve per-planet entry
+  - walks the red-black tree at (entry + 0x80) == subobj+0x60, comparing each
+    node's {+0x1c, +4, +0x24} against {c0,c1,c2}  (lines 51-78)
+  - bVar12 = (found) -> **(u8*)(param_1+2) = bVar12   // the GREEN bit
+
+KEY FINDING: the green tree (subobj+0x60) is matched on the 3-COMPONENT CATALOG
+KEY that ID_126802(db+0x3d8) returns FOR THE INSTANCE'S formID — NOT on the bare
+species formID. The catalog db+0x3d8 maps instanceFormID -> canonical {c0,c1,c2}.
+
+--------------------------------------------------------------------------------
+Q2. THE KEY — per-TYPE or per-INSTANCE? (THE CRUX)
+--------------------------------------------------------------------------------
+Both the WRITER (ID_52161) and the READER (ID_52162) derive their tree key the
+same way: ID_126802(db+0x3d8, instanceFormID) -> {c0,c1,c2}.
+
+So the question reduces to: for two DIFFERENT instances of the same species, does
+db+0x3d8 yield the SAME {c0,c1,c2}? Trace the WRITER's mint path (type-scan-inner):
+
+ID_52161 (type-scan-inner.txt:1):
+  pauVar4 = ID_126802(db+0x3d8, &instanceId)          // catalog lookup
+  ... if lookup MISS (uVar9==0 && lo32==0 && uVar12==0):           // line 51
+      if (ID_937572+0x1803 == 0  &&  instanceId + 0x1000000 < 0xffffff):  // 53
+          plVar6 = ID_47401(instanceId)               // base form of the ref
+          puVar7 = (**(plVar6 + 0xa8))(plVar6, ...)    // ask BASE FORM for key
+          if (puVar7[0..2] all zero):                  // base form has NO key
+              puVar8 = ID_137052(local_58)             // ** PER-INSTANCE MINT **
+          else:
+              puVar8 = base-form key {c0,c1,c2}        // ** PER-TYPE key **
+          ... ID_46756(db) -> persists instanceId -> {key} into db+0x3d8
+      ID_124902(subobj+0x60 ..., &key)                 // write GREEN tree node
+
+ID_137052 (canonical-key.txt:1) — the minter — is UNCONDITIONALLY per-instance:
+  uVar4   = (GetUserNameA hash) & 0x7ffffff          // username, constant
+  ticks   = _Xtime_get_ticks()/10 ; spins until != last  // ** TIMESTAMP **
+  key.c0  = (int)(ticks >> 0x20)
+  key.c1  = (int)ticks                                 // ** per-call timestamp **
+  key.c2  = uVar4 | 0xa0000000                         // flag 0xa0000000
+=> two instances minted at different times get DIFFERENT c0/c1. PER-INSTANCE.
+
+THEREFORE the per-type-vs-per-instance outcome is decided ENTIRELY by ONE branch:
+  Does the species' BASE FORM return a non-zero key from vtable[0xa8]?
+   - vtable[0xa8] non-zero  => PER-TYPE key (stable across instances) => GREEN
+     for fresh instances IS possible ref-free.
+   - vtable[0xa8] == {0,0,0} => falls through to ID_137052 => PER-INSTANCE key
+     => the tree node written off the sample instance can NEVER be matched by a
+     fresh instance (different timestamp) => ref-free green is IMPOSSIBLE.
+
+CONFIRMED IDENTITY: the call (**(baseForm + 0xa8))(...) is vtable SLOT 0xa8/8 =
+0x15 (21). Attempt-matrix row #3 already established empirically that
+"vtable[0x15] returns {0,0,0} for FLOR/NPC_ base forms -> no key." That is the
+EXACT slot ID_52161 queries. So for ordinary planted FLOR/fauna the base-form key
+is {0,0,0} -> the else branch is NOT taken -> ID_52161 mints PER-INSTANCE via
+ID_137052 (timestamp). This is the failure the user now sees, and it is now
+over-determined by THREE independent pieces of evidence that all agree:
+  (i)  vtable[0x15] = {0,0,0} for FLOR/NPC_ (matrix #3),
+  (ii) the db+0x3d8 catalog 3rd component is per-instance (matrix 2-spawn test),
+  (iii) ID_137052 is unconditionally a per-call timestamp (canonical-key.txt).
+No further decompile is needed; re-running slot 0x15 would only re-confirm (i).
+
+--------------------------------------------------------------------------------
+RESOLVING THE CONTRADICTION (#8 "worked" vs now "fails")
+--------------------------------------------------------------------------------
+#8 was a FALSE POSITIVE / non-reproducible. Mechanisms that explain a one-off green
+on the never-visited planet WITHOUT a valid per-type write:
+  (a) The "never-visited" planet shared a STAR SYSTEM / was a moon of the Jemison
+      body the test was run from; ID_52158's biome propagation (ID_937609+0x160 =
+      CURRENT biome) + ID_52188 (current planet) credited the wrong-but-adjacent
+      body, OR the planet had been loaded into the catalog earlier in that session.
+  (b) The catalog db+0x3d8 still held the sample instance's key from the SAME
+      session, so the freshly-landed instances (same session, re-resolved through
+      the still-populated transient catalog) matched. After a full restart the
+      catalog is rebuilt empty and the match is lost.
+  (c) Confirmation bias on a partial/biome-overlapping render.
+The robust evidence (matrix "Confirmed facts": "db+0x3d8 catalog key's 3rd
+component is per-instance — confirmed by 2-spawn stability test"; re_green_outline:
+"hand-writing the tree with a catalog key FAILED ... per-instance ... never
+matched") all says PER-INSTANCE. #8 contradicts the 2-spawn test and the live
+retest; the 2-spawn test + live retest win. #8 should be downgraded to NOT
+CONFIRMED.
+
+Why #7 (current planet) genuinely greens: on the planet you're standing on the
+SAME live instance you scanned is (often) still the one being rendered, and the
+transient catalog still holds ITS key for the rest of the session -> match. It is
+NOT proof of a per-type write; it is the per-instance key matching itself.
+
+--------------------------------------------------------------------------------
+Q3. WHY TREE-ALONE = BLUE but TREE+COUNT = GREEN
+--------------------------------------------------------------------------------
+ID_52161 writes ONLY the green tree (subobj+0x60). The outline decider ID_83007
+does not consult that tree first: ID_83007 (scanned-state.txt:1) returns
+  1 + (scanned-byte != 0)   from the +0x21 / +0x28 SCAN-FLAG path,
+i.e. the BLUE/GREEN gate the renderer reads is the per-(planet,species) SCAN-FLAG
+(subobj+0x60 entry +0x21, set by ID_124898/ID_124899), NOT the RB-tree alone.
+ID_52158 (outline-decider.txt:729) is what sets that flag:
+  - resolves subobj via db+0x268
+  - ID_124898(subobj, species, delta)   // +0x21 scan-flag  (setscanned.txt:1)
+  - ID_124899(subobj, species, percent) // +0x20 percent
+  - then a biome cluster pass reading ID_937609+0x160 (CURRENT biome) -> ID_52157
+The biome read at ID_937609+0x160 is the CURRENT biome and feeds only the cluster
+PROPAGATION to sibling species (ID_52157 calls), NOT the primary green for the
+species being completed. So the biome read is NOT load-bearing for the target
+species' own green — matrix's "biome risk did not materialize" is correct for the
+single species, but irrelevant because the PRIMARY key is still per-instance.
+
+So "tree + count = green" observed on the current planet is: count (ID_52158) sets
+the species SCAN-FLAG (real per-type state, correct), and tree (ID_52161) writes a
+node whose key happens to match the still-live instance THIS session. Strip the
+session-live instance (restart, fresh spawns) and only the SCAN-FLAG persists —
+which, by itself, the outline tree-reader ID_52162 does not honor with the minted
+per-instance key. Result: BLUE on reload for any planet where the key was minted.
+
+--------------------------------------------------------------------------------
+Q4. THE VERDICT
+--------------------------------------------------------------------------------
+CAN the mod ref-free green a TARGET planet's flora/fauna for FRESH instances?
+
+NO — not by the ID_52161 + ID_52158 pair as written, for any species whose base
+form returns {0,0,0} from vtable[0xa8] (the normal FLOR / NPC_ case). The green
+tree is keyed by a 3-component CATALOG key that, for these forms, is MINTED
+PER-INSTANCE by ID_137052 from a timestamp. A node written off one sample instance
+is keyed to that instance's timestamp; a fresh instance on the target planet
+resolves to a DIFFERENT key and never matches -> renders BLUE. This is a hard
+engine design fact (ID_137052 is unconditionally timestamp-based), not a bug in
+the mod's offsets.
+
+The persistent, per-type state that DOES survive reload and IS honored is the
+SCAN-FLAG (subobj+0x60 entry+0x21, via ID_124898/ID_124899) and the survey % — but
+the OUTLINE tree-reader (ID_52162) keys on the catalog key, not that flag, so the
+flag alone does not produce the green outline for fresh instances. (It does make
+GetSurveyPercent / the data 100% correct, which already works ref-free.)
+
+The ground-truth fact (a genuinely 100%-surveyed planet greens fresh instances on
+reload) is NOT a counterexample: in that case the engine, during the REAL in-world
+scan, wrote tree nodes whose keys came from the species' actual resource-id path
+for THAT planet's authored instances — OR the renderer's green for a fully
+surveyed planet is gated by the per-(planet,species) scanned-flag through a code
+path (ID_52159, keyed by species formID) that we have NOT been able to trip
+ref-free with a matching catalog key. Either way, the reproducible lever we can
+pull ref-free (ID_52161 mint) produces a per-instance key and fails on reload.
+
+WHAT TO CHANGE / WHERE TO GO NEXT (concrete):
+  1. STOP treating ID_52161 as a ref-free green. It only "works" intra-session via
+     the live sample instance's own catalog key. Remove the false claim in
+     green-outline-attempts.md #8 and re_green_outline ("SOLVED").
+  2. The only path that can ref-free green fresh instances is to make the OUTLINE
+     reader's catalog lookup (ID_126802 db+0x3d8 by instance formID) resolve to a
+     key that the per-PLANET tree node ALSO uses. That requires the species base
+     form to yield a stable canonical key (vtable[0xa8] != 0). ACTION: decompile
+     vtable[0xa8] for FLOR and NPC_ (resolve the vtable via ID_47401(species)
+     +0xa8) and confirm whether ANY non-zero key exists (e.g. a resource-gen RSGD
+     id). If yes, write the tree with THAT key directly (no spawn, no ID_137052),
+     keyed identically for the reader -> ref-free green becomes possible.
+  3. If vtable[0xa8] == {0,0,0} for these forms (expected), ref-free green is
+     IMPOSSIBLE by writing state: the outline match key is per-instance by design.
+     The honest product is: green ON the planet via the real engine scan path
+     (#5/CompleteSurvey, current planet only), and ref-free DATA 100% everywhere
+     (already shipped). Do not claim galaxy-wide green.
+
+================================================================================

@@ -1,0 +1,3 @@
+################ vftable substr='ScannableComponent' slot=0x428 ################
+(no vftable symbol matched substr)
+
