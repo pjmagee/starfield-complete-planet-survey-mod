@@ -16,6 +16,119 @@ ScriptName CompletePlanetSurveyQuest
 ;      present, so it's the one step the ref-free galaxy sweep can't reproduce.
 ;   4. ScanNearbyRefs — per-ref outline refresh (flips blue -> scanned colour).
 
+; ISOLATION PROBE — run it while STANDING on a blue planet:
+;   cgf "CompletePlanetSurveyQuest.TestDirectGreen"
+; Writes +0x21/+0x20 directly (esm key, no spawn/scan) for the planet you're on, whose
+; PlayerKnowledge entry is already loaded. If flora/fauna turn GREEN -> the direct write +
+; esm key is correct and the galaxy blue is purely a remote-entry-lifecycle problem. If they
+; stay BLUE -> a direct write is insufficient and we must drive the engine writer (ID_52158).
+Function TestDirectGreen() global
+    Actor playerRef = Game.GetPlayer()
+    Planet currentPlanet = playerRef.GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.MessageBox("TestDirectGreen DID NOTHING — GetCurrentPlanet() is None. You're at a settlement / landing pad / ship / interior. Walk OUT into open wilderness (where the scanner shows biome flora & fauna), then run it again. The blue you see now is just 'nothing was written'.")
+        Return
+    EndIf
+    int n = CompletePlanetSurveyNative.TestDirectGreen(currentPlanet as Form)
+    CompletePlanetSurveyNative.DebugLog("TestDirectGreen: wrote " + n + " species (canonical/esm key) on current planet")
+    If n == 0
+        Debug.MessageBox("TestDirectGreen wrote 0 species — this body has no authored flora/fauna, or its knowledge entry didn't resolve. Move to a different LIVING planet and retry.")
+    Else
+        Debug.MessageBox("TestDirectGreen WROTE +0x21 for " + n + " species (valid run). The live colour will NOT change — that's expected. The real test: SAVE -> fully quit to desktop -> relaunch -> reload -> check these flora/fauna on the fresh load.")
+    EndIf
+EndFunction
+
+; THE DECISIVE PROBE — stand on a living planet, then:
+;   cgf "CompletePlanetSurveyQuest.ProbeScanKeys"
+; For each of the first few flora AND fauna species, it spawns one instance, drives the REAL
+; create path (SetScanned drives ID_118472 -> ID_83005, stamping the ScannableComponent +0x24),
+; waits for the deferred create to flush, then logs authored vs base vs canonical(+0x24) off the
+; SAME ref. Grep the log for "ProbeScanKeys:" — it tells us whether the canonical differs from the
+; authored ESM id (the whole question) and whether the create path produced a real component.
+Function ProbeScanKeys() global
+    Actor playerRef = Game.GetPlayer()
+    Planet currentPlanet = playerRef.GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.Notification("ProbeScanKeys: stand on a planet surface first")
+        Return
+    EndIf
+    ObjectReference playerRef_OR = playerRef as ObjectReference
+    int total = CompletePlanetSurveyNative.EnumeratePlanetSpecies(currentPlanet as Form)
+    int probed = 0
+    int i = 0
+    While i < total && probed < 8
+        int  fid = CompletePlanetSurveyNative.GetPlanetSpeciesFormIdAt(i)
+        Form sf  = Game.GetForm(fid)
+        If sf != None
+            ObjectReference r = playerRef_OR.PlaceAtMe(sf, 1, false, true, true, None, None, true)
+            If r != None
+                r.SetScanned(true)      ; REAL create path (ID_118472 -> ID_83005 stamps +0x24)
+                Utility.Wait(0.15)      ; let the deferred component-create flush before we read it
+                CompletePlanetSurveyNative.ProbeScanKeys(r, fid)
+                r.Disable(false)
+                r.Delete()
+                probed += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    Debug.MessageBox("ProbeScanKeys: probed " + probed + " species. Check CompletePlanetSurvey.log for 'ProbeScanKeys:' lines (authored vs base vs canonical).")
+EndFunction
+
+; PLANET-KEY FIX TEST — run standing in OPEN WILDERNESS on a living planet:
+;   cgf "CompletePlanetSurveyQuest.TestRenderKeyGreen"
+; Writes +0x21 under the RENDER planet id (ID_52188(player)) instead of the form +0x54 id the data
+; sweep uses. The diagnosis is that the outline reads (938333|ID_52188), not (938333|+0x54). If a
+; SAVE -> full quit -> reload then shows these flora/fauna GREEN (where TestDirectGreen was blue),
+; the planet-key domain was the entire bug, and remote green becomes a matter of mapping +0x54 -> render id.
+Function TestRenderKeyGreen() global
+    Actor playerRef = Game.GetPlayer()
+    Planet currentPlanet = playerRef.GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.MessageBox("TestRenderKeyGreen DID NOTHING — GetCurrentPlanet() is None. Walk OUT into open wilderness and retry.")
+        Return
+    EndIf
+    int n = CompletePlanetSurveyNative.TestRenderKeyGreen(playerRef as ObjectReference, currentPlanet as Form)
+    If n == 0
+        Debug.MessageBox("TestRenderKeyGreen wrote 0 — see log (ID_52188 returned 0, or the render-keyed entry didn't resolve). Try open terrain on a living planet.")
+    Else
+        Debug.MessageBox("TestRenderKeyGreen WROTE +0x21 under the RENDER planet key for " + n + " species. Now SAVE -> fully quit -> relaunch -> reload -> check. GREEN = planet-key was the whole bug.")
+    EndIf
+EndFunction
+
+; DEFINITIVE READ PROBE — ask the engine what the outline actually reads:
+;   cgf "CompletePlanetSurveyQuest.ProbeRenderRead"
+; Calls the renderer's OWN green reader (ID_52159) for each authored species. Run it (a) on a planet
+; you just CompleteSurvey'd (green) — expect "GREEN for N/N"; then (b) on a planet where only
+; TestDirectGreen ran (blue) — if "GREEN for 0/N", the render keys on a different species id than our
+; authored write, which finally pins down where the green lives. Read-only, safe to spam.
+Function ProbeRenderRead() global
+    Actor playerRef = Game.GetPlayer()
+    Planet currentPlanet = playerRef.GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.MessageBox("ProbeRenderRead: GetCurrentPlanet None — walk into open wilderness on a living planet.")
+        Return
+    EndIf
+    int green = CompletePlanetSurveyNative.ProbeRenderRead(playerRef as ObjectReference, currentPlanet as Form)
+    Debug.MessageBox("ProbeRenderRead: the engine's outline reader (ID_52159) reports GREEN for " + green + " authored species (see log, per-species). Compare a CompleteSurvey'd planet vs a TestDirectGreen'd one.")
+EndFunction
+
+; DB-STATE DIFF PROBE — find what a full scan writes that our byte-poke doesn't:
+;   cgf "CompletePlanetSurveyQuest.DumpSpeciesSlots"
+; Dumps the raw per-species slot bytes + subobj header to the log. Run it (a) after TestDirectGreen
+; (half-scan) and (b) after CompleteSurvey (full green+info) on the same planet — the byte difference
+; is the missing "catalogued/known" record. Read-only.
+Function DumpSpeciesSlots() global
+    Actor playerRef = Game.GetPlayer()
+    Planet currentPlanet = playerRef.GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.MessageBox("DumpSpeciesSlots: GetCurrentPlanet None — walk into open wilderness on a living planet.")
+        Return
+    EndIf
+    int n = CompletePlanetSurveyNative.DumpSpeciesSlots(currentPlanet as Form)
+    Debug.MessageBox("DumpSpeciesSlots: dumped " + n + " species slots to the log. Run before/after CompleteSurvey and diff the hex.")
+EndFunction
+
 Function CompleteSurvey() global
     Actor playerRef = Game.GetPlayer()
 
@@ -96,31 +209,31 @@ Function CompleteAllPlanetsSurveyData() global
 
     CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
 
-    ; 3) Green pass: every planet now has its survey entry, so paint all flora/fauna green for the
-    ;    whole galaxy from here — one live handle per species, tree + count completion per planet.
-    GreenAllPlanets()
+    ; NO galaxy-wide green pass. Greening a world's flora/fauna requires the per-(planet,species)
+    ; CANONICAL id the engine only produces when the biome materializes the creature on-planet — it
+    ; cannot be written ref-free without leaving the outline blue (an invalid state). So living
+    ; worlds are completed on-foot via CompleteSurvey; this command completes the barren bodies and
+    ; catalogues survey data + traits galaxy-wide.
     float tEnd = Utility.GetCurrentRealTime()
 
-    ; Explicit per-phase durations (seconds) — so "how long did it take" is in the log directly,
-    ; not a manual subtraction of timestamps.
+    ; Explicit per-phase durations (seconds) — so "how long did it take" is in the log directly.
     float secSweep    = tAfterSweep - tStart
     float secFinalize = tAfterFinalize - tAfterSweep
-    float secGreen    = tEnd - tAfterFinalize
     float secTotal    = tEnd - tStart
-    CompletePlanetSurveyNative.DebugLog("Timing(s): phase1(sweep)=" + secSweep + " phase2(finalize)=" + secFinalize + " phase3(green)=" + secGreen + " total=" + secTotal)
+    CompletePlanetSurveyNative.DebugLog("Timing(s): phase1(sweep)=" + secSweep + " phase2(finalize)=" + secFinalize + " total=" + secTotal)
 
-    ; Unmissable completion signal — a MODAL Debug.MessageBox, NOT a toast. Toasts queue behind
-    ; the ~1798 "Survey Data" slate notifications (which drain over minutes), so the old "Green all"
-    ; toast surfaced long after the work finished, buried. A message box appears immediately and
-    ; the cascade cannot bury it.
-    Debug.MessageBox("Planetary survey complete.  " + count + " worlds catalogued — survey data, traits, and all flora & fauna scanned.  Completed in " + (secTotal as int) + " seconds.")
+    ; Unmissable completion signal — a MODAL Debug.MessageBox, NOT a toast (toasts queue behind the
+    ; Survey Data slate cascade and surface buried, minutes later). Honest wording: barren worlds are
+    ; fully done; living worlds need an on-planet scan.
+    Debug.MessageBox("Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — land on one and run CompleteSurvey to catalogue its life.  Done in " + (secTotal as int) + "s.")
 EndFunction
 
-; Atomically green every planet's flora/fauna from one spot — no visiting. For each UNIQUE species
-; across the galaxy, spawn ONE live instance as a handle, drive the tree write (ID_52161) + the
-; count completion (ID_52158) for every planet that hosts it (planet passed explicitly), then
-; delete the instance. Only ONE ref is live at a time (spawn -> green-everywhere -> delete), so
-; there's no mass-spawn accumulation. Throttled so the engine can flush PlaceAtMe/Delete.
+; Green every planet's flora/fauna from one spot — no visiting. The GREEN is per-(planet,species) and
+; bound to "the planet the scanned ref is on" (ID_52188) — proven in-game (a real scan greens only the
+; planet you're physically on). So for each UNIQUE species we spawn ONE instance, then
+; GreenSpeciesEverywhere loops its host planets and, per planet, SPOOFS the current-planet global to
+; that planet and runs the genuine real scan (SetScanned/ID_83008 + ID_52157), writing the persistent
+; green for that target planet. Then delete the instance. Only ONE ref live at a time. Throttled.
 ;   cgf "CompletePlanetSurveyQuest.GreenAllPlanets"
 Function GreenAllPlanets() global
     Actor player = Game.GetPlayer()
@@ -132,7 +245,6 @@ Function GreenAllPlanets() global
 
     float tGreenStart = Utility.GetCurrentRealTime()
     int speciesCount = CompletePlanetSurveyNative.EnumerateAllSpecies()
-    int greenedPlanets = 0
     int spawned = 0
     int i = 0
     While i < speciesCount
@@ -141,7 +253,11 @@ Function GreenAllPlanets() global
         If sf != None
             ObjectReference r = playerRef.PlaceAtMe(sf, 1, false, true, true, None, None, true)
             If r != None
-                greenedPlanets += CompletePlanetSurveyNative.GreenSpeciesEverywhere(r, fid)
+                ; Per HOST PLANET of this species, GreenSpeciesEverywhere spoofs the "current planet"
+                ; global to that planet then runs the genuine real scan (SetScanned/ID_83008 + ID_52157),
+                ; writing the PERSISTENT per-(planet,species) green for the target — the same write
+                ; CompleteSurvey does for the current planet, redirected to each host planet.
+                CompletePlanetSurveyNative.GreenSpeciesEverywhere(r, fid)
                 r.Disable(false)
                 r.Delete()
                 spawned += 1
@@ -158,7 +274,7 @@ Function GreenAllPlanets() global
     ; later, buried. The galaxy command shows a modal Debug.MessageBox when everything is done;
     ; a standalone GreenAllPlanets run reports via the log line below (with its duration).
     float secGreen = Utility.GetCurrentRealTime() - tGreenStart
-    CompletePlanetSurveyNative.DebugLog("GreenAllPlanets: " + spawned + " species spawned, " + greenedPlanets + " planet-types greened in " + secGreen + "s")
+    CompletePlanetSurveyNative.DebugLog("GreenAllPlanets: " + spawned + " unique species real-scanned (per-species green) in " + secGreen + "s")
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
