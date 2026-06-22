@@ -39,3 +39,6 @@ compile_commands.json
 .claude/*.json
 
 .fake
+# Python bytecode cache (RE tooling)
+__pycache__/
+*.pyc

@@ -164,6 +164,50 @@ namespace Engine
                                                        kPlanetIdOffset);
     }
 
+    // ID_52188: resolve the RENDER-domain planet id for a ref — the BSGalaxy NumericID the outline
+    // renderer keys the green PlayerKnowledge entry on (from the ref's ExtraLocation 0x81 / parentCell
+    // / current-planet global). This is a DIFFERENT id domain than ReadPlanetId's form +0x54 FormID
+    // (which the data sweep + survey-% use). THE "100% but blue" BUG: the mod wrote +0x21 under the
+    // +0x54 id, but the outline reads (938333|ID_52188(player)) — a different entry. A real scan
+    // writes via ID_52188(ref), same domain it reads, which is why CompleteSurvey greens. See
+    // render-read-target-2026-06-22.md. Out params are two int* (planetId + a small secondary).
+    using fn_resolve_planet_t = std::uint64_t (*)(void* ref, std::int32_t* outPlanetId, std::int32_t* outSecondary);
+    inline REL::Relocation<fn_resolve_planet_t> ResolvePlanetFromRef {REL::ID(52188)};
+
+    std::uint32_t GetRenderPlanetId(RE::TESObjectREFR* ref)
+    {
+        if (!ref)
+            return 0;
+        std::int32_t planetId  = 0;
+        std::int32_t secondary = 0;
+        ResolvePlanetFromRef(ref, &planetId, &secondary);
+        return static_cast<std::uint32_t>(planetId);
+    }
+
+    // ID_52159: the OUTLINE renderer's OWN green read — `ID_52159(playerRef, speciesId)` returns the
+    // +0x21 byte for (player's planet via ID_52188, species via FNV hash) — the exact value
+    // ID_90491/ID_90548 use to decide green-vs-blue (species-scanned-check.txt:86-136). Calling it
+    // directly lets us ASK THE ENGINE what the render sees for a species, instead of trusting the
+    // decompile (wrong 4×). It reads the SAME hashmap+slot the mod's ID_124898 writes — so if it
+    // returns 0 for a species we just wrote +0x21 for, the render keys on a DIFFERENT species id
+    // than the authored one (e.g. the live wild creature's id), which is the real discrepancy.
+    using fn_render_green_read_t = char (*)(void* playerRef, std::uint32_t species);
+    inline REL::Relocation<fn_render_green_read_t> RenderGreenRead {REL::ID(52159)};
+
+    std::uint8_t ReadRenderGreen(RE::TESObjectREFR* playerRef, std::uint32_t species)
+    {
+        if (!playerRef || !species)
+            return 0;
+        return static_cast<std::uint8_t>(RenderGreenRead(playerRef, species));
+    }
+
+    // ID_124901: the engine's species-slot hash (FNV-1a of the 4-byte species id) -> slot index in a
+    // subobj's species hashmap. Used to dump the RAW per-species slot bytes (mirrors ID_52159's
+    // lookup) so we can DIFF a full scan (green+info+XP) vs a +0x21 byte-poke (half) and find the
+    // missing "species catalogued/known" field the real scan writes and we don't.
+    using fn_species_slot_hash_t = std::uint64_t (*)(std::uintptr_t hashmap, const void* key4);
+    inline REL::Relocation<fn_species_slot_hash_t> SpeciesSlotHash {REL::ID(124901)};
+
     bool MarkTraitKnown(std::uint32_t planetId, RE::BGSKeyword* keyword)
     {
         if (!planetId || !keyword)
@@ -182,6 +226,59 @@ namespace Engine
         if (!ref || !speciesFormId)
             return;
         PlanetProgressNative(ref, static_cast<std::int32_t>(speciesFormId), kBiomeScanCategory, 0, 0);
+    }
+
+    // ID_83009: resolves the CANONICAL species id (ScannableComponent +0x24) that the outline
+    // renderer (ID_52159, via ID_90491/ID_90548) hashes for a live instance. CONFIRMED by full
+    // decompile trace: the engine's REAL scan keys the persistent green +0x21 byte under THIS
+    // canonical id, NOT the ESM/PPBD authored form id. For leveled/template fauna the two differ,
+    // so our ref-free sweep — which keyed +0x21 by the AUTHORED id — landed in the wrong slot:
+    // GetSurveyPercent (walks the authored array) reads 100%, but the outline (canonical FNV-1a
+    // hash) reads 0 -> blue. That is exactly the "survey complete but flora/fauna blue" signature.
+    // ID_83009 returns entry+0x24 when the instance HAS a scan component, else ref->formID (the
+    // identity case where authored == canonical). Only the ref arg is consumed; rest is spill.
+    using fn_get_canonical_species_t = std::uint32_t (*)(void* ref, void*, void*, void*);
+    inline REL::Relocation<fn_get_canonical_species_t> GetCanonicalSpeciesNative {REL::ID(83009)};
+
+    std::uint32_t GetCanonicalSpeciesId(RE::TESObjectREFR* ref)
+    {
+        if (!ref)
+            return 0;
+        return GetCanonicalSpeciesNative(ref, nullptr, nullptr, nullptr);
+    }
+
+    // ID_83006: resolve a species base FORM to its CANONICAL form. This is the missing piece.
+    // The outline reader ID_52159 hashes the canonical id stamped into a scanned instance's
+    // ScannableComponent +0x24, which the engine computes as *(uint32*)(ID_83006(base)+0x28)
+    // (scan-component-lifecycle.txt:33-35, scan-inner.txt:63-84). We were writing +0x21 under the
+    // RAW ESM form id, but the renderer keys on this canonical id instead -> survey reads 100%
+    // (authored-array walk) yet the outline stays BLUE. ID_83006 is FORM-level (gate ID_64338,
+    // then form+0xC8 base component -> vtable[0x428] -> canonical form), so it is computable
+    // OFF-PLANET from the ESM species form with NO live instance. If the canonical is
+    // species-stable (shared across a species' biome variants), writing +0x21 under it greens the
+    // wild creatures galaxy-wide. Returns 0 when the form isn't scannable / has no canonical.
+    using fn_resolve_canonical_form_t = std::uintptr_t (*)(void* form);
+    inline REL::Relocation<fn_resolve_canonical_form_t> ResolveCanonicalForm {REL::ID(83006)};
+
+    std::uint32_t CanonicalFormId(RE::TESForm* form)
+    {
+        if (!form)
+            return 0;
+        // ID_83006 faults on forms that don't satisfy its internal gate in this build (it took
+        // an access violation and latched the whole session's natives). Catch LOCALLY (/EHa) and
+        // fall back to the raw id, so one bad form degrades to "no canonical" instead of killing
+        // the pass. This converts the crash into per-species diagnostics.
+        try
+        {
+            const auto canonForm = ResolveCanonicalForm(form);
+            if (!canonForm)
+                return 0;
+            return *reinterpret_cast<std::uint32_t*>(canonForm + 0x28);
+        }
+        catch (...)
+        {
+            return 0;
+        }
     }
 
     // Directly increment the scan-flag byte at per-planet component value's
@@ -477,12 +574,17 @@ namespace Engine
             return 0;  // barren / resource-only body — no authored flora/fauna
         int marked = 0;
         for (const auto speciesFormId : it->second)
-            // Survey scan flag (+0x21/+0x20) — drives the % count + "scanned" readout.
-            // NOTE: the GREEN outline is NOT set here — it reads a per-species tree
-            // (subobj+0x80) only the real scan populates, which is why the galaxy sweep
-            // completes the data but greening needs the on-planet spawn-and-scan pass.
-            if (MarkSpeciesScannedForPlanet(planetId, speciesFormId, kDefaultScanDelta) == 1)
+        {
+            // The GREEN outline reads +0x21 keyed by the species' CANONICAL id (ID_83006-derived),
+            // NOT the raw ESM form id. Writing the raw id completes the survey % (authored-array
+            // walk) but leaves the outline blue. Write under the canonical so the outline lights
+            // up too. Fall back to the raw id when the form has no resolvable canonical.
+            std::uint32_t key = CanonicalFormId(RE::TESForm::LookupByID(speciesFormId));
+            if (key == 0)
+                key = speciesFormId;
+            if (MarkSpeciesScannedForPlanet(planetId, key, kDefaultScanDelta) == 1)
                 ++marked;
+        }
         return marked;
     }
 
@@ -558,12 +660,13 @@ namespace Engine
         int                        total       = 0;
         int                        completed   = 0;
         int                        skipped     = 0;
-        int                        markedTotal = 0;  // species/resource scan flags set
-        int                        esmTotal    = 0;  // ESM-authored flora/fauna marked
+        int                        markedTotal   = 0;  // resource/attribute scan flags set
+        int                        skippedLiving = 0;  // planets WITH flora/fauna — left for on-planet green
 
-        // Parse Starfield.esm up front (cached) so the per-planet flora/fauna lookups
-        // below are cheap. This is the only source of a never-visited planet's species.
-        Esm::GetPlanetSpecies();
+        // Parse Starfield.esm up front (cached). This map tells us which planets HAVE authored
+        // flora/fauna — the ones we must NOT ref-free "complete", because marking their species
+        // scanned leaves the outline blue (an invalid state). See re_green_outline.
+        const auto& planetSpecies = Esm::GetPlanetSpecies();
 
         // Enumerate every planet (PNDT) form from the global form registry —
         // TESDataHandler::formArrays[kPNDT] is empty in Starfield (galaxy forms
@@ -579,18 +682,23 @@ namespace Engine
                 ++skipped;
                 return;
             }
-            // 1) Engine discover (ID_102650): create the per-planet knowledge entry
-            //    if missing + mark it discovered. The create is asynchronous, so a few
-            //    entries aren't ready this frame — the Papyrus finalize pass mops those
-            //    up (and fires each planet's completion event) a few frames later.
+            // Skip any planet that HAS authored flora/fauna. Completing it ref-free would mark its
+            // flora/fauna "scanned" while the outline stays BLUE — the engine keys the green on a
+            // per-(planet,species) CANONICAL id that only exists once the biome materializes the
+            // creature on-planet, which we cannot write from here. That is an invalid state. Living
+            // worlds are left for the on-planet CompleteSurvey command; here we ONLY complete bodies
+            // with no flora/fauna (genuinely completable ref-free to a TRUE 100%).
+            if (planetSpecies.count(planetId))
+            {
+                ++skippedLiving;
+                return;
+            }
+            // Engine discover (ID_102650): create the per-planet knowledge entry if missing + mark
+            // it discovered (async create; the Papyrus finalize pass mops up stragglers + fires the
+            // slate). Then write the ref-free survey state (attribute bits + resources). With no
+            // flora/fauna on these bodies, this reaches a genuine 100%.
             ScanCompletePlanet(0, planetId, 1);
-            // 2) Write the ref-free survey state (attribute bits + species/resource
-            //    scan flags). Slate dispatch is deferred to the finalize pass.
             markedTotal += WritePlanetSurveyState(planetId, kDefaultScanDelta);
-            // 3) Mark the planet's authored flora/fauna (from Starfield.esm) as scanned —
-            //    the species the runtime can't give us for an unvisited planet. The finalize
-            //    pass re-applies this once async entries flush, so stragglers are covered.
-            esmTotal += MarkEsmSpeciesForPlanet(planetId);
             sweptForms.push_back(form->GetFormID());
             ++completed;
         });
@@ -603,8 +711,8 @@ namespace Engine
         const auto phase1Ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                   std::chrono::steady_clock::now() - t0)
                                   .count();
-        spdlog::info("CompleteAllPlanetsSurveyData: Phase 1 swept {} PNDT forms, {} processed, {} species/resource flags set, {} ESM flora/fauna marked, {} over cap (skipped) in {} ms",
-                     total, completed, markedTotal, esmTotal, skipped, phase1Ms);
+        spdlog::info("CompleteAllPlanetsSurveyData: Phase 1 swept {} PNDT forms, {} barren completed, {} living skipped (flora/fauna left for on-planet), {} resource/attribute flags set, {} over cap in {} ms",
+                     total, completed, skippedLiving, markedTotal, skipped, phase1Ms);
         return completed;
     }
 
@@ -757,6 +865,223 @@ namespace Papyrus
     void DebugLog(std::monostate, RE::BSFixedString msg)
     {
         spdlog::info("[papyrus] {}", msg.c_str());
+    }
+
+    // PROBE (isolation test): write the +0x21 scan-flag / +0x20 percent DIRECTLY under the ESM
+    // species id for `planetForm` — via MarkEsmSpeciesForPlanet -> MarkSpeciesScannedForPlanet ->
+    // ID_124898/ID_124899. NO spawn, NO SetScanned, NO ID_52157. Run it on the planet you are
+    // STANDING ON (its PlayerKnowledge entry is already loaded) to isolate one variable: does a
+    // pure direct +0x21 write under esmFid green a planet whose entry exists? Returns species
+    // written: n>0 => the writes landed (entry resolved); n==0 => ResolvePlanetSubobj found no
+    // entry (silent no-op — meaning the remote-planet blue is an entry-lifecycle problem).
+    std::int32_t TestDirectGreen(std::monostate, RE::TESForm* planetForm)
+    {
+        if (!planetForm)
+            return -1;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        if (!planetId)
+            return -1;
+
+        // Diagnostic: log each species' esm id vs the ID_83006 canonical id BEFORE the write, so
+        // the result is self-explaining. (REMAPPED) = canonical differs from esm (the case the raw
+        // write was missing); (NO-CANON) = ID_83006 returned 0 (we fall back to the raw id).
+        const auto& m  = Esm::GetPlanetSpecies();
+        const auto  it = m.find(planetId);
+        if (it != m.end())
+        {
+            int remapped = 0, nocanon = 0;
+            for (const auto sf : it->second)
+            {
+                const auto canon = Engine::CanonicalFormId(RE::TESForm::LookupByID(sf));
+                const char* tag  = (canon == 0) ? " (NO-CANON)" : (canon != sf ? " (REMAPPED)" : "");
+                if (canon == 0)
+                    ++nocanon;
+                else if (canon != sf)
+                    ++remapped;
+                spdlog::info("TestDirectGreen species: esm=0x{:08X} canonical=0x{:08X}{}", sf, canon, tag);
+            }
+            spdlog::info("TestDirectGreen: {} remapped, {} no-canon of {} species on planet 0x{:08X}",
+                         remapped, nocanon, it->second.size(), planetId);
+        }
+
+        const auto n = Engine::MarkEsmSpeciesForPlanet(planetId);
+        spdlog::info("TestDirectGreen: planetId=0x{:08X} -> +0x21 written (canonical key) for {} species", planetId, n);
+        return n;
+    }
+
+    // THE DECISIVE PROBE (build-skew already ruled out 1.16.244). Call AFTER the Papyrus side has
+    // PlaceAtMe'd a species instance AND driven the REAL create path (ObjectReference.SetScanned,
+    // = ID_118472 -> ID_83005, which stamps the ScannableComponent +0x24 canonical) AND waited a
+    // beat for the deferred create to flush. We read three keys off the SAME live instance:
+    //   authored  = the ESM/PPBD species formId we placed
+    //   base      = ref->GetBaseObject()->GetFormID() (what the renderer is claimed to hash, base+0x28)
+    //   canonical = ID_83009(ref) -> ScannableComponent +0x24 (what the real scan keys +0x21 on)
+    // Outcomes:
+    //   canonical == INSTANCE (0xFF...) -> the create path did NOT flush (no component) -> need a
+    //       longer wait or a different create trigger; the canonical is unobtainable this way.
+    //   canonical == authored (== base) for all -> ID_83006 is IDENTITY -> the off-planet AUTHORED
+    //       write was the right key, so the blue is NOT a key-domain bug (-> planet-binding /
+    //       entry-rematerialize / ID_52180 membership). Stop chasing the canonical.
+    //   canonical != authored -> a REAL remap exists; THIS canonical is the key to cache + write
+    //       ref-free per host planet (the probe-once-cache-replay lead).
+    void ProbeScanKeys(std::monostate, RE::TESObjectREFR* ref, std::int32_t authoredFid)
+    {
+        if (!ref)
+            return;
+        const std::uint32_t refId    = static_cast<std::uint32_t>(ref->GetFormID());
+        const auto          base     = ref->GetBaseObject();  // NiPointer<TESBoundObject>
+        const std::uint32_t baseId   = base ? static_cast<std::uint32_t>(base->GetFormID()) : 0u;
+        const std::uint32_t canon    = Engine::GetCanonicalSpeciesId(ref);  // ID_83009 -> +0x24
+        const std::uint32_t authored = static_cast<std::uint32_t>(authoredFid);
+        const char* baseTag  = (baseId == authored) ? "==authored" : "!=authored";
+        const char* canonTag = (canon == 0)        ? "NULL"
+                             : (canon == refId)     ? "==INSTANCE(no-component!)"
+                             : (canon == authored)  ? "==authored(IDENTITY)"
+                             : (canon == baseId)    ? "==base"
+                                                    : "REMAP(distinct)";
+        spdlog::info("ProbeScanKeys: authored=0x{:08X} base=0x{:08X}({}) canonical=0x{:08X}({}) instance=0x{:08X}",
+                     authored, baseId, baseTag, canon, canonTag, refId);
+    }
+
+    // THE PLANET-KEY FIX TEST. The diagnosis: the outline reads the green entry keyed by
+    // (938333 | ID_52188(player)) — the BSGalaxy NumericID — NOT (938333 | planetForm+0x54) the data
+    // path uses. This writes +0x21 under the RENDER planet id for the current planet's species, and
+    // logs both ids so we see the domain split. If, after this, a SAVE->reload renders GREEN where
+    // TestDirectGreen (+0x54) was blue, the planet key was the entire bug. Species are still looked up
+    // by the +0x54 form id (the ESM map domain), but WRITTEN under the render id.
+    std::int32_t TestRenderKeyGreen(std::monostate, RE::TESObjectREFR* playerRef, RE::TESForm* planetForm)
+    {
+        if (!playerRef || !planetForm)
+            return -1;
+        const auto formId   = Engine::ReadPlanetId(planetForm);       // +0x54 (data / survey-% domain)
+        const auto renderId = Engine::GetRenderPlanetId(playerRef);   // ID_52188 (outline domain)
+        spdlog::info("TestRenderKeyGreen: formId(+0x54)=0x{:08X} renderId(ID_52188)=0x{:08X}{}",
+                     formId, renderId, (formId != renderId) ? " (DIFFERENT -> confirms the 2 domains)" : " (SAME)");
+        if (!renderId)
+        {
+            spdlog::warn("TestRenderKeyGreen: ID_52188 returned 0 — not on a resolved planet");
+            return 0;
+        }
+        const auto& m  = Esm::GetPlanetSpecies();
+        const auto  it = m.find(formId);
+        if (it == m.end())
+            return 0;
+        int n = 0;
+        for (const auto sf : it->second)
+            if (Engine::MarkSpeciesScannedForPlanet(renderId, sf, Engine::kDefaultScanDelta) == 1)
+                ++n;
+        spdlog::info("TestRenderKeyGreen: wrote +0x21 under renderId=0x{:08X} for {} species", renderId, n);
+        return n;
+    }
+
+    // PROBE (read-only, the definitive one): ask the engine's OWN outline-green reader (ID_52159)
+    // what it returns for each authored species of the current planet, for THIS player. Cuts through
+    // the unreliable decompile by calling the actual render-decision function.
+    //   - Run AFTER CompleteSurvey (a GREEN planet) -> expect "GREEN for N/N". Confirms ID_52159 IS
+    //     the read and that it returns nonzero where the outline is green.
+    //   - Run AFTER TestDirectGreen (a BLUE byte-poke planet) -> if "GREEN for 0/N", the render reads
+    //     a DIFFERENT slot/species-id than our authored write (e.g. the wild creature's render id),
+    //     pinpointing exactly where the green really lives.
+    std::int32_t ProbeRenderRead(std::monostate, RE::TESObjectREFR* playerRef, RE::TESForm* planetForm)
+    {
+        if (!playerRef || !planetForm)
+            return -1;
+        const auto  formId = Engine::ReadPlanetId(planetForm);
+        const auto& m      = Esm::GetPlanetSpecies();
+        const auto  it     = m.find(formId);
+        if (it == m.end())
+            return 0;
+        int green = 0;
+        for (const auto sf : it->second)
+        {
+            const auto r = Engine::ReadRenderGreen(playerRef, sf);
+            if (r != 0)
+                ++green;
+            spdlog::info("ProbeRenderRead: species=0x{:08X} ID_52159=0x{:02X}{}", sf, r,
+                         (r != 0) ? " (GREEN)" : " (blue)");
+        }
+        spdlog::info("ProbeRenderRead: ID_52159 returns GREEN for {}/{} authored species on planet 0x{:08X}",
+                     green, static_cast<int>(it->second.size()), formId);
+        return green;
+    }
+
+    // DUMP the raw species DB state for diffing. Run it (a) right after TestDirectGreen (half-scan)
+    // and (b) right after CompleteSurvey (full scan: green + info + XP) on the SAME planet — the byte
+    // difference in the per-species slot (and the subobj header / +0x60 tree region) is the missing
+    // "species catalogued/known" record the real scan writes. Read-only; mirrors ID_52159's lookup.
+    std::int32_t DumpSpeciesSlots(std::monostate, RE::TESForm* planetForm)
+    {
+        if (!planetForm)
+            return -1;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        const auto db       = Engine::GetKnowledgeDB();
+        if (!db)
+            return -1;
+        const auto subobj = Engine::ResolvePlanetSubobj(db, planetId);
+        if (!subobj)
+        {
+            spdlog::info("DumpSpeciesSlots: no knowledge entry for planet 0x{:08X}", planetId);
+            return 0;
+        }
+        const auto         base = reinterpret_cast<std::uintptr_t>(subobj);
+        static const char* H    = "0123456789ABCDEF";
+        auto               hexdump = [&](std::uintptr_t addr, int len) {
+            std::string s;
+            s.reserve(static_cast<std::size_t>(len) * 3);
+            const auto* p = reinterpret_cast<const std::uint8_t*>(addr);
+            for (int i = 0; i < len; ++i)
+            {
+                s += H[p[i] >> 4];
+                s += H[p[i] & 0xF];
+                s += ' ';
+            }
+            return s;
+        };
+
+        // subobj header incl. the subobj+0x60 scanned-species tree region — catches subobj-level state.
+        spdlog::info("DumpSpeciesSlots: planet=0x{:08X} subobj[0x00..0x70]=[ {}]", planetId, hexdump(base, 0x70));
+
+        const auto  hashmap = base + 0x18;
+        const auto  end     = *reinterpret_cast<std::uint64_t*>(base + 0x48);
+        const auto  slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+        const auto& m       = Esm::GetPlanetSpecies();
+        const auto  it      = m.find(planetId);
+        if (it == m.end())
+            return 0;
+        int dumped = 0;
+        for (const auto sf : it->second)
+        {
+            std::uint32_t key = sf;
+            const auto    idx = Engine::SpeciesSlotHash(hashmap, &key);
+            if (idx == end || !slots)
+            {
+                spdlog::info("DumpSpeciesSlots: species=0x{:08X} NO-SLOT", sf);
+                continue;
+            }
+            const auto slotAddr = slots + idx * 0x30;
+            spdlog::info("DumpSpeciesSlots: species=0x{:08X} slot[0x00..0x30]=[ {}]", sf, hexdump(slotAddr, 0x30));
+            // Deref the +0x08 BSTArray {begin,end,cap} and dump its u32 contents — the species'
+            // catalogue ids the full scan builds and our poke leaves NULL.
+            const auto arrBegin = *reinterpret_cast<const std::uintptr_t*>(slotAddr + 0x08);
+            const auto arrEnd   = *reinterpret_cast<const std::uintptr_t*>(slotAddr + 0x10);
+            if (arrBegin != 0 && arrEnd > arrBegin && (arrEnd - arrBegin) <= 0x200 && ((arrEnd - arrBegin) % 4) == 0)
+            {
+                const auto  count = (arrEnd - arrBegin) / 4;
+                const auto* ids   = reinterpret_cast<const std::uint32_t*>(arrBegin);
+                std::string s;
+                for (std::size_t i = 0; i < count; ++i)
+                {
+                    const auto v = ids[i];
+                    for (int n = 28; n >= 0; n -= 4)
+                        s += H[(v >> n) & 0xF];
+                    s += ' ';
+                }
+                spdlog::info("DumpSpeciesSlots:   species=0x{:08X} +0x08 array[{}] u32s=[ {}]", sf, count, s);
+            }
+            ++dumped;
+        }
+        spdlog::info("DumpSpeciesSlots: dumped {} slots for planet 0x{:08X}", dumped, planetId);
+        return dumped;
     }
 
     // Bypass ID_83038's per-ref component check by calling the per-planet progress
@@ -930,10 +1255,10 @@ namespace Papyrus
         // ID_102650 fires it at discover time, before our writes finish the planet, so the
         // slate wouldn't otherwise drop. The engine awards a planet's survey reward once,
         // so re-firing is idempotent (one slate per planet).
+        // Only barren bodies (no flora/fauna) reach the finalize pass now — the sweep skips living
+        // worlds — so we deliberately do NOT mark any flora/fauna here. That would write the
+        // invalid "scanned but blue" state. Living worlds are greened on-planet via CompleteSurvey.
         const auto marked = Engine::CompletePlanetSurveyState(planetId);
-        // Re-apply the ESM-authored flora/fauna now the entry is guaranteed ready (catches
-        // the async-create stragglers the C++ sweep couldn't write).
-        Engine::MarkEsmSpeciesForPlanet(planetId);
         return marked;
     }
 
@@ -973,21 +1298,47 @@ namespace Papyrus
     }
 
     // Green ONE species type on EVERY planet that hosts it, using `ref` (a live spawned instance
-    // of that species) as the handle. Per planet it drives the tree write (ID_52161) + the count
-    // completion (ID_52158), both with the planet explicit — so the whole galaxy's green for this
-    // species is written from one spot, no visiting. Returns the number of planets greened.
+    // of that species) as the canonical-id source. The persistent green is the +0x21 scan-flag in
+    // BSGalaxy::PlayerKnowledge, keyed by (planet, CANONICAL species id) — and the outline renderer
+    // (ID_52159) reads it for the player's CURRENT planet using the rendered instance's canonical
+    // id. So to green a TARGET planet ref-free we write +0x21 DIRECTLY for (targetPlanet, canonical)
+    // — no spoofing "the planet you're on", no driving ID_52158 (which re-reads the current biome
+    // and fired the same wrong key). The ONLY fix vs the old sweep is using the canonical id, not
+    // the ESM id. Returns the number of planets actually written. See COMPLETE-scan-to-green-trace.
     std::int32_t GreenSpeciesEverywhere(std::monostate, RE::TESObjectREFR* ref, std::int32_t speciesFid)
     {
         if (!ref || speciesFid == 0)
             return 0;
-        const auto  fid = static_cast<std::uint32_t>(speciesFid);
-        const auto& inv = Engine::GetSpeciesToPlanets();
-        const auto  it  = inv.find(fid);
+        const auto  esmFid = static_cast<std::uint32_t>(speciesFid);
+        const auto& inv    = Engine::GetSpeciesToPlanets();
+        const auto  it     = inv.find(esmFid);
         if (it == inv.end())
             return 0;
+
+        // Register the live instance the way CompleteSurvey (the proven-working per-planet green)
+        // does, so its ScannableComponent — and the canonical id at +0x24 — is populated for
+        // ID_83009 to read. Side effect: greens the CURRENT planet for this species (harmless).
+        Engine::ScanRefNative(ref, 1, Engine::kBiomeScanCategory, 0);
+        Engine::UpdatePlanetProgress(ref, esmFid);
+
+        // The canonical id the renderer will hash for fresh instances. Key the +0x21 write by THIS,
+        // not the ESM id, or leveled/template fauna stay blue. Fall back to ESM if unresolved.
+        std::uint32_t canonicalId = Engine::GetCanonicalSpeciesId(ref);
+        if (canonicalId == 0)
+            canonicalId = esmFid;
+
+        // One diagnostic line per unique species. "(REMAPPED)" => canonical != ESM, i.e. this
+        // species was the kind silently breaking the green. If a retest is still blue, this log
+        // tells us definitively whether the key remapped — no more guessing.
+        spdlog::info("GreenSpeciesEverywhere: esmFid=0x{:08X} canonicalId=0x{:08X}{} -> {} host planets",
+                     esmFid, canonicalId, (canonicalId != esmFid) ? " (REMAPPED)" : "",
+                     it->second.size());
+
+        std::int32_t greened = 0;
         for (const auto planetId : it->second)
-            Engine::GreenAndCompleteTypeForPlanet(ref, planetId, fid);
-        return static_cast<std::int32_t>(it->second.size());
+            if (Engine::MarkSpeciesScannedForPlanet(planetId, canonicalId, Engine::kDefaultScanDelta) == 1)
+                ++greened;
+        return greened;
     }
 
     void Register()
@@ -1005,6 +1356,26 @@ namespace Papyrus
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, CPS_GUARDED(MarkTraitKnownForPlanet),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "TestDirectGreen"sv, CPS_GUARDED(TestDirectGreen),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "ProbeScanKeys"sv, CPS_GUARDED(ProbeScanKeys),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "TestRenderKeyGreen"sv, CPS_GUARDED(TestRenderKeyGreen),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "ProbeRenderRead"sv, CPS_GUARDED(ProbeRenderRead),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "DumpSpeciesSlots"sv, CPS_GUARDED(DumpSpeciesSlots),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
@@ -1263,6 +1634,11 @@ SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
     // e.g. "[2026-06-21 14:31:50.598] [tid] [I] …". CommonLibSF already timestamps by default;
     // this makes the format explicit and adds the date for cross-session clarity.
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%t] [%L] %v");
+    // Flush every info+ line straight to disk. Starfield terminates the process abruptly on exit
+    // (no clean spdlog shutdown), so buffered lines written shortly before quit are LOST — which
+    // silently ate the TestDirectGreen / ProbeScanKeys diagnostic output (they logged at info just
+    // before the player quit, never flushed). Flushing on info guarantees probe results survive.
+    spdlog::flush_on(spdlog::level::info);
     spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
 
     const auto* messaging = SFSE::GetMessagingInterface();

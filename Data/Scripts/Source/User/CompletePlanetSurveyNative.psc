@@ -7,6 +7,33 @@ Function DebugLog(string asMsg) global native
 ; Mark a trait keyword as known for the planet. Fires the trait progress event.
 bool Function MarkTraitKnownForPlanet(Form akPlanet, Keyword akKeyword) global native
 
+; PROBE: write +0x21/+0x20 directly (esm species key, no spawn/scan) for the planet.
+; Run on the planet you're standing on to test if a direct write greens an existing entry.
+; Returns species written (0 = no entry resolved).
+int Function TestDirectGreen(Form akPlanet) global native
+
+; DECISIVE PROBE: call AFTER PlaceAtMe + SetScanned(true) + a short Wait on a live species
+; instance. Logs authored vs base-form vs canonical(+0x24) id off the SAME ref, so we learn
+; whether the canonical differs from the authored ESM id at all (and whether the create path
+; stamped a real component). akAuthoredFid = the ESM formId originally placed.
+Function ProbeScanKeys(ObjectReference akRef, int akAuthoredFid) global native
+
+; PLANET-KEY FIX TEST: write +0x21 under the RENDER planet id (ID_52188(player)) instead of the
+; form +0x54 id, for the current planet's species. If a save/reload then renders GREEN where
+; TestDirectGreen was blue, the planet-key domain was the whole "100% but blue" bug. Returns
+; species written.
+int Function TestRenderKeyGreen(ObjectReference akPlayer, Form akPlanet) global native
+
+; DEFINITIVE READ PROBE: calls the engine's OWN outline-green reader (ID_52159) for each authored
+; species and returns how many it reports GREEN. Run on a CompleteSurvey'd (green) planet vs a
+; TestDirectGreen'd (blue) one to see, from the engine itself, what the render actually reads.
+int Function ProbeRenderRead(ObjectReference akPlayer, Form akPlanet) global native
+
+; DUMP the raw per-species DB slot bytes (+ subobj header/tree region) for the planet. Run after
+; TestDirectGreen (half) and after CompleteSurvey (full green+info) and diff the hex to find the
+; "species catalogued/known" field the real scan writes that our byte-poke skips. Returns slots dumped.
+int Function DumpSpeciesSlots(Form akPlanet) global native
+
 ; Mark every form the engine tracks for the planet (flora/fauna/resources/traits)
 ; as scanned via the ID_1016657 aggregator. Also fires the survey-complete event
 ; that drops the Survey Data slate when the planet hits 100%.
