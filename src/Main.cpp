@@ -208,6 +208,83 @@ namespace Engine
     using fn_species_slot_hash_t = std::uint64_t (*)(std::uintptr_t hashmap, const void* key4);
     inline REL::Relocation<fn_species_slot_hash_t> SpeciesSlotHash {REL::ID(124901)};
 
+    // ID_35755: BSTArray<u32>::push_back grow path — (header{begin,end,cap}, pos, &value). Allocates
+    // via the ENGINE allocator (ID_35770) and updates the header + frees the old buffer (ID_35757),
+    // so the array is engine-OWNED and safe to free on teardown (ID_35771). This is how the real scan
+    // fills slot+0x08; we use it to build that array ref-free — the GREEN fix.
+    using fn_bstarray_grow_t = std::uint32_t* (*)(std::int64_t* header, std::uint32_t* pos, const std::uint32_t* value);
+    inline REL::Relocation<fn_bstarray_grow_t> BSTArrayU32Grow {REL::ID(35755)};
+
+    // push_back one u32 onto a species slot's +0x08 BSTArray, matching the engine's inline push_back
+    // (grow via ID_35755 when full, else in-place). slotAddr = the slot base (subobj+0x40 + idx*0x30);
+    // header {begin@+0x08, end@+0x10, cap@+0x18}. Engine-owned alloc -> safe teardown.
+    void PushSpeciesAttr(std::uintptr_t slotAddr, std::uint32_t id)
+    {
+        auto* const end = *reinterpret_cast<std::uint32_t**>(slotAddr + 0x10);
+        auto* const cap = *reinterpret_cast<std::uint32_t**>(slotAddr + 0x18);
+        if (end == cap)  // full (incl. empty 0==0) -> engine grow + insert
+        {
+            std::uint32_t v = id;
+            BSTArrayU32Grow(reinterpret_cast<std::int64_t*>(slotAddr + 0x08), end, &v);
+        }
+        else  // spare capacity -> in-place append
+        {
+            *end                                                = id;
+            *reinterpret_cast<std::uint32_t**>(slotAddr + 0x10) = end + 1;
+        }
+    }
+
+    // The LIVE biome member table holds the engine's EXACT per-species marker set on the CURRENT planet —
+    // it is the source array that slot+0x08 is copied from (ID_52158). Reading it yields the correct
+    // value-specific markers for BOTH kingdoms (flora's resource/genetics/reproduction markers AND fauna's
+    // X) with NO derivation, NO condition VM, NO fault risk (pure loads) — strictly more correct than any
+    // hardcode, and it sidesteps the materialization-bound ID_83024 (which faults ref-free) and the
+    // value-specific flora markers (which a fixed list can't capture). Off-planet the live biome is null
+    // (the table is materialization-bound), so this returns false there. (complete-scan-green-model §3.2a.)
+    inline REL::Relocation<std::uintptr_t*> Singleton937609 {REL::ID(937609)};  // *+0x160 = live biome
+
+    // ID_56887: FNV-1a member find over the biome member hashmap. (table=biome+0x20, out[2], key4) ->
+    // out[0]=table base (==biome+0x20), out[1]=matched index (== bucketCount on MISS). The member entry
+    // is bucketBase + out[1]*0x28; its uint[] marker array is [member+0x08 .. member+0x10).
+    using fn_find_member_t = std::int64_t* (*)(std::int64_t table, std::int64_t out[2], unsigned char* key4);
+    inline REL::Relocation<fn_find_member_t> FindBiomeMember {REL::ID(56887)};
+
+    // Read a (current-planet, species) marker set from the live biome member table. Returns false
+    // off-planet / on miss / on fault (caller leaves the species blue). LOCALLY guarded (/EHa); pure loads.
+    bool ReadLiveMemberMarkers(std::uint32_t speciesFormId, std::vector<std::uint32_t>& out)
+    {
+        out.clear();
+        try
+        {
+            auto* const s = Singleton937609.get();
+            if (!s || !*s)
+                return false;
+            const auto biome = *reinterpret_cast<std::uintptr_t*>(*s + 0x160);
+            if (!biome)  // off-planet / no live biome materialized
+                return false;
+            std::int64_t res[2] = {0, 0};
+            FindBiomeMember(static_cast<std::int64_t>(biome) + 0x20, res, reinterpret_cast<unsigned char*>(&speciesFormId));
+            const auto table       = static_cast<std::uintptr_t>(res[0]);  // == biome+0x20
+            const auto bucketBase  = *reinterpret_cast<std::uintptr_t*>(table + 0x20);
+            const auto bucketCount = *reinterpret_cast<std::uint64_t*>(table + 0x28);
+            const auto idx         = static_cast<std::uint64_t>(res[1]);
+            if (bucketCount == 0 || idx == bucketCount || !bucketBase)  // empty / MISS
+                return false;
+            const auto  member = bucketBase + idx * 0x28;
+            auto* const begin  = *reinterpret_cast<std::uint32_t**>(member + 0x08);
+            auto* const end    = *reinterpret_cast<std::uint32_t**>(member + 0x10);
+            if (!begin || end < begin || (end - begin) > 0x40)  // sanity bound
+                return false;
+            for (auto* p = begin; p != end; ++p)
+                out.push_back(*p);
+            return !out.empty();
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
     bool MarkTraitKnown(std::uint32_t planetId, RE::BGSKeyword* keyword)
     {
         if (!planetId || !keyword)
@@ -1051,11 +1128,17 @@ namespace Papyrus
         int dumped = 0;
         for (const auto sf : it->second)
         {
-            std::uint32_t key = sf;
-            const auto    idx = Engine::SpeciesSlotHash(hashmap, &key);
+            // Resolve the slot under the CANONICAL key — the same key TestDirectGreen/TestBuildArray
+            // write +0x21/+0x08 under. Keying by the raw ESM id mis-reads (or misses) the slot for any
+            // remapped species, so the dump would lie about what the writers actually built.
+            auto* const  form = RE::TESForm::LookupByID(sf);
+            std::uint32_t key = form ? Engine::CanonicalFormId(form) : 0;
+            if (key == 0)
+                key = sf;
+            const auto idx = Engine::SpeciesSlotHash(hashmap, &key);
             if (idx == end || !slots)
             {
-                spdlog::info("DumpSpeciesSlots: species=0x{:08X} NO-SLOT", sf);
+                spdlog::info("DumpSpeciesSlots: species=0x{:08X} key=0x{:08X} NO-SLOT", sf, key);
                 continue;
             }
             const auto slotAddr = slots + idx * 0x30;
@@ -1082,6 +1165,85 @@ namespace Papyrus
         }
         spdlog::info("DumpSpeciesSlots: dumped {} slots for planet 0x{:08X}", dumped, planetId);
         return dumped;
+    }
+
+    // THE FIX, validation step: build the slot+0x08 attribute array (engine-allocated) for each of the
+    // current planet's species that currently has an EMPTY +0x08 (i.e. after a TestDirectGreen poke).
+    // Pushes the two universal attribute ids present in EVERY dumped species (0x0023E90D, 0x002634BE) —
+    // enough to make the array non-empty. If the species then render PROPERLY green (outline + info)
+    // after this + a reload, the gate IS slot+0x08 and the engine-allocated build is sound — then we
+    // derive the full per-species attribute ids from the ESM and write them. Returns slots built.
+    std::int32_t TestBuildArray(std::monostate, RE::TESForm* planetForm)
+    {
+        if (!planetForm)
+            return -1;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        const auto db       = Engine::GetKnowledgeDB();
+        if (!db)
+            return -1;
+        const auto subobj = Engine::ResolvePlanetSubobj(db, planetId);
+        if (!subobj)
+        {
+            spdlog::info("TestBuildArray: no knowledge entry for planet 0x{:08X} (run TestDirectGreen first)", planetId);
+            return 0;
+        }
+        const auto base    = reinterpret_cast<std::uintptr_t>(subobj);
+        const auto hashmap = base + 0x18;
+        const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
+        const auto slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+        const auto& m  = Esm::GetPlanetSpecies();
+        const auto  it = m.find(planetId);
+        if (it == m.end())
+            return 0;
+
+        // Marker source: Esm::GetSpeciesMarkers — the per-species slot+0x08 set derived PURELY from
+        // Starfield.esm (no game, no visiting, no live instance). Fauna resolves its temperament X via
+        // NPC_->OBTS->temperament OMOD->NKEY->FLST 0x00160C97 (proven 100% on ground truth); flora gets
+        // the 4-marker skeleton with correct per-species reproduction (PRPS) + the >=3-biome 5th marker.
+        // This replaces the materialization-bound live-member read (kept below as an optional validator),
+        // so fauna now greens REMOTELY too. Unknown forms come back empty -> left blue.
+        int built = 0;
+        for (const auto sf : it->second)
+        {
+            auto* const form = RE::TESForm::LookupByID(sf);
+            if (!form)
+                continue;
+            // Slot keyed by the SAME key TestDirectGreen wrote +0x21 under (green needs +0x21 AND +0x08
+            // on ONE slot). CanonicalFormId is 0/NO-CANON for bare forms, so both fall back to the raw
+            // ESM id identically — the slots line up.
+            std::uint32_t key = Engine::CanonicalFormId(form);
+            if (key == 0)
+                key = sf;
+            const auto idx = Engine::SpeciesSlotHash(hashmap, &key);
+            if (idx == hashEnd || !slots)
+                continue;
+            const auto slotAddr = slots + idx * 0x30;
+            // Clear any existing +0x08 array (leak the old engine buffer — safe, no double-free) so we
+            // rebuild cleanly (no duplicate markers on re-run).
+            *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08) = 0;
+            *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10) = 0;
+            *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x18) = 0;
+
+            std::vector<std::uint32_t> markers = Esm::GetSpeciesMarkers(sf, planetId);
+            if (markers.empty())
+            {
+                spdlog::info("TestBuildArray: 0x{:08X} no esm-derived markers -> skip (left blue)", sf);
+                continue;
+            }
+            // Append the func-699 actor-scan markers (Abilities/Resistances/Weaknesses) so a creature
+            // with an ability greens with its FULL set, matching a real in-game scan (the slot+0x08
+            // species set alone leaves ability-creatures one marker short -> blue).
+            const auto actorMarkers = Esm::GetSpeciesActorMarkers(sf);
+            markers.insert(markers.end(), actorMarkers.begin(), actorMarkers.end());
+            for (const auto id : markers)
+                Engine::PushSpeciesAttr(slotAddr, id);
+            spdlog::info("TestBuildArray: 0x{:08X} esm-derived {} markers ({} actor) (first=0x{:08X})",
+                         sf, markers.size(), actorMarkers.size(), markers[0]);
+            ++built;
+        }
+        spdlog::info("TestBuildArray: wrote direct +0x08 marker set for {} species on planet 0x{:08X}",
+                     built, planetId);
+        return built;
     }
 
     // Bypass ID_83038's per-ref component check by calling the per-planet progress
@@ -1376,6 +1538,10 @@ namespace Papyrus
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "DumpSpeciesSlots"sv, CPS_GUARDED(DumpSpeciesSlots),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "TestBuildArray"sv, CPS_GUARDED(TestBuildArray),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
