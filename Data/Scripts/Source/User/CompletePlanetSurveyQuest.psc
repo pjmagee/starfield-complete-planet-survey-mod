@@ -129,6 +129,43 @@ Function DumpSpeciesSlots() global
     Debug.MessageBox("DumpSpeciesSlots: dumped " + n + " species slots to the log. Run before/after CompleteSurvey and diff the hex.")
 EndFunction
 
+; THE FIX — validation step. On a fresh living planet, in order:
+;   cgf "CompletePlanetSurveyQuest.TestDirectGreen"   (half-scan: creates slots, +0x08 empty)
+;   cgf "CompletePlanetSurveyQuest.TestBuildArray"    (engine-build the +0x08 attribute array)
+;   save -> quit -> reload -> check the flora/fauna
+; If they render PROPERLY green (outline + info) after the reload, slot+0x08 IS the gate and the
+; engine-allocated build works -> we then derive full per-species attribute ids from the ESM.
+Function TestBuildArray() global
+    Actor playerRef = Game.GetPlayer()
+    Planet currentPlanet = playerRef.GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.MessageBox("TestBuildArray: GetCurrentPlanet None — walk into open wilderness on a living planet.")
+        Return
+    EndIf
+    int n = CompletePlanetSurveyNative.TestBuildArray(currentPlanet as Form)
+    If n == 0
+        Debug.MessageBox("TestBuildArray built 0 arrays — run TestDirectGreen first (it creates the empty slots), on a living planet.")
+    Else
+        Debug.MessageBox("TestBuildArray engine-built the +0x08 attribute array for " + n + " species. SAVE -> quit -> reload -> check: do they render properly GREEN now (outline + info)?")
+    EndIf
+EndFunction
+
+; PROPER GREEN — the incorporated solution, ref-free + no spawning. Marks species scanned (+0x21,
+; survey %) AND builds the slot+0x08 attribute-marker catalogue (the green outline + info panel).
+; One command for the planet you're on:  cgf "CompletePlanetSurveyQuest.GreenPlanetProper"
+Function GreenPlanetProper() global
+    Actor playerRef = Game.GetPlayer()
+    Planet p = playerRef.GetCurrentPlanet()
+    If p == None
+        Debug.MessageBox("GreenPlanetProper: not on a planet — stand in open wilderness on a living planet.")
+        Return
+    EndIf
+    Form pf = p as Form
+    int flags = CompletePlanetSurveyNative.TestDirectGreen(pf)   ; +0x21 survey flags + create slots
+    int cat   = CompletePlanetSurveyNative.TestBuildArray(pf)    ; slot+0x08 attribute catalogue
+    Debug.MessageBox("GreenPlanetProper: " + flags + " species scanned, " + cat + " catalogues built. Flora AND fauna should now render GREEN with the full correct 4-marker info (genetics/reproduction/temperament now derived per-species from the ESM). If anything stays blue or shows a wrong/missing marker, tell me the species and which field.")
+EndFunction
+
 Function CompleteSurvey() global
     Actor playerRef = Game.GetPlayer()
 
@@ -161,10 +198,11 @@ Function CompleteSurvey() global
     EndIf
 EndFunction
 
-; Complete the survey for EVERY planet/moon in the galaxy in one pass — ref-free
-; (no teleport, no spawn). Console:
-;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
-Function CompleteAllPlanetsSurveyData() global
+; Complete the survey for every UNINHABITED planet/moon in the galaxy (no flora/fauna) in one pass —
+; ref-free (no teleport, no spawn). Worlds WITH species are deliberately skipped (their flora/fauna
+; can't be greened by this command — that's the separate CompleteAllPlanets command). Console:
+;   cgf "CompletePlanetSurveyQuest.CompleteUninhabitedPlanets"
+Function CompleteUninhabitedPlanets() global
     ; Immersive framing as a MODAL popup — the CK-authored MESG record CPSRecallMessage (0x807),
     ; NOT a toast. A toast would be buried under the cascade of native "<Planet> Survey Data"
     ; notifications that drains over several minutes. Message.Show() is modal and blocks until the

@@ -34,6 +34,11 @@ int Function ProbeRenderRead(ObjectReference akPlayer, Form akPlanet) global nat
 ; "species catalogued/known" field the real scan writes that our byte-poke skips. Returns slots dumped.
 int Function DumpSpeciesSlots(Form akPlanet) global native
 
+; THE FIX (validation): engine-build the slot+0x08 attribute array for species whose +0x08 is empty
+; (after a TestDirectGreen poke), pushing the 2 universal attribute ids. If they then render PROPERLY
+; green after a reload, slot+0x08 is the gate and the build is sound. Returns slots built.
+int Function TestBuildArray(Form akPlanet) global native
+
 ; Mark every form the engine tracks for the planet (flora/fauna/resources/traits)
 ; as scanned via the ID_1016657 aggregator. Also fires the survey-complete event
 ; that drops the Survey Data slate when the planet hits 100%.

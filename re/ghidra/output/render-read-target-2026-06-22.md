@@ -1,5 +1,20 @@
 # Render read-target — where the outline ACTUALLY reads green (2026-06-22)
 
+> ## ⛔ SUPERSEDED 2026-06-23 — the H2 "WRONG PLANET KEY" VERDICT IS REFUTED
+> A full decompile of `ID_52188` (verification task wjpdx9i2j) + the in-game `TestRenderKeyGreen`
+> measurement proved `*(planetForm+0x54)` and `ID_52188(player)` are the **SAME FormID-domain id, an
+> IDENTITY, not two domains**: `formId(+0x54)=0x0003F5A1 == renderId(ID_52188)=0x0003F5A1 == Jemison PNDT
+> FormID`. `ID_52188`'s ids round-trip through `ID_51710→ID_47401 = LookupFormByID` (FormID domain); the
+> suspected `ID_51760/51773/124846/42691` cluster resolves only the SYSTEM coordinate, **not** the planet
+> id — there is **no `+0x54→P_render` converter**. So the mod's `+0x54`-keyed write is in the CORRECT render
+> domain. The "100% but blue" from the bare `+0x21` poke was a **live-repaint / slot-registration** confound
+> (ProbeRenderRead returned 17/17 green from that same poke), NOT a key-domain miss. **Remote green is
+> decompile-GO**: a write keyed by a never-visited planet's `+0x54` FormID renders green on arrival. This
+> doc's mechanism (same physical arrays, +0x21 read-site, FNV species key) remains correct; only its H2
+> root-cause and its "remote not achievable" bottom-line are wrong. Canonical: memory `re-green-outline`
+> ★★ section + `species-scan-complete-model-2026-06-23.md`.
+
+
 Resolves H1 (wrong structure) vs H2 (wrong planet key) for the "TestDirectGreen wrote
 +0x21 for 17 species under the authored==canonical species id at (938333|ReadPlanetId),
 SAVE+quit+reload → survey % = 100% / BIOME COMPLETE, but the scanner OUTLINE stays BLUE"
