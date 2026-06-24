@@ -4,9 +4,11 @@ ScriptName CompletePlanetSurveyQuest
 ;   cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits,fauna,flora"
 ;   cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "resources,traits"
 ;   cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "all"
+;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"   ; whole galaxy (barren + life)
 ;
 ; CompletePlanet — current planet only (player must be on-surface). CompleteBarrenPlanets — ref-free
-; galaxy sweep for lifeless worlds. CompleteLifePlanets — life-bearing worlds (see each function's notes).
+; galaxy sweep for lifeless worlds. CompleteLifePlanets — life-bearing worlds. CompleteAllPlanets —
+; both sweeps, the entire galaxy in one command. (See each function's notes.)
 ;
 ; Auto-complete on scan: Settings > Gameplay toggle (CompleteSurveyIfEnabled queues native dispatch;
 ; C++ poller runs _AutoCompleteCurrentPlanet after the scanner closes).
@@ -682,6 +684,19 @@ Function CompleteLifePlanets(string asCategories) global
     float secs = Utility.GetCurrentRealTime() - t0
     CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets[" + asCategories + "]: " + worlds + " life worlds, " + greened + " greened in " + secs + "s")
     Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + ").  " + greened + " greened.  Done in " + (secs as int) + "s.")
+EndFunction
+
+; Complete EVERY planet/moon in the galaxy — barren AND life-bearing — for the given categories, in
+; ONE command. Runs both galaxy sweeps: CompleteBarrenPlanets (lifeless worlds) then CompleteLifePlanets
+; (life worlds). Together they cover the whole galaxy (the barren sweep deliberately skips living
+; worlds, so both are needed). DATA + ref-free species green are written galaxy-wide; the in-world trait
+; OBJECTS still finish on-foot / auto-resolve on arrival (see CompleteLifePlanets). Each sweep shows its
+; own completion popup.
+;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"
+;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "resources,traits"
+Function CompleteAllPlanets(string asCategories) global
+    CompleteBarrenPlanets(asCategories)
+    CompleteLifePlanets(asCategories)
 EndFunction
 
 ; True if the category list asks for creatures (any of fauna/flora/species/creatures, or "all").

@@ -10,6 +10,9 @@ Three commands, each taking a **category string** — a comma list of any of
 | `CompletePlanet` | the one you're standing on | `cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits,fauna,flora"` |
 | `CompleteBarrenPlanets` | every world with **no** life | `cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "resources,traits"` |
 | `CompleteLifePlanets` | every world **with** life | `cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "resources,traits,fauna,flora"` |
+| `CompleteAllPlanets` | the **whole galaxy** (barren + life) | `cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"` |
+
+`CompleteAllPlanets` is a thin wrapper that runs `CompleteBarrenPlanets` then `CompleteLifePlanets` (so it shows both of their completion popups).
 
 Pick exactly what gets marked: `"traits"` alone, `"resources,traits"`, `"all"`, etc.
 
