@@ -69,6 +69,12 @@ namespace Engine
     //   discriminators.txt:3665). Read it as a uint16* global, exactly like TraitDiscriminator(938333).
     inline REL::Relocation<std::uint16_t*> ScannableDiscriminator {REL::ID(939118)};
 
+    // ID_938083: the ref-keyed LocationManager "encountered/seen" component in db+0x268 — the durable
+    // store a real trait scan writes that the planet-keyed 938333 does NOT (so 938333 alone leaves the
+    // in-world object stuck at 0/N on reload). Same disc-global pattern (CONCAT24(ID_938083, refId)<<0x10,
+    // discriminators.txt:1409, loc-reflist:25). Read as uint16* like the other two.
+    inline REL::Relocation<std::uint16_t*> LocRefDiscriminator {REL::ID(938083)};
+
     // ID_126805: the registry BEGIN/lower-bound iterator over the same BSTHashMap ID_126806 point-looks
     //   up. Signature mirrors ID_126806 (q4-126806-confirm.txt): (container=db+0x268, out[4]u64 scratch,
     //   &keyLow) -> returns the out buffer (ptr to 4 u64s {b8,b0,a8,a0}). The caller passes an 80-byte
@@ -730,6 +736,40 @@ namespace Engine
         return 1;
     }
 
+    // Mark a LOADED scan-target ref "encountered/seen" in the ref-keyed ID_938083 LocationManager
+    // component — the durable store a real scan writes that the mod's planet-keyed 938333 does NOT,
+    // and the missing piece that leaves the in-world trait object stuck at 0/N on reload even with a
+    // byte-perfect 938333 record (in-game confirmed). THE WRITE is decompile-verified from ID_57033
+    // @140914700:103 — after a DbLookup under (disc_938083<<48)|(refId<<16), set the single byte at
+    //   entry+0xb9 = 1   (NOT the +0x20 subobj; a plain u8, not a list-append).
+    // REF-keyed -> only works for a ref whose 938083 entry already exists (the engine creates it on
+    // cell-load/materialization). DbLookup is a pure point-lookup: a miss returns 0 (no create, no
+    // crash). Returns 1 written, 0 no-entry (not materialized), -1 bad input/db.
+    int MarkScanTargetLocationDurable(std::uint32_t refFormId)
+    {
+        if (!refFormId)
+            return -1;
+        const auto db = GetKnowledgeDB();
+        if (!db)
+            return -1;
+        const std::uint16_t disc = *LocRefDiscriminator.get();  // ID_938083
+        const std::uint64_t key  =
+            (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(refFormId) << 16);
+
+        std::uintptr_t out[4]    = {0, 0, 0, kDbLookupNotFound};
+        auto           container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);
+        DbLookup(container, out, &key);
+        if (out[3] == kDbLookupNotFound && out[2] == 0)
+            return 0;  // no 938083 entry for this ref (not materialized) — nothing to write, no create
+
+        const auto base     = reinterpret_cast<std::uint8_t*>(out[2]);
+        const auto entryOff = *reinterpret_cast<std::uint16_t*>(base + kBucketOffsetTableOff + out[3] * 4);
+        // entry = base + entryOff; the "seen" byte is at entry+0xb9 (ID_57033:103). Engine writes 1.
+        *(base + entryOff + 0xb9) = 1;
+        spdlog::info("[locref-seen] ref=0x{:08X} -> 938083 entry+0xb9 = 1 (durable seen)", refFormId);
+        return 1;
+    }
+
     // ACTI scan-target canonical -> its trait keyword (the +0x08 member a real scan appends). Inverse of
     // kTraitScanTargets (kw->ACTI). The canon arg comes from ID_83009(ref) and == the scan-target base ACTI.
     std::uint32_t TraitKeywordForCanonical(std::uint32_t canonicalActi)
@@ -774,9 +814,16 @@ namespace Engine
             return false;
         const auto base = reinterpret_cast<std::uintptr_t>(subobj);
 
-        // Ensure the per-canonical slot EXISTS (idempotent): ID_124899 creates it if absent. We then write
-        // the bytes directly so the value is exact regardless of any prior accumulation.
-        SetPercentByte(subobj, canonicalActi, static_cast<std::uint8_t>(100), 0);  // ID_124899: create+pct
+        // CLEAN per-trait write (save-diff 2026-06-24: real 2/2 record = 58 B, the mod's old write = 152 B
+        // MALFORMED — the engine reloads the malformed record as "0/2 / UNKNOWN FEATURE"). The malformation
+        // came from HAND-MANAGING the slot's inline +0x08 array (the manual zero) and HAND-PUSHING the keyword
+        // into the pooled subobj+0x08 BSTArray. Both are removed. We now only:
+        //   1. let the ENGINE create the slot + set pct (ID_124899 SetPercentByte) — engine-sized, +0x08 empty,
+        //   2. set the scan-flag byte to EXACTLY 2 directly (IncrementScanFlag would ACCUMULATE past 2).
+        // The trait KEYWORD goes into the pooled array via MarkTraits (ID_52155, the engine's own trait-known
+        // writer) which the caller runs FIRST — so the pooled array is engine-grown, never hand-built. This
+        // reproduces the clean Save30 slot byte-for-byte: <id> <flag=2> <pct=100> <empty +0x08>.
+        SetPercentByte(subobj, canonicalActi, static_cast<std::uint8_t>(100), 0);  // ID_124899: create slot + pct
 
         const auto hashmap = base + 0x18;
         const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
@@ -785,36 +832,10 @@ namespace Engine
         if (idx == hashEnd || !slots)
             return false;
         const auto slotAddr = slots + idx * 0x30;
+        *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21) = 2;  // scan-flag = 2 (complete); pct=100 set above
 
-        // 1. flag = EXACTLY 2, pct = 100 — direct absolute writes (Save14 parity; not accumulate).
-        *reinterpret_cast<std::uint8_t*>(slotAddr + 0x20) = 100;  // slot+0x20 percent
-        *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21) = 2;    // slot+0x21 scan-flag
-
-        // 2. Clear the canonical slot's inline 24-byte +0x08 array (a real trait scan leaves it EMPTY here).
-        //    Just ZERO begin/end/cap — LEAK any old engine buffer (safe: no double-free / no wrong-free
-        //    corruption; same pattern as TestBuildArray). The mod's PRIOR (wrong) write pushed the keyword here.
-        *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08) = 0;  // begin
-        *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10) = 0;  // end
-        *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x18) = 0;  // cap
-
-        // 3. Append the trait keyword to the POOLED BSTArray<u32> at subobj+0x08 (the array a real scan
-        //    populates and the panel reveal reads). Use CommonLibSF's RE::BSTArray so the capacityAndFlags +
-        //    engine-allocator grow are handled CORRECTLY — the prior MANUAL alloc/encode wrote cap without the
-        //    allocator flag, corrupting the array so the NEXT engine access faulted (log: first slot OK, second
-        //    ref crashed). Idempotent: skip if the keyword is already a member.
-        auto& pool = *reinterpret_cast<RE::BSTArray<std::uint32_t>*>(base + 0x08);
-        for (const auto existing : pool)
-            if (existing == traitKeyword)
-            {
-                spdlog::info("[trait-slot] planet=0x{:08X} canon=0x{:08X} pooled already has kwd 0x{:08X}",
-                             planetId, canonicalActi, traitKeyword);
-                return true;
-            }
-        pool.push_back(traitKeyword);  // raw keyword; the serializer applies the ^0x400000 DB tag on save
-
-        spdlog::info("[trait-slot] planet=0x{:08X} canon=0x{:08X} pooled(subobj+0x08) += kwd 0x{:08X}  "
-                     "(slot flag=2 pct=100, slot+0x08 cleared)",
-                     planetId, canonicalActi, traitKeyword);
+        spdlog::info("[trait-slot] planet=0x{:08X} canon=0x{:08X} kwd=0x{:08X} -> slot flag=2 pct=100 "
+                     "(clean; +0x08 left empty, keyword owned by MarkTraits)", planetId, canonicalActi, traitKeyword);
         return true;
     }
 
@@ -961,7 +982,7 @@ namespace Engine
     // Papyrus MarkTraits); a keyword's scan-flag byte is meaningless to the survey %.
     //
     // Returns the number of species/resource forms marked.
-    int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta)
+    int MarkEverythingForPlanet(std::uint32_t planetId, std::uint8_t delta, bool includeSpecies = true)
     {
         if (!planetId)
             return 0;
@@ -972,8 +993,18 @@ namespace Engine
         {
             ++seen;
             auto* form = RE::TESForm::LookupByID(fid);
-            if (form && form->GetFormType() == RE::FormType::kKYWD)
-                return;  // trait keyword — handled by the trait path, not as a species
+            if (form)
+            {
+                const auto ft = form->GetFormType();
+                if (ft == RE::FormType::kKYWD)
+                    return;  // trait keyword — handled by the trait path, not as a species
+                // "resources" category purity: when species are excluded, skip flora (FLOR) and
+                // fauna (NPC_) so a resources-only completion never marks species scan flags. The
+                // green path (MarkEsmSpeciesForPlanet / +0x08 build) is the ONLY thing that should
+                // touch species — otherwise "resources" leaves flora/fauna scanned-but-blue.
+                if (!includeSpecies && (ft == RE::FormType::kFLOR || ft == RE::FormType::kNPC_))
+                    return;
+            }
             if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
                 ++marked;
         });
@@ -1011,10 +1042,10 @@ namespace Engine
     // core of "complete a planet" — no refs, no spawn. It does NOT fire the
     // completion event; callers choose when (the slate timing matters at scale).
     // Returns the number of species/resource forms marked.
-    int WritePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta)
+    int WritePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta, bool includeSpecies = true)
     {
         SetPlanetAttributeBits(planetId);
-        return MarkEverythingForPlanet(planetId, delta);
+        return MarkEverythingForPlanet(planetId, delta, includeSpecies);
     }
 
     // Fully complete one planet's survey ref-free: write the state, then fire the
@@ -1022,9 +1053,9 @@ namespace Engine
     // single shared "complete one planet" entry point used by BOTH the on-planet
     // path (MarkResourcesForPlanet) and the galaxy sweep's per-planet finalize
     // (FinalizeSweptPlanet). Returns the marked-form count. Idempotent.
-    int CompletePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta)
+    int CompletePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta, bool includeSpecies = true)
     {
-        const int marked = WritePlanetSurveyState(planetId, delta);
+        const int marked = WritePlanetSurveyState(planetId, delta, includeSpecies);
         NotifySurveyProgress(planetId);
         return marked;
     }
@@ -1520,24 +1551,24 @@ namespace Papyrus
                     }
                 }
 
-                const auto canon = Engine::GetCanonicalSpeciesId(ref);  // ID_83009
-                spdlog::info("[trait-walk] formID=0x{:08X} state={} rawByte={} canon=0x{:08X} dist={}",
-                             formID, static_cast<int>(biomeState), static_cast<int>(stateByte), canon,
+                spdlog::info("[trait-walk] formID=0x{:08X} state={} rawByte={} dist={}",
+                             formID, static_cast<int>(biomeState), static_cast<int>(stateByte),
                              haveRadius ? static_cast<int>(std::sqrt(distSq)) : -1);
 
-                // READ-ONLY DIAGNOSTIC: probe the known-set member state only — NO writes. The destructive
-                // completion (CompleteScanTargetCredit: the ScanRefNative byte + durable 938333) is disabled
-                // here because it left half-scanned state that jammed manual re-scanning until the planet
-                // re-materialized. Re-enable only once the trait render-gate (the real known-set store) is found.
-                Engine::ProbeScanTargetKnownSet(ref);
+                // THE FIX: write the ref-keyed ID_938083 "seen" byte (entry+0xb9 = 1) — the durable
+                // LocationManager store a real scan writes that the planet-keyed 938333 does NOT, the
+                // piece that leaves the in-world object stuck at 0/N on reload (decompile ID_57033:103,
+                // in-game: 938333-complete colony still 0/2). NO 939118 jam byte, so the hand-scanner is
+                // never bricked. The registry gives the rendered ref's correct FormID (the 938083 key),
+                // so no wrong-instance miss. A ref with no 938083 entry (not materialized) no-ops.
                 ++probed;
-                if (biomeState == 1)
-                    ++scanned;
+                if (Engine::MarkScanTargetLocationDurable(formID) == 1)
+                    ++scanned;  // had a 938083 entry and we set its seen byte
             });
 
-        spdlog::info("[trait-walk] registry walk visited {} entries, probed {} trait scan-targets ({} were unscanned)",
+        spdlog::info("[trait-walk] registry walk visited {} entries, {} trait scan-targets, {} marked seen (938083)",
                      visited, probed, scanned);
-        return probed;
+        return scanned;
     }
 
     void DebugLog(std::monostate, RE::BSFixedString msg)
@@ -1938,6 +1969,18 @@ namespace Papyrus
         Engine::g_pendingCompleteSurvey.store(true, std::memory_order_release);
     }
 
+    // Cancel any pending auto-complete-on-scan dispatch. A MANUAL completion command calls this at
+    // its start so an explicit category command (e.g. CompletePlanet "traits") is NOT overridden by
+    // a queued _AutoCompleteCurrentPlanet -> CompletePlanet("all") left over from an earlier real
+    // scan (QA: 'CompletePlanet "traits" was ignored and "All" was completed instead' — the log
+    // showed CompletePlanet[TRAITS] then the poller firing CompletePlanet[All] 271ms later). Only
+    // the atomic flag is cleared (poller-thread-owned countdown resets itself when the flag is false).
+    void CancelPendingAutoComplete(std::monostate)
+    {
+        Engine::g_pendingCompleteSurvey.store(false, std::memory_order_release);
+        spdlog::info("CancelPendingAutoComplete: cleared pending auto-complete (manual command wins)");
+    }
+
     // Set a flag for the per-frame poller to run an outline-refresh sweep on
     // nearby refs once menus are closed. Running the sweep directly from Papyrus
     // races with the scanner UI and crashes on procgen cells.
@@ -1948,21 +1991,61 @@ namespace Papyrus
         return 0;
     }
 
-    // Covers the category Papyrus can't enumerate directly (no GetBiomeResources API):
-    // runs the engine's per-planet aggregator (ID_1016657) which returns every tracked
-    // form ID for the planet, then marks each by bumping its scan-flag byte. Flora, fauna,
-    // and traits are also swept as a by-product, but those are already marked explicitly
-    // via their per-category paths in Papyrus — this call's unique contribution is resources.
+    // Ensure a planet's knowledge entry exists (ref-free) so subsequent ref-free writes — resource
+    // flags, attribute bits, species green — actually LAND. Drives the engine's own discover path
+    // ID_102650 (creates the entry if missing via ID_52204, sets the surveyed bit, fires the Survey
+    // Data slate, recurses moons). REQUIRED before completing a NEVER-VISITED planet: ResolvePlanetSubobj
+    // is a pure lookup, so MarkSpeciesScannedForPlanet / SetPlanetAttributeBits silently no-op until the
+    // entry is created here. Same call the galaxy sweep uses (proven safe at scale). Returns 1 on
+    // success, 0 if the planet id didn't resolve.
+    std::int32_t DiscoverPlanetEntry(std::monostate, RE::TESForm* planetForm)
+    {
+        if (!planetForm)
+            return 0;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        if (!planetId)
+            return 0;
+        Engine::ScanCompletePlanet(0, planetId, 1);
+        spdlog::info("DiscoverPlanetEntry: planet=0x{:08X} planetId=0x{:08X} -> ID_102650 discover",
+                     planetForm->GetFormID(), planetId);
+        return 1;
+    }
+
+    // DURABLE trait scan-target completion — the write a REAL scan makes to the knowledge DB
+    // (938333), WITHOUT the transient 939118+0x28 byte (the jammer the old path also wrote). For
+    // ONE scan-target ACTI on a planet: per-canonical slot +0x21=2 / +0x20=100 + the trait keyword
+    // appended to the pooled subobj+0x08 BSTArray. This record is byte-equal to a real 2/2 scan
+    // (re/save/compare_save21.py: mod == real Save14). Ref-free, all-planets — the planet's knowledge
+    // entry must already exist (current planet, or DiscoverPlanetEntry first). The point (per the
+    // user, in-game): a CORRECT durable write removes the "0/N scan required" state on reload — no
+    // jam byte, so the hand-scanner is never bricked. Returns 1 on write, 0 if the slot didn't resolve.
+    std::int32_t CompleteTraitObjectSlot(std::monostate, RE::TESForm* planetForm, std::int32_t actiFormId, RE::BGSKeyword* traitKw)
+    {
+        if (!planetForm || actiFormId == 0 || !traitKw)
+            return 0;
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        if (!planetId)
+            return 0;
+        const bool ok = Engine::CompleteTraitSlot(planetId, static_cast<std::uint32_t>(actiFormId),
+                                                  static_cast<std::uint32_t>(traitKw->GetFormID()));
+        return ok ? 1 : 0;
+    }
+
+    // RESOURCES category — pure. Runs the engine's per-planet aggregator (ID_1016657) and marks
+    // the attribute bits + every NON-species tracked form (resources). Flora (FLOR) and fauna
+    // (NPC_) are deliberately EXCLUDED (includeSpecies=false) so a "resources" completion never
+    // touches species scan flags — species are greened only by the dedicated green path. Trait
+    // keywords are skipped too (handled by MarkTraits). Fires the survey-complete event.
     std::int32_t MarkResourcesForPlanet(std::monostate, RE::TESForm* planetForm, std::int32_t delta)
     {
         if (!planetForm)
             return 0;
         const auto planetId = Engine::ReadPlanetId(planetForm);
         const auto d        = static_cast<std::uint8_t>(delta <= 0 ? Engine::kDefaultScanDelta : (delta > Engine::kMaxScanDelta ? Engine::kMaxScanDelta : delta));
-        // Shared single-planet completion: attribute bits + species/resource scan
-        // flags + the survey-complete event (drops the "<Planet> Survey Data" slate).
-        // Same core the galaxy sweep's per-planet finalize uses.
-        const auto n = Engine::CompletePlanetSurveyState(planetId, d);
+        // Resources-only: attribute bits + resource scan flags + the survey-complete slate.
+        // includeSpecies=false keeps flora/fauna out of the resources category (QA: "resources
+        // touched species when it should not").
+        const auto n = Engine::CompletePlanetSurveyState(planetId, d, /*includeSpecies=*/false);
         spdlog::info("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
                      planetForm->GetFormID(), planetId, d, n);
         return n;
@@ -2237,6 +2320,14 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "DiscoverPlanetEntry"sv, CPS_GUARDED(DiscoverPlanetEntry),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CompleteTraitObjectSlot"sv, CPS_GUARDED(CompleteTraitObjectSlot),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "EnumeratePlanetSpecies"sv, CPS_GUARDED(EnumeratePlanetSpecies),
             std::optional<bool> {true}, false);
 
@@ -2277,6 +2368,9 @@ namespace Papyrus
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "QueueCompleteSurvey"sv, CPS_GUARDED(QueueCompleteSurvey), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CancelPendingAutoComplete"sv, CPS_GUARDED(CancelPendingAutoComplete), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "CompleteAllPlanetsSurveyData"sv, CPS_GUARDED(CompleteAllPlanetsSurveyData),

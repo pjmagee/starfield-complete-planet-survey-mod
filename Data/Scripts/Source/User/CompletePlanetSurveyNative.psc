@@ -24,14 +24,15 @@ int Function MarkScanTargetScannedForPlanet(Form akPlanet, int aiActiFormId) glo
 ; Visual still needs a monocle repaint (look away/back) after the batch.
 int Function CompleteTraitScanTargetRef(ObjectReference akRef) global native
 
-; READ-ONLY diagnostic: probe ALL loaded trait scan-targets in range by walking the engine's GLOBAL
-; 939118 ScannableComponent registry directly (the EXACT store the outline reader ID_83007 and the
-; count walker ID_90522 both read) — so there is ZERO "wrong instance" risk (FindAllReferencesWithKeyword
-; can miss the rendered overlay instances; the registry cannot). For each registry REFR it guards
-; ID_83007(ref)!=0, filters to trait scan-target ACTIs (keyword 0x001CBEA3), distance-gates against
-; akPlayer when non-None, then logs known-set member state only (no ID_83008 / identity reveal writes).
-; Pass Game.GetPlayer() as ObjectReference and a radius in world units (0 / None player = probe all loaded).
-; Returns the number of trait scan-targets probed. Check CompletePlanetSurvey.log for [trait-walk] lines.
+; Complete ALL loaded trait scan-targets in range by walking the engine's GLOBAL 939118 registry (the
+; EXACT store the outline/count read — ZERO "wrong instance" risk; FindAllReferencesWithKeyword can miss
+; the rendered overlay instances, the registry cannot). For each registry REFR it guards ID_83007(ref)!=0,
+; filters to trait scan-target ACTIs (keyword 0x001CBEA3), distance-gates against akPlayer when non-None,
+; then writes the ref-keyed durable ID_938083 "seen" byte (entry+0xb9 = 1, decompile ID_57033) — the
+; LocationManager store a real scan writes that the planet-keyed 938333 does NOT, so the in-world "0/N"
+; clears on RELOAD. NO 939118 jam byte -> the hand-scanner is never bricked. ON-PLANET only (the ref must
+; be materialized; a ref with no 938083 entry no-ops). Pass Game.GetPlayer() + radius (0 = all loaded).
+; Returns the count whose 938083 seen-byte was set. Check the log for [trait-walk]/[locref-seen] lines.
 int Function CompleteTraitScanTargetsInRange(ObjectReference akPlayer, float afRadiusUnits) global native
 
 ; PROBE: write +0x21/+0x20 directly (esm species key, no spawn/scan) for the planet.
@@ -66,10 +67,22 @@ int Function DumpSpeciesSlots(Form akPlanet) global native
 ; green after a reload, slot+0x08 is the gate and the build is sound. Returns slots built.
 int Function TestBuildArray(Form akPlanet) global native
 
-; Mark every form the engine tracks for the planet (flora/fauna/resources/traits)
-; as scanned via the ID_1016657 aggregator. Also fires the survey-complete event
-; that drops the Survey Data slate when the planet hits 100%.
+; RESOURCES category (pure): mark the planet's attribute bits + resource scan flags via the
+; ID_1016657 aggregator, EXCLUDING flora/fauna (species are greened only by the green path) and
+; trait keywords. Fires the survey-complete event that drops the Survey Data slate at 100%.
 int  Function MarkResourcesForPlanet(Form akPlanet, int aiDelta) global native
+
+; Ensure a planet's knowledge entry exists (ref-free) via the engine discover ID_102650, so the
+; subsequent ref-free writes (resources / species green) actually land on a NEVER-VISITED planet.
+; ResolvePlanetSubobj is a pure lookup, so resources + green silently no-op until this runs. Also
+; sets the surveyed bit, fires the Survey Data slate, and recurses moons. Returns 1 on success.
+int  Function DiscoverPlanetEntry(Form akPlanet) global native
+
+; DURABLE trait scan-target completion for ONE scan-target ACTI — the 938333 write a real scan makes
+; (slot +0x21=2/+0x20=100 + trait keyword in the pooled subobj+0x08), byte-equal to a real 2/2 scan,
+; WITHOUT the transient 939118 byte (the jammer). Ref-free, all-planets (entry must exist). A correct
+; durable write removes the in-world "0/N scan required" state on reload. Returns 1 on write.
+int  Function CompleteTraitObjectSlot(Form akPlanet, int aiActiFormId, Keyword akTraitKw) global native
 
 ; Enumerate every flora + fauna species form for the planet (across all biomes).
 ; Call once, then iterate 0..count-1 via GetPlanetSpeciesFormIdAt + Game.GetForm.
@@ -92,6 +105,11 @@ int  Function ScanNearbyRefs() global native
 ; scanner UI. C++ polls the flag, waits until the scanner is closed + grace
 ; period, then dispatches Papyrus CompleteSurvey from a clean state.
 Function QueueCompleteSurvey() global native
+
+; Cancel a pending auto-complete-on-scan dispatch. A manual completion command calls this first so
+; an explicit category command (e.g. CompletePlanet "traits") is not overridden by a queued
+; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
+Function CancelPendingAutoComplete() global native
 
 ; Sweep every planet/moon in the galaxy and complete its survey ref-free (no
 ; teleport, no spawn): discover each, then write its attribute bits + species/

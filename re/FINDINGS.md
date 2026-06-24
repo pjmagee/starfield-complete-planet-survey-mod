@@ -5,6 +5,7 @@ Survey mod. This is the durable, in-repo record so every agent/contributor sees 
 ground truth instead of re-deriving it from the raw `re/` dumps.
 
 **Scope rule.** A finding only appears here if it carries one of these confidence tags:
+
 - `save-verified` — proven by a byte-diff of real Starfield `.sfs` saves (scripts in `re/save/`).
 - `decompile-verified` — the engine function was disassembled/decompiled and the logic read directly.
 - `tool-validated 17/17` — reproduced by an offline tool against all 17 ground-truth species (no hardcoded per-species tables).
@@ -39,7 +40,7 @@ they are never re-pursued as fact.
 | 1.11 | **Practical green rule = write BOTH** `slot+0x21` (the color boolean) AND a COMPLETE `slot+0x08` marker set (the full live-scan set incl. func-699 abilities). On-screen repaint + the detail panel need the `slot+0x08` build; for ability-creatures the outline state machine additionally gates on `slot+0x08` completeness. | `in-game` | model doc ★★ ("writing func-699 markers to slot+0x08 GREENS ability-creatures"); `re/ghidra/output/slot-0x08-catalogue-writer-2026-06-22.md` (the `ID_52158` writer path) |
 | 1.12 | **Planet key is a single FormID identity:** `*(planetForm+0x54) == ID_52188(player) == planet PNDT FormID` — no converter. The stamp site `ID_51735` BGSPlanet::Manager::SetCurrentPlanet writes `Manager+0x80 = planet FormID` VERBATIM (`MOV [RCX+0x80],EDX`), so the render key ≡ planet FormID by construction. | `decompile-verified` + `in-game` | `re/ghidra/output/planet-id-stamp-site-2026-06-23.md`; in-game `TestRenderKeyGreen` measured `+0x54 == renderId == 0x0003F5A1` |
 | 1.13 | **canonical species id == authored ESM id** for all 17 probed species (the `ID_83006`/`ID_83009` canonical-remap theory is dead — authored id is the correct DB key). | `in-game` | `ProbeScanKeys` (8 Jemison species, `canonical == authored` ×8; 2 fauna had dynamic `0xFF` base but canonical still == authored) |
-| 1.14 | The durable green record = BSGalaxy::PlayerKnowledge at `db+0x268`, entry key `(ID_938333<<48)|(planetId<<16)`, subobj = entry+0x20, species slot via FNV-1a (`ID_124901`) of the authored species id; percent `slot+0x20`, scan-flag `slot+0x21`. Ref-free writes persist (the `ID_124898` dirty bit is saved; no event sink commits state). | `decompile-verified` + `in-game` | `re/ghidra/output/species-scan-complete-model-2026-06-23.md`; on-planet CompleteSurvey greens + persists across quit-to-desktop (`in-game`) |
+| 1.14 | The durable green record = BSGalaxy::PlayerKnowledge at `db+0x268`, entry key `(ID_938333<<48)|(planetId<<16)`, subobj = entry+0x20, species slot via FNV-1a (`ID_124901`) of the authored species id; percent`slot+0x20`, scan-flag`slot+0x21`. Ref-free writes persist (the`ID_124898` dirty bit is saved; no event sink commits state). | `decompile-verified` + `in-game` | `re/ghidra/output/species-scan-complete-model-2026-06-23.md`; on-planet CompleteSurvey greens + persists across quit-to-desktop (`in-game`) |
 
 **Shipped status (`in-game`, `shipped`):** on-planet `CompleteSurvey` greens flora+fauna and
 persists across a full restart. `EsmReader.cpp` now ports the unified CTDA evaluator and derives
@@ -51,7 +52,7 @@ every flora/fauna marker offline, matching the Python reference 17/17.
 
 | # | Finding (one line) | Confidence | Evidence |
 |---|---|---|---|
-| 2.1 | **Trait-known = the `938333` PlayerKnowledge record**, written by `ID_52155` (MarkTraitKnown) → gate `ID_52205` → `ID_52156` into the planet's `938333` trait member-array (`key=(938333<<48)|(planetId<<16)`, DB-insert `ID_52204`) + fires `PlanetTraitKnownEvent` + `ID_97853` survey recompute. | `decompile-verified` | `re/ghidra/output/astro-trait-known-synthesis-2026-06-24.md` |
+| 2.1 | **Trait-known = the `938333` PlayerKnowledge record**, written by `ID_52155` (MarkTraitKnown) → gate `ID_52205` → `ID_52156` into the planet's `938333` trait member-array (`key=(938333<<48)|(planetId<<16)`, DB-insert`ID_52204`) + fires`PlanetTraitKnownEvent` + `ID_97853` survey recompute. | `decompile-verified` | `re/ghidra/output/astro-trait-known-synthesis-2026-06-24.md` |
 | 2.2 | The `MarkTraitKnown`/`MarkTraitKnownForPlanet` path is **ref-free, off-planet, all-planets** — it is the engine's own orbital (Astrophysics-skill) trait path. Driven galaxy-wide by the Papyrus sweep (`CompletePlanetSurveyQuest.psc` `MarkTraits(p, p.GetKeywordTypeList(44))`). Only requirement: the planet's components are materialized in `db+0x268` (the discover→finalize→MarkTraits order guarantees this). | `decompile-verified` + `shipped` | `astro-trait-known-synthesis-2026-06-24.md`; `CompletePlanetSurveyQuest.psc` |
 | 2.3 | All trait readers hit `938333`: `ID_52154` IsTraitKnown (panel "TRAITS N/N"), `ID_52159` species green outline, `ID_97851` survey % (via the `ID_1016657` aggregator arrays). So the durable `938333` write is **byte-identical to a real scan** for the trait-known data. | `save-verified` + `decompile-verified` | `re/save/decode_pk_record.py`, `re/save/compare_save19.py`, `re/save/compare_save21.py` (mod Save19/21 == real Save14: slot flag=2, pct=100, pooled keyword `0x00625588` present) |
 | 2.4 | In the `938333` record, IDs are stored as **DB-local indices = `FormID ^ 0x00400000`** (bit22 tag), which is why raw-FormID searches found 0 hits. The record lives in **GlobalData REGION 1** (not the ChangeForms section). | `save-verified` | `re/save/decode_pk_record.py` (`0x0061B250`→ACTI `0x0021B250`; `0x00625588`→KYWD `0x00225588`) |
@@ -75,6 +76,21 @@ This is the **on-planet, materialization-bound** surface object — distinct fro
 DATA in §2 (which is already all-planets-complete). The DATA is solved; only this cosmetic
 on-surface visual is engine/scan-bound.
 
+> ### ★ SOLVED 2026-06-24 (`in-game`) — drive the game's OWN Papyrus survey quest, not the engine.
+> The whole byte-level hunt below (939118 / 938333-slot / 938083 / the read-hook) is SUPERSEDED. The
+> completion is plain Papyrus in the SHIPPED game scripts (`…\Starfield\Data\Scripts\Source\PlanetTrait‑
+> ScanTargetScript.psc` + `SQ_ParentScript.psc`): a scan fires `OnScanned()` → `SQ_Parent.DiscoverMatching‑
+> PlanetTraits(ref)`, which sets the **Location actor value `PlanetTraitLocationScanCount`**; at the alive
+> scan-target count (`loc.GetRefTypeAliveCount(PlanetTraitScanTargetLocRef)` = the "N") it `SetExplored()`s
+> + discovers the trait. **"0/N SCANNED" is literally a Location actor value.** THE FIX (shipped, Papyrus-
+> only, no DLL change): for each loaded scan-target ref — `r.SetScanned(true)` (reveals the detail text +
+> blocks re-scan) + `loc.SetValue(PlanetTraitLocationScanCount, needed)` (absolute, caps any over-count) +
+> `SQ_Parent.DiscoverMatchingPlanetTraits(r, false)`. Object now reads named + 100% + detail, persists on
+> reload. **ON-PLANET ONLY** (`CompletePlanet "traits"`): the objects are overlay-cell refs that exist
+> only when the surface is loaded — there is NO all-planets store for them (unlike species). Key forms:
+> `SQ_Parent` QUST `0x0007092C`, `PlanetTraitScanTargetLocRef` `0x0027A567`, scan kw `0x001CBEA3`. The
+> user's insight cracked it: the objects are SEPARATE entities LINKED to a trait, not the trait itself.
+
 | # | Finding (one line) | Confidence | Evidence |
 |---|---|---|---|
 | 4.1 | The surface scan-target's outline + N/M count read a **TRANSIENT per-ref `BGSScannable` component** (disc `ID_939118`, scanned byte `+0x28`), keyed by the placed REFR's own FormID. `939118` has an **empty save serializer** (`ID_38417`) and is **reset to 0 on every materialize** — it does not exist off-planet. **For traits, BLUE = scanned** (not green). | `decompile-verified` + `save-verified` | `re/ghidra/output/trait-scan-target-durable-store-2026-06-23.md`, `trait-true-completion-2026-06-23.md`; `re/save/analyze_scan_count.py` (REFRs/ACTI/kw absent from all 3 saves) |
@@ -95,7 +111,7 @@ on-surface visual is engine/scan-bound.
 
 | # | Finding (one line) | Confidence | Evidence |
 |---|---|---|---|
-| 5.1 | The `.sfs` container is byte-exact decoded: `BCPS` magic, LE header, zlib `ZIP `-tagged ~212 KB chunks; body = `SFS_SAVEGAME` + header + plugin list + FO4/SSE-shaped file-location table. | `save-verified` | `re/save/sfs_container.py` + `re/save/sfs_body.py` |
+| 5.1 | The `.sfs` container is byte-exact decoded: `BCPS` magic, LE header, zlib `ZIP`-tagged ~212 KB chunks; body = `SFS_SAVEGAME` + header + plugin list + FO4/SSE-shaped file-location table. | `save-verified` | `re/save/sfs_container.py` + `re/save/sfs_body.py` |
 | 5.2 | The durable PlayerKnowledge `938333` record lives in **GlobalData Region 1** (`body[offsetA:offsetB]`), NOT ChangeForms — which is why earlier ChangeForms/formID-array diffs missed it. It grows +22 B on scan#1 (CREATE) and edits in place on scan#2. | `save-verified` | `re/save/decode_pk_record.py`, `re/save/scan-count-store-2026-06-23.md` |
 | 5.3 | **Direct save-file authoring of trait scan-target green is BLOCKED**: never-visited overlay REFRs don't exist in the save (materialization-created), and the ChangeForms encoding is undocumented (community StarfieldSaveTool stops at header/plugins; Starfield ChangeForms/GlobalData diverges from FO4). | `save-verified` | `re/save/save-file-write-feasibility-2026-06-23.md` |
 | 5.4 | The real formID array (start = section offset at `table_base−8`: `u32 count` then FormIDs) is **byte-identical across the 0/2, 1/2, 2/2 saves** (count 311117, 0 added/removed) → there is **no per-REFR ChangeForm** for a scanned trait target and no durable id-keyed N/M counter. `changeFormCount` 15362→15363 = scan#1 adds the planet's `938333` singleton, scan#2 edits in place. | `save-verified` | `re/save/analyze_scan_count.py` (and `diff_real_fidarray.py`, `diff_changeforms.py`, `diff_all_regions.py`) |
@@ -252,6 +268,7 @@ not re-introduced as findings.
    by **statically parsing the PNDT/PPBD from the ESM** (§3.4), not from the live knowledge DB. (`in-game` + `decompile-verified`)
 
 ### Frida caveat
+
 `re/frida/probe_scan.py` / `probe_durable_key.py` offsets are **mislabeled/unreliable** — re-derive
 runtime addresses via REL::ID + the Address Library before any further Frida work, and never hook
 per-frame functions (`ID_90513/90517/90523/90530` — hooking them crashed the game). The known
@@ -260,6 +277,7 @@ correct fix recorded: `ID_83025` true offset is `0x1309730` (not `0x309730`).
 ---
 
 ## How to regenerate the key evidence
+
 - **Offline marker derivation / 17-species validation:** `python re/tools/esm_derive_markers.py --validate`
 - **Compile + assert the real EsmReader 17/17:** `test/build_validate.bat` (compiles `test/ValidateMarkers.cpp` against the real `EsmReader.cpp`)
 - **Save byte-diffs (need the user's Save12/13/14 etc.):** `python re/save/analyze_scan_count.py`, `re/save/compare_save21.py`, `re/save/verify_render_gate.py`
