@@ -5,7 +5,7 @@ namespace Plugin
     using namespace std::string_view_literals;
     static constexpr auto Name{ "CompletePlanetSurvey"sv };
     static constexpr auto Author{ "pjmagee"sv };
-    static constexpr auto Version{ REL::Version{ 1, 1, 0, 0 } };
+    static constexpr auto Version{ REL::Version{ 1, 2, 0, 0 } };
 }
 
 SFSE_PLUGIN_VERSION = []() noexcept {

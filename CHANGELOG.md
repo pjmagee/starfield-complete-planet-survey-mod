@@ -41,6 +41,60 @@ verified.
 
 *No unreleased changes.*
 
+## [1.2.0] — 2026-06-25
+
+Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.1.0 — a drop-in
+upgrade; no game or SFSE change required).
+
+Turns the single galaxy command into a **parameterized completion suite** you point at exactly what
+you want, and closes the two gaps v1.1.0 left open: the in-world **trait scan-target objects**
+("Unknown Feature / 0-of-N SCANNED") now complete properly, and flora/fauna render **fully** green —
+outline *and* species info — persistently, even on worlds you have never visited.
+
+### Added
+
+- **Parameterized completion commands.** Each takes a category string — any comma-separated mix of
+  `resources`, `traits`, `fauna`, `flora`, or the wildcard `all`:
+  - `CompletePlanet "<cats>"` — the world you are standing on.
+  - `CompleteBarrenPlanets "<cats>"` — every lifeless world (ref-free galaxy sweep).
+  - `CompleteLifePlanets "<cats>"` — every life-bearing world (ref-free; works from orbit, another
+    system, or on foot).
+  - `CompleteAllPlanets "<cats>"` — the whole galaxy (both sweeps) in one cohesive command: one
+    immersive intro, one combined result.
+
+  See [`docs/COMPLETION-COMMANDS.md`](docs/COMPLETION-COMMANDS.md) and the playstyle guide in
+  [`docs/MOD-DESCRIPTION.md`](docs/MOD-DESCRIPTION.md).
+- **In-world trait scan-target completion.** The surface "Unknown Feature" objects that read
+  "0 of N SCANNED" now complete by driving the game's OWN survey-quest path
+  (`SQ_Parent.DiscoverMatchingPlanetTraits`) — exactly what a real hand-scan does, in plain Papyrus,
+  with no engine pokes. The object reloads complete and named, with no "0/N" corruption, and the
+  hand scanner stays fully usable. Remote worlds' objects auto-resolve on arrival (the game's own
+  `CheckForScanTargetUpdate`, since the trait is now known) — the same path the Astrophysics skill uses.
+
+### Changed
+
+- **Proper persistent green.** v1.1.0 set the species scan flag (a half-green); v1.2.0 also builds the
+  ESM-derived `slot+0x08` attribute-marker catalogue (genetics / reproduction / temperament /
+  abilities), so flora & fauna render **fully** green — outline *and* species info — after a reload,
+  including freshly-spawned instances.
+- **Flora and fauna are split.** `"fauna"` greens only creatures and `"flora"` only plants (they were
+  previously greened together).
+- **`resources` is pure** — it marks resource + attribute survey data only and never touches species,
+  so `"resources"` on a life world leaves its creatures untouched (add `fauna,flora` / `all` to green them).
+
+### Internal (no player-facing change)
+
+- **Build-mode log gating.** A release / `releasedbg` build ships at log level INFO — the per-planet
+  and per-species green & resource lines log at DEBUG, so a whole-galaxy completion no longer writes
+  ~20k lines to `CompletePlanetSurvey.log`; only per-stage summaries, timings and faults remain. A
+  `xmake f -m debug` build keeps the full per-body trace. CI builds the release symbol build (`releasedbg`).
+- Removed the reverse-engineering scaffolding console commands (`TestDirectGreen`, `ProbeScanKeys`,
+  `TestRenderKeyGreen`, `ProbeRenderRead`, `DumpSpeciesSlots`, `TestBuildArray`, `TestScanTraitTargets`,
+  `TestMarkScanTargetKB`, `TestTraitOnPlanet`, `TestTraitRegistryWalk`) and dead helpers from the
+  shipped scripts; trimmed the native decl file to the production surface.
+- Crash-safety hardening at the native boundary and consolidation of the green / trait / survey-%
+  reverse-engineering trail under `re/`.
+
 ## [1.1.0] — 2026-06-20
 
 Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.0.8 —
@@ -231,7 +285,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.8...v1.1.0
 [1.0.8]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.6...v1.0.7
