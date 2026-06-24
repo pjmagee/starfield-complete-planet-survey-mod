@@ -1,0 +1,500 @@
+======== ID_90661 / ID_90661 @ 1415ac100 ========
+
+void ID_90661(longlong param_1)
+
+{
+  if (*(longlong *)(*(longlong *)(param_1 + 0x10) + 0x10) != 0) {
+    ID_90518(param_1 + 0x18);
+    return;
+  }
+  return;
+}
+
+
+
+======== ID_90676 / ID_90676 @ 1415ac680 ========
+
+void ID_90676(longlong param_1)
+
+{
+  longlong *plVar1;
+  longlong *plVar2;
+  longlong lVar3;
+  
+  if (*(longlong *)(*(longlong *)(param_1 + 0x10) + 0x10) != 0) {
+    ID_90518(param_1 + 0x18);
+  }
+  plVar2 = *(longlong **)(param_1 + 0x10);
+  *(undefined8 *)(param_1 + 0x10) = 0;
+  if (plVar2 != (longlong *)0x0) {
+    LOCK();
+    plVar1 = plVar2 + 1;
+    lVar3 = *plVar1;
+    *(int *)plVar1 = (int)*plVar1 + -1;
+    UNLOCK();
+    if ((int)lVar3 == 1) {
+      (**(code **)(*plVar2 + 8))();
+    }
+  }
+  return;
+}
+
+
+
+======== ID_90493 / ID_90493 @ 141598890 ========
+
+undefined8 * ID_90493(undefined8 *param_1)
+
+{
+  longlong *plVar1;
+  undefined8 *puVar2;
+  uint uVar3;
+  longlong lVar4;
+  char cVar5;
+  undefined8 uVar6;
+  undefined8 *puVar7;
+  undefined8 *puVar8;
+  longlong *plVar9;
+  int iVar10;
+  longlong *plVar11;
+  int iVar12;
+  longlong lVar13;
+  float fVar14;
+  undefined1 extraout_var [56];
+  undefined1 auVar15 [16];
+  undefined1 auVar16 [64];
+  undefined1 auVar17 [64];
+  undefined8 *local_res10;
+  longlong *local_res18;
+  undefined8 local_res20;
+  undefined8 uVar18;
+  longlong local_f8;
+  uint local_f0;
+  int local_ec;
+  longlong local_e8;
+  uint local_e0;
+  int local_dc;
+  longlong local_d8;
+  uint local_d0;
+  int local_cc;
+  longlong local_c8;
+  undefined1 local_c0;
+  longlong local_b8;
+  uint local_b0;
+  int local_ac;
+  longlong local_a8;
+  longlong local_98;
+  longlong local_88;
+  undefined8 *local_80;
+  undefined8 local_78;
+  
+  param_1[1] = 0;
+  ID_939103 = param_1;
+  if (param_1 == (undefined8 *)0xffffffffffffffe8) {
+    ID_939103 = (undefined8 *)0x0;
+  }
+  param_1[5] = BSTEventSink<struct_PickRefUpdateEvent>::vftable;
+  param_1[6] = BSTEventSink<struct_TESActorLocationChangeEvent>::vftable;
+  param_1[7] = BSTEventSink<struct_PlayerPlanetSurveyProgressEvent>::vftable;
+  param_1[8] = BSTEventSink<struct_ShowingQuestMarketTextEvent>::vftable;
+  param_1[9] = BSTEventSink<struct_BGSScannerGuideEffectStatusUpdateEvent>::vftable;
+  *param_1 = MonocleUIDataModel::vftable;
+  param_1[2] = MonocleUIDataModel::vftable;
+  param_1[4] = MonocleUIDataModel::vftable;
+  param_1[5] = MonocleUIDataModel::vftable;
+  param_1[6] = MonocleUIDataModel::vftable;
+  param_1[7] = MonocleUIDataModel::vftable;
+  param_1[8] = MonocleUIDataModel::vftable;
+  param_1[9] = MonocleUIDataModel::vftable;
+  puVar7 = param_1 + 10;
+  *(undefined1 *)(param_1 + 0xb) = 0;
+  param_1[0xc] = 0;
+  param_1[0xd] = 0;
+  *puVar7 = TUIDataToFlash<struct_MonocleUIDataModel::MenuData>::vftable;
+  local_res18 = param_1 + 0xe;
+  *(undefined1 *)(param_1 + 0xf) = 0;
+  *local_res18 = (longlong)TUIDataShuttleContainerMap<struct_MonocleUIDataModel::MenuData>::vftable;
+  param_1[0x10] = 0;
+  param_1[0x11] = 0;
+  param_1[0x12] = 0;
+  local_res10 = puVar7;
+  ID_90619(param_1 + 0x13);
+  *(undefined2 *)(param_1 + 0x83) = 0;
+  param_1[0x82] = puVar7;
+  lVar13 = param_1[0x10];
+  lVar4 = param_1[0x11];
+  if (lVar13 != lVar4) {
+    do {
+      *(undefined8 *)(*(longlong *)(lVar13 + 8) + 8) = param_1[0x82];
+      lVar13 = lVar13 + 0x10;
+    } while (lVar13 != lVar4);
+    lVar13 = param_1[0x10];
+  }
+  param_1[0x11] = lVar13;
+  (**(code **)(param_1[0x13] + 8))(param_1 + 0x13,param_1[0x82]);
+  puVar7 = param_1 + 0x84;
+  *(undefined1 *)(param_1 + 0x85) = 0;
+  param_1[0x86] = 0;
+  param_1[0x87] = 0;
+  *puVar7 = TUIDataToFlash<struct_MonocleUIDataModel::MenuFreqData>::vftable;
+  local_res10 = puVar7;
+  ID_90616(param_1 + 0x88);
+  *(undefined2 *)(param_1 + 0xaa) = 0;
+  param_1[0xa9] = puVar7;
+  lVar13 = param_1[0x8a];
+  lVar4 = param_1[0x8b];
+  if (lVar13 != lVar4) {
+    do {
+      *(undefined8 *)(*(longlong *)(lVar13 + 8) + 8) = param_1[0xa9];
+      lVar13 = lVar13 + 0x10;
+    } while (lVar13 != lVar4);
+    lVar13 = param_1[0x8a];
+  }
+  param_1[0x8b] = lVar13;
+  (**(code **)(param_1[0x8d] + 8))(param_1 + 0x8d,param_1[0xa9]);
+  puVar8 = param_1 + 0xab;
+  *(undefined1 *)(param_1 + 0xac) = 0;
+  param_1[0xad] = 0;
+  param_1[0xae] = 0;
+  *puVar8 = TUIDataToFlash<struct_MonocleUIDataModel::PickRefData>::vftable;
+  local_res18 = param_1 + 0xaf;
+  *(undefined1 *)(param_1 + 0xb0) = 0;
+  *local_res18 = (longlong)
+                 TUIDataShuttleContainerMap<struct_MonocleUIDataModel::PickRefData>::vftable;
+  param_1[0xb1] = 0;
+  param_1[0xb2] = 0;
+  param_1[0xb3] = 0;
+  local_res10 = puVar8;
+  ID_90618(param_1 + 0xb4);
+  *(undefined2 *)(param_1 + 0x160) = 0;
+  param_1[0x15f] = puVar8;
+  lVar13 = param_1[0xb1];
+  lVar4 = param_1[0xb2];
+  if (lVar13 != lVar4) {
+    do {
+      *(undefined8 *)(*(longlong *)(lVar13 + 8) + 8) = param_1[0x15f];
+      lVar13 = lVar13 + 0x10;
+    } while (lVar13 != lVar4);
+    lVar13 = param_1[0xb1];
+  }
+  param_1[0xb2] = lVar13;
+  (**(code **)(param_1[0xb4] + 8))(param_1 + 0xb4,param_1[0x15f]);
+  ID_90560();
+  puVar2 = param_1 + 0x1cb;
+  *(undefined1 *)(param_1 + 0x1cc) = 0;
+  param_1[0x1cd] = 0;
+  param_1[0x1ce] = 0;
+  *puVar2 = TUIDataToFlash<struct_MonocleUIDataModel::EventData>::vftable;
+  local_res18 = param_1 + 0x1cf;
+  *(undefined1 *)(param_1 + 0x1d0) = 0;
+  *local_res18 = (longlong)TUIDataShuttleContainerMap<struct_MonocleUIDataModel::EventData>::vftable
+  ;
+  param_1[0x1d1] = 0;
+  param_1[0x1d2] = 0;
+  param_1[0x1d3] = 0;
+  local_res20 = param_1 + 0x1d4;
+  *local_res20 = MonocleUIDataModel::EventData::vftable;
+  param_1[0x1d6] = 0;
+  *(undefined1 *)(param_1 + 0x1d7) = 1;
+  param_1[0x1d5] = TUIValue<unsigned_int>::vftable;
+  *(undefined4 *)(param_1 + 0x1d8) = 0;
+  local_res10 = puVar2;
+  ID_130553(param_1 + 0x1d9);
+  ID_130553(param_1 + 0x1dd);
+  *(undefined2 *)(param_1 + 0x1e2) = 0;
+  param_1[0x1e1] = puVar2;
+  lVar13 = param_1[0x1d1];
+  lVar4 = param_1[0x1d2];
+  if (lVar13 != lVar4) {
+    do {
+      *(undefined8 *)(*(longlong *)(lVar13 + 8) + 8) = param_1[0x1e1];
+      lVar13 = lVar13 + 0x10;
+    } while (lVar13 != lVar4);
+    lVar13 = param_1[0x1d1];
+  }
+  param_1[0x1d2] = lVar13;
+  (**(code **)(param_1[0x1d4] + 8))(param_1 + 0x1d4,param_1[0x1e1]);
+  *(undefined4 *)(param_1 + 0x1e3) = 0;
+  param_1[0x1e4] = 0;
+  *(undefined4 *)(param_1 + 0x1e5) = 0;
+  *(undefined2 *)((longlong)param_1 + 0xf2c) = 0;
+  *(undefined1 *)((longlong)param_1 + 0xf2e) = 0;
+  param_1[0x1e6] = 0;
+  param_1[0x1e7] = 0;
+  param_1[0x1e8] = 0;
+  param_1[0x1e9] = 0;
+  *(undefined4 *)(param_1 + 0x1ea) = 0xffffffff;
+  *(undefined2 *)((longlong)param_1 + 0xf54) = 0;
+  *(undefined1 *)((longlong)param_1 + 0xf56) = 0;
+  param_1[0x1eb] = 0;
+  *(undefined4 *)(param_1 + 0x1ec) = 0xffffffff;
+  *(undefined4 *)((longlong)param_1 + 0xf64) = 0;
+  *(undefined1 *)(param_1 + 0x1ed) = 0;
+  ID_130574(ID_937633,"MonocleMenuData",param_1 + 10);
+  ID_130574(ID_937633,"MonocleMenuFreqData",puVar7);
+  ID_130574(ID_937633,"MonoclePickRefData",puVar8);
+  ID_130574(ID_937633,"MonocleKnownResourcesData",param_1 + 0x161);
+  ID_130574(ID_937633,"MonocleEventsData",puVar2);
+  LOCK();
+  *(undefined1 *)((longlong)param_1 + 0xf11) = 1;
+  UNLOCK();
+  local_res18 = (longlong *)ID_123785(0x18);
+  plVar11 = (longlong *)0x0;
+  iVar12 = 0;
+  if (local_res18 != (longlong *)0x0) {
+    *local_res18 = (longlong)NiRefObject::vftable;
+    *(undefined4 *)(local_res18 + 1) = 0;
+    *(undefined4 *)((longlong)local_res18 + 0xc) = 0xffffffff;
+    LOCK();
+    ID_884299 = ID_884299 + 1;
+    UNLOCK();
+    local_res18[2] = 0;
+    *local_res18 = (longlong)MonocleUIDataModel::MonocleUIDataEventShuttle::vftable;
+    LOCK();
+    *(int *)(local_res18 + 1) = (int)local_res18[1] + 1;
+    UNLOCK();
+    plVar11 = local_res18;
+  }
+  plVar9 = (longlong *)param_1[1];
+  if (plVar9 != (longlong *)0x0) {
+    (**(code **)(*plVar9 + 0x18))(plVar9);
+    plVar9[2] = 0;
+  }
+  plVar9 = (longlong *)param_1[1];
+  if (plVar9 != plVar11) {
+    if (plVar11 != (longlong *)0x0) {
+      LOCK();
+      *(int *)(plVar11 + 1) = (int)plVar11[1] + 1;
+      UNLOCK();
+      plVar9 = (longlong *)param_1[1];
+    }
+    param_1[1] = plVar11;
+    if (plVar9 != (longlong *)0x0) {
+      LOCK();
+      plVar1 = plVar9 + 1;
+      lVar13 = *plVar1;
+      *(int *)plVar1 = (int)*plVar1 + -1;
+      UNLOCK();
+      if ((int)lVar13 == 1) {
+        (**(code **)(*plVar9 + 8))();
+      }
+    }
+  }
+  plVar9 = (longlong *)param_1[1];
+  if (plVar9 != (longlong *)0x0) {
+    plVar9[2] = (longlong)param_1;
+    (**(code **)(*plVar9 + 0x10))();
+  }
+  uVar18 = 0;
+  if (plVar11 != (longlong *)0x0) {
+    LOCK();
+    plVar9 = plVar11 + 1;
+    lVar13 = *plVar9;
+    *(int *)plVar9 = (int)*plVar9 + -1;
+    UNLOCK();
+    if ((int)lVar13 == 1) {
+      (**(code **)(*plVar11 + 8))(plVar11);
+    }
+  }
+  if (param_1 + 4 != (undefined8 *)0x0) {
+    uVar6 = ID_35639(ID_922868 + 0x78);
+    ID_123821(uVar6,param_1 + 4);
+  }
+  if (param_1 != (undefined8 *)0xffffffffffffffd8) {
+    ID_123821(ID_922868 + 0x5f8);
+  }
+  uVar6 = ID_86615();
+  if (param_1 != (undefined8 *)0xffffffffffffffc0) {
+    ID_123821(uVar6);
+  }
+  uVar6 = ID_90628();
+  if (param_1 != (undefined8 *)0xffffffffffffffb8) {
+    ID_123821(uVar6);
+  }
+  uVar6 = ID_64105();
+  if (param_1 != (undefined8 *)0xffffffffffffffd0) {
+    ID_123821(uVar6);
+  }
+  uVar6 = ID_64214();
+  if (param_1 != (undefined8 *)0xffffffffffffffc8) {
+    ID_123821(uVar6);
+  }
+  ID_821574 = 1;
+  if (ID_897435 == '\0') {
+    ID_821574 = *(undefined1 *)(ID_939740 + 0x278);
+    *(undefined1 *)(ID_939740 + 0x278) = 2;
+  }
+  ID_90530(param_1);
+  ID_90526(param_1);
+  ID_90525(param_1);
+  auVar16 = ZEXT464(ID_500263);
+  if (ID_890958 != 0) {
+    auVar16._0_8_ = ID_101589(ID_922868 + 0x70);
+    auVar16._8_56_ = extraout_var;
+    auVar16 = ZEXT1664(auVar16._0_16_);
+  }
+  auVar17 = ZEXT1264(ZEXT812(0));
+  lVar13 = ID_121060(ID_922868);
+  auVar15._0_8_ = -(ulonglong)(lVar13 == 0);
+  auVar15._8_8_ = 0xffffffffffffffff;
+  auVar15 = vblendvps_avx(ZEXT416(ID_909797),auVar17._0_16_,auVar15);
+  *(float *)((longlong)param_1 + 0xf44) = auVar16._0_4_ * ID_909791 + auVar15._0_4_ + ID_909788;
+  lVar4 = ID_937633;
+  lVar13 = param_1[1];
+  if (lVar13 == 0) {
+LAB_141598fe9:
+    if (lVar13 == 0) goto LAB_141599086;
+  }
+  else {
+    if (ID_937633 == 0) goto LAB_141599086;
+    if (*(longlong *)(lVar13 + 0x10) != 0) {
+      LOCK();
+      *(int *)(lVar13 + 8) = *(int *)(lVar13 + 8) + 1;
+      UNLOCK();
+      local_a8 = lVar13;
+      puVar7 = (undefined8 *)ID_123895(lVar4 + 0x80,&local_f8,0x20,8,uVar18,0);
+      puVar7[1] = ID_90675;
+      *puVar7 = BSService::Detail::TCmd<class_<lambda_49dd87ad78ee43fe8a48fb6892984d6b>,void>::
+                vftable;
+      puVar7[2] = lVar13;
+      LOCK();
+      uVar3 = *(uint *)(local_f8 + 0x10);
+      *(uint *)(local_f8 + 0x10) = local_f0;
+      UNLOCK();
+      if (uVar3 < *(uint *)(lVar4 + 0x1e4)) {
+        *(uint *)((ulonglong)uVar3 + 0x44 + local_f8) = local_f0;
+      }
+      else {
+        *(uint *)(local_f8 + 0x14) = local_f0;
+      }
+      LOCK();
+      *(int *)(local_f8 + 0xc) = *(int *)(local_f8 + 0xc) + local_ec;
+      UNLOCK();
+      local_a8 = 0;
+      lVar13 = param_1[1];
+      goto LAB_141598fe9;
+    }
+  }
+  lVar4 = ID_937633;
+  if ((ID_937633 != 0) && (*(longlong *)(lVar13 + 0x10) != 0)) {
+    LOCK();
+    *(int *)(lVar13 + 8) = *(int *)(lVar13 + 8) + 1;
+    UNLOCK();
+    local_98 = lVar13;
+    puVar7 = (undefined8 *)ID_123895(lVar4 + 0x80,&local_e8,0x20);
+    puVar7[1] = ID_90669;
+    *puVar7 = BSService::Detail::TCmd<class_<lambda_33d62600cbeb197191711a0e2d25692a>,void>::vftable
+    ;
+    puVar7[2] = lVar13;
+    LOCK();
+    uVar3 = *(uint *)(local_e8 + 0x10);
+    *(uint *)(local_e8 + 0x10) = local_e0;
+    UNLOCK();
+    if (uVar3 < *(uint *)(lVar4 + 0x1e4)) {
+      *(uint *)((ulonglong)uVar3 + 0x44 + local_e8) = local_e0;
+    }
+    else {
+      *(uint *)(local_e8 + 0x14) = local_e0;
+    }
+    LOCK();
+    *(int *)(local_e8 + 0xc) = *(int *)(local_e8 + 0xc) + local_dc;
+    UNLOCK();
+    local_98 = 0;
+  }
+LAB_141599086:
+  ID_90532(param_1);
+  lVar4 = ID_937633;
+  lVar13 = param_1[1];
+  if (((lVar13 != 0) && (ID_937633 != 0)) && (*(longlong *)(lVar13 + 0x10) != 0)) {
+    LOCK();
+    *(int *)(lVar13 + 8) = *(int *)(lVar13 + 8) + 1;
+    UNLOCK();
+    local_c0 = 0;
+    local_c8 = lVar13;
+    puVar7 = (undefined8 *)ID_123895(lVar4 + 0x80,&local_d8,0x20);
+    puVar7[1] = ID_90678;
+    *puVar7 = BSService::Detail::TCmd<class_<lambda_8b49f36a5460320b399365080a2c0cdc>,void>::vftable
+    ;
+    puVar7[2] = lVar13;
+    *(undefined1 *)(puVar7 + 3) = 0;
+    LOCK();
+    uVar3 = *(uint *)(local_d8 + 0x10);
+    *(uint *)(local_d8 + 0x10) = local_d0;
+    UNLOCK();
+    if (uVar3 < *(uint *)(lVar4 + 0x1e4)) {
+      *(uint *)((ulonglong)uVar3 + 0x44 + local_d8) = local_d0;
+    }
+    else {
+      *(uint *)(local_d8 + 0x14) = local_d0;
+    }
+    LOCK();
+    *(int *)(local_d8 + 0xc) = *(int *)(local_d8 + 0xc) + local_cc;
+    UNLOCK();
+    local_c8 = 0;
+  }
+  lVar13 = ID_63412(ID_922868);
+  iVar10 = iVar12;
+  if (lVar13 != 0) {
+    plVar11 = (longlong *)(lVar13 + 0x88);
+    if (ID_909838 != 0) {
+      fVar14 = (float)(**(code **)(*plVar11 + 8))(plVar11);
+      iVar12 = (int)fVar14;
+    }
+    iVar10 = 0;
+    if (ID_909840 != 0) {
+      fVar14 = (float)(**(code **)(*plVar11 + 8))(plVar11);
+      iVar10 = (int)fVar14;
+    }
+  }
+  if ((*(int *)(param_1 + 0x1e9) != iVar12) || (*(int *)((longlong)param_1 + 0xf4c) != iVar10)) {
+    *(int *)(param_1 + 0x1e9) = iVar12;
+    *(int *)((longlong)param_1 + 0xf4c) = iVar10;
+    if ((iVar10 != 0) && (iVar12 == iVar10)) {
+      ID_90513(param_1);
+    }
+    lVar4 = ID_937633;
+    local_res20 = (undefined8 *)CONCAT44(iVar10,iVar12);
+    puVar7 = local_res20;
+    lVar13 = param_1[1];
+    if (((lVar13 != 0) && (ID_937633 != 0)) && (*(longlong *)(lVar13 + 0x10) != 0)) {
+      LOCK();
+      *(int *)(lVar13 + 8) = *(int *)(lVar13 + 8) + 1;
+      UNLOCK();
+      local_78 = 0;
+      local_80 = local_res20;
+      local_88 = lVar13;
+      puVar8 = (undefined8 *)ID_123895(lVar4 + 0x80,&local_b8,0x20);
+      puVar8[1] = ID_90673;
+      *puVar8 = BSService::Detail::TCmd<class_<lambda_54cffc6b72315e542c0c7f4c29973cb0>,void>::
+                vftable;
+      local_88 = 0;
+      puVar8[2] = lVar13;
+      puVar8[3] = puVar7;
+      LOCK();
+      uVar3 = *(uint *)(local_b8 + 0x10);
+      *(uint *)(local_b8 + 0x10) = local_b0;
+      UNLOCK();
+      if (uVar3 < *(uint *)(lVar4 + 0x1e4)) {
+        *(uint *)((ulonglong)uVar3 + 0x44 + local_b8) = local_b0;
+      }
+      else {
+        *(uint *)(local_b8 + 0x14) = local_b0;
+      }
+      LOCK();
+      *(int *)(local_b8 + 0xc) = *(int *)(local_b8 + 0xc) + local_ac;
+      UNLOCK();
+    }
+  }
+  ID_97831();
+  cVar5 = ID_918688;
+  *(char *)((longlong)param_1 + 0xf67) = ID_918688;
+  if (cVar5 == '\0') {
+    local_res10 = (undefined8 *)CONCAT44(local_res10._4_4_,auVar17._0_4_);
+    ID_67378(0xf1,ID_922868,&local_res10);
+    *(bool *)((longlong)param_1 + 0xf67) = local_res10._0_4_ != auVar17._0_4_;
+  }
+  return param_1;
+}
+
+
+

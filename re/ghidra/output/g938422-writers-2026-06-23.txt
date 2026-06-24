@@ -1,0 +1,105 @@
+# functions referencing global 1461ea0c8 that STORE to candidate field offsets
+==== ID_102624@141a21510 [ID_102624] ====
+    141a21538  MOV qword ptr [RCX + 0x10],RAX
+    141a21543  MOV qword ptr [RCX + 0x38],RAX
+==== ID_103317@141a991f0 [ID_103317] ====
+    141a991f3  MOV qword ptr [RAX + 0x20],RBX
+    141a991f7  MOV qword ptr [RAX + 0x18],R8
+    141a991fb  MOV qword ptr [RAX + 0x10],RDX
+==== ID_102770@141a4e990 [ID_102770] ====
+    141a4f4a6  MOV qword ptr [RBX + 0x18],R12
+    141a4f4aa  MOV qword ptr [RBX + 0x10],R12
+    141a4f4ae  MOV word ptr [RBX + 0x38],0x0
+==== ID_86504@14147bf50 [ID_86504] ====
+    14147bf57  MOV qword ptr [R11 + 0x10],RBP
+    14147bf6d  MOV dword ptr [R11 + 0x18],R12D
+==== ID_102619@141a1faa0 [ID_102619] ====
+    141a1faa3  MOV qword ptr [RAX + 0x10],RBX
+    141a1faa7  MOV qword ptr [RAX + 0x18],RSI
+    141a1fb94  MOV qword ptr [RSI + 0x10],R14
+    141a1fb9f  MOV qword ptr [RSI + 0x38],R14
+    141a1fe0c  MOV qword ptr [RBX + 0x18],R12
+    141a1fe2f  MOV qword ptr [RBX + 0x20],RCX
+    141a1fe41  MOV qword ptr [RBX + 0x18],RAX
+    141a1fe8d  MOV qword ptr [RBX + 0x10],R12
+    141a1fea9  MOV qword ptr [RBX + 0x18],RAX
+    141a1fee9  MOV qword ptr [RBX + 0x10],RAX
+    141a1fef1  MOV qword ptr [RBX + 0x20],RCX
+    141a1ff44  MOV qword ptr [RBX + 0x10],R12
+    141a1ff68  MOV qword ptr [RCX + 0x10],R12
+    141a1ff7d  MOV word ptr [RBX + 0x3c],0x0
+    141a1ffa5  MOV qword ptr [RBX + 0x10],R12
+    141a1ffc1  MOV qword ptr [RBX + 0x18],RAX
+    141a20001  MOV qword ptr [RBX + 0x10],RAX
+    141a20009  MOV qword ptr [RBX + 0x20],RCX
+    141a20067  MOV qword ptr [RBX + 0x10],RCX
+    141a20081  MOV qword ptr [RBX + 0x18],RCX
+    141a20085  MOV qword ptr [RBX + 0x20],RCX
+    141a200cf  MOV qword ptr [RCX + 0x10],R12
+    141a200f6  MOV qword ptr [RCX + 0x10],R12
+    141a2011d  MOV qword ptr [RCX + 0x10],R12
+    141a20206  MOV qword ptr [RBX + 0x10],R12
+    141a20221  MOV qword ptr [RBX + 0x18],RAX
+    141a20267  MOV qword ptr [RBX + 0x10],RAX
+    141a2026f  MOV qword ptr [RBX + 0x20],RCX
+    141a203b1  MOV qword ptr [RCX + 0x10],R12
+    141a20525  MOV qword ptr [RCX + 0x10],R12
+    141a2087f  MOV qword ptr [RCX + 0x10],RBX
+    141a210c6  MOV qword ptr [RAX + 0x10],0x0
+    141a210ce  MOV qword ptr [RAX + 0x18],RDI
+    141a210d2  MOV qword ptr [RAX + 0x20],0x0
+    141a210ea  MOV word ptr [RAX + 0x38],0x0
+    141a21129  MOV qword ptr [RAX + 0x10],0x0
+    141a21131  MOV qword ptr [RAX + 0x18],RDI
+    141a21135  MOV qword ptr [RAX + 0x20],0x0
+    141a2114d  MOV word ptr [RAX + 0x38],0x0
+==== ID_75778@141023e70 [ID_75778] ====
+    141024419  MOV dword ptr [RCX + 0x20],EAX
+==== ID_90518@14159b890 [ID_90518] ====
+    14159b893  MOV qword ptr [RAX + 0x10],RDX
+    14159b9bd  MOV dword ptr [RSI + 0x20],EDI
+    14159ba08  MOV byte ptr [R14 + 0x18],BL
+    14159bab2  MOV dword ptr [RBX + 0x18],EDI
+    14159bafa  MOV byte ptr [RBX + 0x18],DIL
+    14159bc56  MOV byte ptr [RBX + 0x18],R12B
+    14159bd95  MOV dword ptr [RBX + 0x18],EDI
+    14159be30  MOV dword ptr [RBX + 0x18],EDI
+    14159be77  MOV byte ptr [R14 + 0x18],BL
+    14159c025  MOV byte ptr [RBX + 0x18],DIL
+    14159c0ca  MOV byte ptr [RBX + 0x18],DIL
+    14159c11a  MOV byte ptr [RBX + 0x18],0x0
+    14159c156  MOV byte ptr [RBX + 0x18],0x0
+    14159c1a5  MOV byte ptr [RBX + 0x18],DIL
+    14159c290  MOV byte ptr [RBX + 0x18],0x0
+    14159c6a1  MOV dword ptr [RBX + 0x18],EDI
+    14159c6d6  MOV dword ptr [RBX + 0x18],0x194
+    14159c715  MOV byte ptr [RBX + 0x18],0x1
+    14159c771  MOV byte ptr [RBX + 0x18],R14B
+    14159c83f  MOV byte ptr [RBX + 0x18],0x0
+    14159c8db  MOV byte ptr [RBX + 0x18],0x0
+    14159ca2c  MOV byte ptr [RSI + 0x18],BL
+    14159ccac  MOV byte ptr [RBX + 0x18],0x0
+    14159cce8  MOV byte ptr [RBX + 0x18],0x0
+    14159cd1d  MOV byte ptr [RDI + 0x18],0x0
+    14159cd66  MOV byte ptr [RBX + 0x18],DIL
+    14159d117  MOV dword ptr [RBX + 0x18],R12D
+    14159d16f  MOV dword ptr [RBX + 0x18],EAX
+==== ID_103170@141a82290 [ID_103170] ====
+    141a82297  MOV qword ptr [RAX + 0x18],R8
+    141a82abc  MOV qword ptr [RAX + 0x10],RCX
+==== ID_90502@141599990 [ID_90502] ====
+    141599a61  MOV dword ptr [RBX + 0x20],EDI
+==== ID_86634@141487700 [ID_86634] ====
+    141487703  MOV qword ptr [RAX + 0x20],R9
+    141487707  MOV qword ptr [RAX + 0x18],R8
+    14148770b  MOV qword ptr [RAX + 0x10],RDX
+==== ID_105169@141b62bd0 [ID_105169] ====
+    141b62bd3  MOV qword ptr [RAX + 0x10],RDX
+==== ID_96628@14175e020 [ID_96628] ====
+    14175e023  MOV qword ptr [RAX + 0x10],RBX
+    14175e027  MOV qword ptr [RAX + 0x18],R8
+==== ID_102688@141a38fb0 [ID_102688] ====
+    141a39167  MOV dword ptr [RAX + 0x10],EBX
+==== ID_105168@141b62460 [ID_105168] ====
+    141b62463  MOV qword ptr [RAX + 0x10],RBX
+    141b62467  MOV qword ptr [RAX + 0x18],R8

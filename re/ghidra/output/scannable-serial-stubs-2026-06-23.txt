@@ -1,0 +1,202 @@
+======== ID_38417 / ID_38417 @ 14036d270 ========
+
+undefined8 * ID_38417(undefined8 param_1,undefined8 *param_2)
+
+{
+  param_2[2] = 0;
+  param_2[3] = 0;
+  *param_2 = 0;
+  *(undefined1 *)(param_2 + 4) = 0;
+  param_2[1] = 0x7c;
+  return param_2;
+}
+
+
+
+======== ID_83037 / ID_83037 @ 14130a5f0 ========
+
+void ID_83037(longlong param_1)
+
+{
+  ID_83043(*(undefined8 *)(param_1 + 0x28),param_1);
+  return;
+}
+
+
+
+======== ID_40332 / ID_40332 @ 1403ec080 ========
+
+undefined8 ID_40332(undefined8 param_1,ulonglong param_2)
+
+{
+  if ((param_2 & 1) != 0) {
+    ID_182799(param_1,0x30);
+  }
+  return param_1;
+}
+
+
+
+======== ID_83029 / ID_83029 @ 141309930 ========
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+longlong ID_83029(undefined8 param_1,longlong param_2,longlong *param_3,ulonglong param_4,
+                 undefined8 *param_5)
+
+{
+  undefined4 uVar1;
+  ulonglong *puVar2;
+  longlong lVar3;
+  longlong lVar4;
+  undefined8 *puVar5;
+  char cVar6;
+  ulonglong uVar7;
+  longlong *plVar8;
+  ulonglong *puVar9;
+  undefined8 local_28;
+  undefined8 uStack_20;
+  longlong local_18;
+  longlong local_10;
+  
+  puVar5 = param_5;
+  param_5 = (undefined8 *)
+            (((ulonglong)ID_939118 << 0x20 | param_4 & 0xffffffff) << 0x10 |
+            (ulonglong)**(ushort **)*param_5);
+  ID_126711(param_3);
+  cVar6 = '\0';
+  if (*(char *)(param_2 + 0x20) != '\0') {
+    puVar2 = *(ulonglong **)(param_2 + 0x18);
+    local_18 = 0;
+    local_28 = _ID_501138;
+    uStack_20 = _UNK_144f09628;
+    local_10 = 0xfe0;
+    cVar6 = ID_38418(*param_3 + 0x268,&local_28,&param_5,0x30);
+    lVar3 = local_18;
+    if (cVar6 != '\0') {
+      ID_126656(*(undefined8 *)(local_18 + -0x18),local_18 + -0x20);
+      uVar7 = (ulonglong)*(ushort *)(lVar3 + 0x12 + local_10 * 4);
+      puVar9 = (ulonglong *)(lVar3 + 0x10 + uVar7);
+      *(undefined ***)(uVar7 + lVar3) =
+           BSTVSOTree_detail::
+           TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_ScannableComponent>_>
+           ::vftable;
+      *puVar9 = (ulonglong)param_5;
+      uVar7 = *puVar2;
+      puVar9[1] = uVar7;
+      plVar8 = (longlong *)0x0;
+      if (uVar7 != 0) {
+        LOCK();
+        *(longlong *)(uVar7 + 8) = *(longlong *)(uVar7 + 8) + 1;
+        UNLOCK();
+        plVar8 = (longlong *)puVar9[1];
+      }
+      *plVar8 = (longlong)puVar9;
+      lVar3 = *(longlong *)*puVar5;
+      puVar9[2] = *(ulonglong *)(lVar3 + 0x10);
+      *(undefined4 *)(puVar9 + 3) = *(undefined4 *)(lVar3 + 0x18);
+    }
+    ID_126689(*param_3,param_2);
+    cVar6 = *(char *)(param_2 + 0x20);
+  }
+  if (cVar6 == '\0') {
+    lVar3 = *(longlong *)*puVar5;
+    uVar1 = *(undefined4 *)(lVar3 + 0x18);
+    lVar4 = *(longlong *)**(undefined8 **)(param_2 + 0x18);
+    *(undefined8 *)(lVar4 + 0x10) = *(undefined8 *)(lVar3 + 0x10);
+    *(undefined4 *)(lVar4 + 0x18) = uVar1;
+  }
+  return param_2;
+}
+
+
+
+======== ID_83113 / ID_83113 @ 141310ff0 ========
+
+void ID_83113(undefined8 param_1,undefined8 param_2,undefined4 param_3)
+
+{
+  undefined1 local_28 [40];
+  
+  ID_126704(param_2,local_28,(ulonglong)CONCAT24(ID_939128,param_3) << 0x10);
+  return;
+}
+
+
+
+======== ID_83114 / ID_83114 @ 141311020 ========
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+char ID_83114(longlong param_1,longlong *param_2,longlong param_3,undefined8 *param_4)
+
+{
+  char cVar1;
+  longlong *plVar2;
+  longlong lVar3;
+  undefined8 *puVar4;
+  undefined8 *puVar5;
+  longlong lStackX_8;
+  undefined8 uStack_68;
+  undefined4 uStack_60;
+  undefined8 uStack_58;
+  undefined8 uStack_50;
+  longlong lStack_48;
+  longlong lStack_40;
+  undefined1 auStack_38 [24];
+  longlong *plStack_20;
+  char cStack_18;
+  
+  uStack_60 = 0xffffffff;
+  uStack_68 = 0xffffffffffffffff;
+  lStackX_8 = param_1;
+  plVar2 = (longlong *)ID_47401(*(undefined4 *)(param_3 + 0x28));
+  if (plVar2 != (longlong *)0x0) {
+    lVar3 = (**(code **)(*plVar2 + 0x230))(plVar2);
+    if (lVar3 != 0) {
+      uStack_68 = *(undefined8 *)(*(longlong *)*param_4 + 0x18);
+      uStack_60 = *(undefined4 *)(*(longlong *)*param_4 + 0x20);
+    }
+  }
+  lStackX_8 = (ulonglong)CONCAT24(ID_939128,*(undefined4 *)(param_3 + 0x28)) << 0x10;
+  ID_126711(param_2,auStack_38);
+  if (cStack_18 == '\0') {
+    lVar3 = *(longlong *)*plStack_20;
+    *(undefined8 *)(lVar3 + 0x10) = uStack_68;
+    *(undefined4 *)(lVar3 + 0x18) = uStack_60;
+  }
+  else {
+    lStack_48 = 0;
+    lStack_40 = 0xfe0;
+    uStack_58 = _ID_501138;
+    uStack_50 = _UNK_144f09628;
+    cVar1 = ID_38418(*param_2 + 0x268,&uStack_58,&lStackX_8,0x30);
+    lVar3 = lStack_48;
+    if (cVar1 != '\0') {
+      ID_126656(*(undefined8 *)(lStack_48 + -0x18),lStack_48 + -0x20);
+      puVar4 = (undefined8 *)((ulonglong)*(ushort *)(lVar3 + 0x12 + lStack_40 * 4) + lVar3);
+      *puVar4 = BSTVSOTree_detail::
+                TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,class_SpaceshipWeaponBindingComponent>_>
+                ::vftable;
+      puVar4[2] = lStackX_8;
+      lVar3 = *plStack_20;
+      puVar4[3] = lVar3;
+      puVar5 = (undefined8 *)0x0;
+      if (lVar3 != 0) {
+        LOCK();
+        *(longlong *)(lVar3 + 8) = *(longlong *)(lVar3 + 8) + 1;
+        UNLOCK();
+        puVar5 = (undefined8 *)puVar4[3];
+      }
+      *puVar5 = puVar4 + 2;
+      *(undefined8 *)((longlong)puVar4 + 0x24) = 0xffffffffffffffff;
+      puVar4[4] = uStack_68;
+      *(undefined4 *)(puVar4 + 5) = uStack_60;
+    }
+    ID_126689(*param_2,auStack_38);
+  }
+  return cStack_18;
+}
+
+
+

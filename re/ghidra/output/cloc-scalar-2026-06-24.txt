@@ -1,0 +1,3 @@
+Instructions referencing scalar 0x434f4c43:
+
+Distinct containing functions:

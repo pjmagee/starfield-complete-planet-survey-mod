@@ -1,0 +1,45 @@
+STR @ 144b56b10 : "PlanetaryExploration::SurveyChangeReason"
+    <- 14006709b DATA in ID_4726@140067080 [ID_4726]
+    <- 1400670a2 DATA in ID_4726@140067080 [ID_4726]
+
+STR @ 144ba7fc8 : "BodyIsPlanetTraitKnown >> %0.2f"
+    <- 140bf4477 DATA in ID_65307@140bf43f0 [ID_65307]
+
+STR @ 144bcf9a0 : "BodyIsPlanetTraitKnown"
+    <- 1400e21e2 DATA in ID_7982@1400bff20 [ID_7982]
+    <- 1400e21e9 DATA in ID_7982@1400bff20 [ID_7982]
+
+STR @ 144c06960 : "fHandScannerScanRange"
+    <- 140127c5c DATA in ID_13078@140127c50 [ID_13078]
+
+STR @ 144c06978 : "fHandScannerScanRangeSkillMult"
+    <- 140127c8c DATA in ID_13079@140127c80 [ID_13079]
+
+STR @ 144d63050 : "ProxyFormPtr"
+    <- 14231ffdd DATA in ID_124590@14231f630 [ID_124590]
+
+STR @ 1459e8350 : ".?AV?$TObjectWrapper@V?$StoredComponent@$00UCTProxyFormPtr@BSGalaxy@@@Detail@BSComponentDB2@@@BSTVSOTree_detail@@"
+    (no direct xrefs)
+
+STR @ 145a27a10 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VPlanetTraitKnownEvent@StarMap@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145a27a80 : ".?AU?$EventSource@VPlanetTraitKnownEvent@StarMap@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145a281e0 : ".?AV?$BSTEventSource@VPlanetTraitKnownEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145afc940 : ".?AV?$BSTEventSink@UEvent@TraitDiscoveryTextEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b2bae0 : ".?AV?$BSTEventSource@UEvent@TraitDiscoveryTextEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b66f90 : ".?AV?$BSTEventSink@VPlanetTraitKnownEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145ca01e0 : ".?AV?$ComponentFactoryImpl@UCTProxyFormPtr@BSGalaxy@@@Detail@BSComponentDB2@@"
+    (no direct xrefs)
+
+# total string hits: 14

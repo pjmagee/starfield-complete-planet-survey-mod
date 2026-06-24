@@ -1,0 +1,257 @@
+STR @ 144afa158 : "Location Discovered"
+    <- 1402c1aff DATA in ID_35918@1402c1ab0 [ID_35918]
+    <- 1402c1595 DATA in ID_35909@1402c1580 [ID_35909]
+
+STR @ 144b018b0 : "iPlanetScannedLevel:BIEvents"
+    <- 14000af6a DATA in ID_542@14000af60 [ID_542]
+
+STR @ 144b018d0 : "iPlanetScannedFrequencyMS:BIEvents"
+    <- 14000af37 DATA in ID_541@14000af30 [ID_541]
+
+STR @ 144b02498 : "PlanetScannedv2"
+    <- 140333eb1 DATA in ID_37581@140332ba0 [ID_37581]
+
+STR @ 144b036b0 : "Data/Materials/Layered/LayeredMaterials/HoudiniPlanets/EffectMaterials/StarmapScanlineEffect.mat"
+    <- 14000c237 DATA in ID_638@14000c230 [ID_638]
+
+STR @ 144b03d50 : "bPlanetScanlineToggle:Scanlines"
+    <- 14000c267 DATA in ID_639@14000c260 [ID_639]
+
+STR @ 144b37ff0 : "Locations Discovered"
+    <- 14017d467 DATA in ID_1013966@14017d460 [ID_1013966]
+    <- 1401bc857 DATA in ID_22045@1401bc850 [ID_22045]
+    <- 140170387 DATA in ID_17053@140170380 [ID_17053]
+    <- 1400af937 DATA in ID_7789@1400af930 [ID_7789]
+    <- 1414e99c7 PARAM in ID_88200@1414e9930 [ID_88200]
+    <- 140188f47 DATA in ID_18502@140188f40 [ID_18502]
+    <- 1401c4a17 DATA in ID_22575@1401c4a10 [ID_22575]
+    <- 140684114 PARAM in ID_49316@140684110 [ID_49316]
+    <- 140041ae7 DATA in ID_3432@140041ae0 [ID_3432]
+    <- 14590d358 DATA in (none)
+    <- 14590d360 DATA in (none)
+
+STR @ 144b38360 : "sMiscStatLocationsDiscovered"
+    <- 1438addd5 READ in ID_194976@1438add90 [ID_194976]
+    <- 1438addc9 PARAM in ID_194976@1438add90 [ID_194976]
+    <- 14590d368 DATA in (none)
+
+STR @ 144b40cf0 : "uPlanetContentPlanetScanResolution:PlanetContent"
+    <- 14004ea3a DATA in ID_4064@14004ea30 [ID_4064]
+
+STR @ 144b55c00 : "LocationDiscovery"
+    <- 14005d693 DATA in ID_4695@14005d4e0 [ID_4695]
+    <- 14005d69a DATA in ID_4695@14005d4e0 [ID_4695]
+
+STR @ 144b56a40 : "PlanetTraitDiscovered"
+    <- 140067180 DATA in ID_4726@140067080 [ID_4726]
+    <- 140067187 DATA in ID_4726@140067080 [ID_4726]
+
+STR @ 144b57b70 : "BGSLocationDiscoveredActivity"
+    <- 14006c5c5 DATA in ID_4753@14006c5b0 [ID_4753]
+    <- 14006c5cc DATA in ID_4753@14006c5b0 [ID_4753]
+
+STR @ 144ba6c88 : "     Location Discovery - %s"
+    <- 140be98eb DATA in ID_65122@140be9490 [ID_65122]
+
+STR @ 144c031c0 : "iXPRewardDiscoverSecretArea"
+    <- 14011e8ea DATA in ID_12485@14011e8e0 [ID_12485]
+
+STR @ 144c031e0 : "iXPRewardDiscoverMapMarker"
+    <- 14011e8ba DATA in ID_12484@14011e8b0 [ID_12484]
+
+STR @ 144c06cb0 : "UndiscoveredTemples_DO"
+    <- 14012727f DATA in ID_13038@140127270 [ID_13038]
+
+STR @ 144c07ef0 : "sLocationDiscovered"
+    <- 1439587b5 READ in ID_204538@143958770 [ID_204538]
+    <- 1439587a9 PARAM in ID_204538@143958770 [ID_204538]
+    <- 145919908 DATA in (none)
+
+STR @ 144c07f90 : "%s discovered from %s"
+    <- 141999503 PARAM in ID_101856@1419991a0 [ID_101856]
+    <- 141999679 PARAM in ID_101856@1419991a0 [ID_101856]
+    <- 1459198d8 DATA in (none)
+    <- 1459198e0 DATA in (none)
+
+STR @ 144c07fa8 : "sDiscoveredIngredientEffectEating"
+    <- 143958635 READ in ID_204534@1439585f0 [ID_204534]
+    <- 143958629 PARAM in ID_204534@1439585f0 [ID_204534]
+    <- 1459198e8 DATA in (none)
+
+STR @ 144c09208 : "You must discover this location to fast travel to it."
+    <- 1416ed24e PARAM in ID_95131@1416ed130 [ID_95131]
+    <- 1416e239e PARAM in ID_95018@1416e1da0 [ID_95018]
+    <- 14591a8f8 DATA in (none)
+    <- 14591a900 DATA in (none)
+
+STR @ 144c09240 : "sNoFastTravelUndiscovered"
+    <- 14395d065 READ in ID_204743@14395d020 [ID_204743]
+    <- 14395d059 PARAM in ID_204743@14395d020 [ID_204743]
+    <- 14591a908 DATA in (none)
+
+STR @ 144c0a220 : "sRadioStationDiscovered"
+    <- 14395d605 READ in ID_204758@14395d5c0 [ID_204758]
+    <- 14395d5f9 PARAM in ID_204758@14395d5c0 [ID_204758]
+    <- 14591aaa8 DATA in (none)
+
+STR @ 144c4e918 : "iNumDiscovered"
+    <- 1413652d5 DATA in ID_1015749@1413650d0 [ID_1015749]
+
+STR @ 144c549f8 : "uUndiscoveredPowers"
+    <- 1413de4b5 DATA in ID_84512@1413de3f0 [ID_84512]
+
+STR @ 144c54a70 : "uUndiscoveredTemples"
+    <- 1413de4c9 DATA in ID_84512@1413de3f0 [ID_84512]
+
+STR @ 144c61b28 : "bDiscovered"
+    <- 1416e5c84 DATA in ID_95079@1416e5be0 [ID_95079]
+    <- 14148ff9f DATA in ID_86772@14148ff40 [ID_86772]
+
+STR @ 144c77838 : "bHasUndiscoveredPoi"
+    <- 141544090 DATA in ID_89233@141543f10 [ID_89233]
+
+STR @ 144c778a8 : "bMarkerDiscovered"
+    <- 1416acd3c DATA in ID_94476@1416acaf0 [ID_94476]
+    <- 141543faa DATA in ID_89233@141543f10 [ID_89233]
+
+STR @ 144c7e570 : "bIsDiscovered"
+    <- 14159826a DATA in ID_90489@141598090 [ID_90489]
+    <- 141597fa3 DATA in ID_90487@141597f50 [ID_90487]
+
+STR @ 144c7ee00 : "UIMenuMonocleScannerResourceDiscoverNew"
+    <- 14159a474 DATA in ID_90506@141599f70 [ID_90506]
+
+STR @ 144c939d0 : "MUSDiscoveryLocationGeneric"
+    <- 140199247 DATA in ID_19724@140199240 [ID_19724]
+
+STR @ 144c939f0 : "MUS_DiscoverLocation_MainThemeC_Obelisk"
+    <- 140199217 DATA in ID_19723@140199210 [ID_19723]
+
+STR @ 144c93a38 : "MUSDiscoveryLocationMainThemeA"
+    <- 140199187 DATA in ID_19720@140199180 [ID_19720]
+
+STR @ 144c93a58 : "MUSDiscoveryLocationDungeon"
+    <- 140199157 DATA in ID_19719@140199150 [ID_19719]
+
+STR @ 144c93a78 : "MUSDiscoveryLocationSpace"
+    <- 1401991e7 DATA in ID_19722@1401991e0 [ID_19722]
+
+STR @ 144c93a98 : "MUSDiscoveryLocationMainThemeB"
+    <- 1401991b7 DATA in ID_19721@1401991b0 [ID_19721]
+
+STR @ 144c93ad8 : "MUSDiscoveryLocationCity"
+    <- 140199127 DATA in ID_19718@140199120 [ID_19718]
+
+STR @ 144c93af8 : "MUSDiscoveryLocationCave"
+    <- 1401990f7 DATA in ID_19717@1401990f0 [ID_19717]
+
+STR @ 144c93b68 : "$DiscoveredText"
+    <- 141669f44 DATA in ID_93623@141669d00 [ID_93623]
+    <- 1415c8893 DATA in ID_91125@1415c85d0 [ID_91125]
+
+STR @ 144c96480 : "UIMenuStarmapScannerClose"
+    <- 14168c985 DATA in ID_94007@14168c5e0 [ID_94007]
+
+STR @ 144c964c0 : "UIMenuStarmapScanPlanet"
+    <- 14168c785 DATA in ID_94007@14168c5e0 [ID_94007]
+    <- 14168c79a READ in ID_94007@14168c5e0 [ID_94007]
+    <- 14168c796 PARAM in ID_94007@14168c5e0 [ID_94007]
+
+STR @ 144c964d8 : "UIMenuStarmapScannerOpen"
+    <- 14168c78c DATA in ID_94007@14168c5e0 [ID_94007]
+    <- 14168c79a READ in ID_94007@14168c5e0 [ID_94007]
+
+STR @ 144c96aa8 : "discovered"
+    <- 141681eae DATA in ID_93944@141681d30 [ID_93944]
+
+STR @ 144c99598 : "fStarMapGalaxyDiscoveredColorBrightness:StarMap"
+    <- 14019ca5c DATA in ID_19999@14019ca50 [ID_19999]
+
+STR @ 144c995c8 : "bStarMapGalaxyLinearizeDiscoveredColor:StarMap"
+    <- 14019ca87 DATA in ID_20000@14019ca80 [ID_20000]
+
+STR @ 144c995f8 : "aStarMapGalaxyUndiscoveredInRangeColor:StarMap"
+    <- 14019c9db DATA in ID_19997@14019c9d0 [ID_19997]
+
+STR @ 144c99628 : "aStarMapGalaxyUndiscoveredNotInRangeColor:StarMap"
+    <- 14019ca1b DATA in ID_19998@14019ca10 [ID_19998]
+
+STR @ 144c9a2f8 : "bHasUndiscoveredPOI"
+    <- 1416accf7 DATA in ID_94476@1416acaf0 [ID_94476]
+
+STR @ 144c9ca38 : "bAllowInspectForUndiscoveredBodies:StarMap"
+    <- 1401a00b7 DATA in ID_20268@1401a00b0 [ID_20268]
+
+STR @ 144c9e088 : "bStarMapEnableUndiscoveredPOIIcon:StarMap"
+    <- 1401a1d67 DATA in ID_20401@1401a1d60 [ID_20401]
+
+STR @ 144d1c3e0 : "OnStoryDiscoverDeadBody"
+    <- 1401ec2c7 DATA in ID_24937@1401ec2c0 [ID_24937]
+
+STR @ 144d2ce60 : "IsLocationDiscoveryEnabled"
+    <- 1420290e3 DATA in ID_117671@142028470 [ID_117671]
+
+STR @ 144d2ced8 : "EnableLocationDiscovery"
+    <- 142028a83 DATA in ID_117671@142028470 [ID_117671]
+
+STR @ 144d38dc8 : "SetMarkerUndiscoveredVisibility"
+    <- 14208ded9 DATA in ID_118497@1420881f0 [ID_118497]
+
+STR @ 144d394e0 : "SetMarkerDiscovered"
+    <- 14208de81 DATA in ID_118497@1420881f0 [ID_118497]
+
+STR @ 144d47ba8 : "OnMapMarkerDiscovered"
+    <- 1401f7d47 DATA in ID_25800@1401f7d40 [ID_25800]
+
+STR @ 144d5ee78 : "Location Discovery"
+    (no direct xrefs)
+
+STR @ 1459bea30 : ".?AV?$BSTEventSink@UMapMarkerDiscoveredEvent@@@@"
+    (no direct xrefs)
+
+STR @ 1459bea80 : ".?AV?$BSTEventSink@UCelestialLocationDiscoveredEvent@@@@"
+    (no direct xrefs)
+
+STR @ 1459bead0 : ".?AVBGSLocationDiscoveredActivity_Runtime@@"
+    (no direct xrefs)
+
+STR @ 1459beb10 : ".?AV?$BGSActivityRuntimeT@VBGSLocationDiscoveredActivity@@@@"
+    (no direct xrefs)
+
+STR @ 1459beb60 : ".?AVBGSLocationDiscoveredActivity@@"
+    (no direct xrefs)
+
+STR @ 1459bf180 : ".?AV?$BSTEventSink@UPlanetScanEvent@Spaceship@@@@"
+    (no direct xrefs)
+
+STR @ 145a75c70 : ".?AV?$BSTEventSource@UCelestialLocationDiscoveredEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145a77d60 : ".?AV?$BSTEventSource@UMapMarkerDiscoveredEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145afc940 : ".?AV?$BSTEventSink@UEvent@TraitDiscoveryTextEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b2bae0 : ".?AV?$BSTEventSource@UEvent@TraitDiscoveryTextEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145ba9b30 : ".?AUPlanetScanToMiscStatHandler@?A0x2dc050ad@@"
+    (no direct xrefs)
+
+STR @ 145ba9b70 : ".?AUMapMarkerDiscoveredToMiscStatHandler@?A0x2dc050ad@@"
+    (no direct xrefs)
+
+STR @ 145baa190 : ".?AULocationDiscoveryMiscStatHandler@?A0x2dc050ad@@"
+    (no direct xrefs)
+
+STR @ 145c7db50 : ".?AU?$EventSource@UPlanetScanEvent@Spaceship@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145c7dd00 : ".?AV?$BSTSingletonImplicit@U?$EventSource@UPlanetScanEvent@Spaceship@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145c7dd70 : ".?AV?$BSTEventSource@UPlanetScanEvent@Spaceship@@@@"
+    (no direct xrefs)
+
+# total string hits: 73

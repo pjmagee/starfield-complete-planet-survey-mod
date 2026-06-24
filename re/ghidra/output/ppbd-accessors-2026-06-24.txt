@@ -1,0 +1,267 @@
+======== ID_51429 / ID_51429 @ 1407734e0 ========
+
+undefined1 ID_51429(uint *param_1,uint *param_2)
+
+{
+  undefined8 *puVar1;
+  undefined8 *puVar2;
+  uint uVar3;
+  undefined4 uVar4;
+  longlong lVar5;
+  char cVar6;
+  uint uVar7;
+  undefined8 *puVar8;
+  ulonglong uVar9;
+  ulonglong uVar10;
+  undefined **local_28;
+  uint *local_20;
+  
+  uVar3 = *param_1;
+  uVar10 = (ulonglong)uVar3;
+  if (*param_2 < uVar3) {
+    if (param_2[1] < uVar3) {
+      local_28 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+      local_20 = param_2;
+      cVar6 = ID_123861(param_2,&local_28,param_2[1],uVar10,0xc);
+      if (cVar6 == '\0') {
+        return 0;
+      }
+    }
+    uVar3 = *param_2;
+    uVar10 = 0;
+    if (*param_1 != 0) {
+      puVar8 = *(undefined8 **)(param_1 + 2);
+      puVar1 = (undefined8 *)((longlong)puVar8 + (ulonglong)*param_1 * 0xc);
+      for (; puVar8 != puVar1; puVar8 = (undefined8 *)((longlong)puVar8 + 0xc)) {
+        if ((uint)uVar10 < uVar3) {
+          uVar4 = *(undefined4 *)(puVar8 + 1);
+          lVar5 = *(longlong *)(param_2 + 2);
+          *(undefined8 *)(lVar5 + uVar10 * 0xc) = *puVar8;
+          *(undefined4 *)(lVar5 + 8 + uVar10 * 0xc) = uVar4;
+          uVar10 = (ulonglong)((uint)uVar10 + 1);
+        }
+        else {
+          local_28 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+          local_20 = param_2;
+          uVar7 = ID_123859(param_2,&local_28,param_2[1],0xc);
+          if (uVar7 != 0xffffffff) {
+            puVar2 = (undefined8 *)(*(longlong *)(param_2 + 2) + (ulonglong)uVar7 * 0xc);
+            *puVar2 = *puVar8;
+            *(undefined4 *)(puVar2 + 1) = *(undefined4 *)(puVar8 + 1);
+          }
+        }
+      }
+    }
+  }
+  else {
+    uVar9 = 0;
+    if (uVar3 != 0) {
+      puVar8 = *(undefined8 **)(param_1 + 2);
+      puVar1 = (undefined8 *)((longlong)puVar8 + uVar10 * 0xc);
+      if (puVar8 != puVar1) {
+        do {
+          uVar4 = *(undefined4 *)(puVar8 + 1);
+          lVar5 = *(longlong *)(param_2 + 2);
+          *(undefined8 *)(lVar5 + uVar9 * 0xc) = *puVar8;
+          *(undefined4 *)(lVar5 + 8 + uVar9 * 0xc) = uVar4;
+          uVar9 = (ulonglong)((int)uVar9 + 1);
+          puVar8 = (undefined8 *)((longlong)puVar8 + 0xc);
+        } while (puVar8 != puVar1);
+        uVar10 = (ulonglong)*param_1;
+      }
+    }
+    ID_51428(param_2,uVar10);
+  }
+  return 1;
+}
+
+
+
+======== ID_51430 / ID_51430 @ 140773660 ========
+
+undefined1 ID_51430(uint *param_1,uint *param_2)
+
+{
+  undefined8 uVar1;
+  char cVar2;
+  uint uVar3;
+  undefined8 *puVar4;
+  undefined8 *puVar5;
+  undefined8 *puVar6;
+  uint uVar7;
+  ulonglong uVar8;
+  uint uVar9;
+  undefined **local_28;
+  uint *local_20;
+  
+  uVar9 = *param_1;
+  if (*param_2 < uVar9) {
+    if (param_2[1] < uVar9) {
+      local_28 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+      local_20 = param_2;
+      cVar2 = ID_123861(param_2,&local_28,param_2[1],uVar9,0x10);
+      if (cVar2 == '\0') {
+        return 0;
+      }
+    }
+    uVar9 = *param_2;
+    uVar7 = 0;
+    if (*param_1 != 0) {
+      puVar6 = *(undefined8 **)(param_1 + 2);
+      puVar5 = puVar6 + (ulonglong)*param_1 * 2;
+      for (; puVar6 != puVar5; puVar6 = puVar6 + 2) {
+        if (uVar7 < uVar9) {
+          uVar1 = puVar6[1];
+          puVar4 = (undefined8 *)(*(longlong *)(param_2 + 2) + (ulonglong)uVar7 * 0x10);
+          *puVar4 = *puVar6;
+          puVar4[1] = uVar1;
+          uVar7 = uVar7 + 1;
+        }
+        else {
+          local_28 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+          local_20 = param_2;
+          uVar3 = ID_123859(param_2,&local_28,param_2[1],0x10);
+          if (uVar3 != 0xffffffff) {
+            puVar4 = (undefined8 *)((ulonglong)uVar3 * 0x10 + *(longlong *)(param_2 + 2));
+            uVar1 = puVar6[1];
+            *puVar4 = *puVar6;
+            puVar4[1] = uVar1;
+          }
+        }
+      }
+    }
+  }
+  else {
+    uVar8 = 0;
+    if (uVar9 != 0) {
+      puVar6 = *(undefined8 **)(param_1 + 2);
+      if (puVar6 != puVar6 + (ulonglong)uVar9 * 2) {
+        puVar5 = puVar6 + 1;
+        do {
+          uVar1 = *puVar5;
+          puVar4 = (undefined8 *)(*(longlong *)(param_2 + 2) + uVar8 * 0x10);
+          *puVar4 = puVar5[-1];
+          puVar4[1] = uVar1;
+          uVar8 = (ulonglong)((int)uVar8 + 1);
+          puVar4 = puVar5 + 1;
+          puVar5 = puVar5 + 2;
+        } while (puVar4 != puVar6 + (ulonglong)uVar9 * 2);
+        uVar9 = *param_1;
+      }
+    }
+    ID_41354(param_2,uVar9);
+  }
+  return 1;
+}
+
+
+
+======== ID_51459 / ID_51459 @ 140775060 ========
+
+void ID_51459(longlong param_1)
+
+{
+  ID_51462(*(undefined8 *)(param_1 + 0x28),param_1);
+  return;
+}
+
+
+
+======== ID_51499 / ID_51499 @ 1407767b0 ========
+
+void ID_51499(longlong param_1,undefined8 *param_2)
+
+{
+  undefined8 *puVar1;
+  longlong lVar2;
+  
+  *param_2 = BSTVSOTree_detail::
+             TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_BSGalaxy::CTBiomeData>_>
+             ::vftable;
+  param_2[2] = *(undefined8 *)(param_1 + 0x10);
+  puVar1 = *(undefined8 **)(param_1 + 0x18);
+  *(undefined8 *)(param_1 + 0x18) = 0;
+  param_2[3] = puVar1;
+  *puVar1 = param_2 + 2;
+  lVar2 = *(longlong *)(param_1 + 0x20);
+  if (lVar2 != 0) {
+    LOCK();
+    *(int *)(lVar2 + 0x10) = *(int *)(lVar2 + 0x10) + 1;
+    UNLOCK();
+  }
+  param_2[4] = lVar2;
+  param_2[5] = *(undefined8 *)(param_1 + 0x28);
+  param_2[6] = *(undefined8 *)(param_1 + 0x30);
+  *(undefined1 *)(param_2 + 7) = *(undefined1 *)(param_1 + 0x38);
+  *(undefined4 *)((longlong)param_2 + 0x3c) = *(undefined4 *)(param_1 + 0x3c);
+  *(undefined4 *)(param_2 + 8) = *(undefined4 *)(param_1 + 0x40);
+  return;
+}
+
+
+
+======== ID_51501 / ID_51501 @ 140776860 ========
+
+void ID_51501(longlong param_1,undefined8 *param_2)
+
+{
+  undefined8 *puVar1;
+  undefined8 uVar2;
+  
+  *param_2 = BSTVSOTree_detail::
+             TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_BSGalaxy::CTAtmosphereModifier>_>
+             ::vftable;
+  param_2[2] = *(undefined8 *)(param_1 + 0x10);
+  puVar1 = *(undefined8 **)(param_1 + 0x18);
+  *(undefined8 *)(param_1 + 0x18) = 0;
+  param_2[3] = puVar1;
+  *puVar1 = param_2 + 2;
+  uVar2 = *(undefined8 *)(param_1 + 0x28);
+  param_2[4] = *(undefined8 *)(param_1 + 0x20);
+  param_2[5] = uVar2;
+  return;
+}
+
+
+
+======== ID_51551 / ID_51551 @ 1407780d0 ========
+
+void ID_51551(longlong param_1,undefined8 *param_2)
+
+{
+  undefined8 uVar1;
+  
+  *param_2 = BSTVSOTree_detail::
+             TObjectWrapper<class_BSComponentDB2::Detail::Edge<1,struct_BSGalaxy::CTPerBiomeData>_>
+             ::vftable;
+  uVar1 = *(undefined8 *)(param_1 + 0x18);
+  param_2[2] = *(undefined8 *)(param_1 + 0x10);
+  param_2[3] = uVar1;
+  ID_51395(param_2 + 4,param_1 + 0x20);
+  return;
+}
+
+
+
+======== ID_51550 / ID_51550 @ 1407780a0 ========
+
+void ID_51550(longlong param_1,undefined8 *param_2)
+
+{
+  undefined8 uVar1;
+  
+  *param_2 = BSTVSOTree_detail::
+             TObjectWrapper<class_BSComponentDB2::Detail::Edge<1,struct_BSGalaxy::CTPlanetOverlayData>_>
+             ::vftable;
+  uVar1 = *(undefined8 *)(param_1 + 0x18);
+  param_2[2] = *(undefined8 *)(param_1 + 0x10);
+  param_2[3] = uVar1;
+  uVar1 = *(undefined8 *)(param_1 + 0x28);
+  param_2[4] = *(undefined8 *)(param_1 + 0x20);
+  param_2[5] = uVar1;
+  param_2[6] = *(undefined8 *)(param_1 + 0x30);
+  return;
+}
+
+
+

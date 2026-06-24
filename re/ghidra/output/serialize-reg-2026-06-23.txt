@@ -1,0 +1,767 @@
+======== ID_124590 / ID_124590 @ 14231f630 ========
+
+undefined8 * ID_124590(undefined8 *param_1)
+
+{
+  longlong lVar1;
+  int *piVar2;
+  undefined2 uVar3;
+  DWORD DVar4;
+  int iVar5;
+  longlong lVar6;
+  undefined8 uVar7;
+  uint uVar8;
+  bool bVar9;
+  undefined8 local_res18;
+  longlong local_res20;
+  undefined8 *local_c0;
+  undefined8 local_b8;
+  undefined8 *local_b0;
+  undefined8 local_a8;
+  undefined8 *local_a0;
+  undefined8 local_98;
+  undefined8 *local_90;
+  undefined8 local_88;
+  undefined8 *local_80;
+  undefined8 local_78;
+  undefined8 *local_70;
+  undefined8 local_68;
+  undefined8 *local_60;
+  undefined8 local_58 [3];
+  
+  ID_944202 = param_1;
+  if (param_1 == (undefined8 *)0xfffffffffffffff8) {
+    ID_944202 = (undefined8 *)0x0;
+  }
+  *(undefined1 (*) [16])(param_1 + 3) = (undefined1  [16])0x0;
+  *(undefined4 *)((longlong)param_1 + 0x1c) = 0;
+  param_1[4] = 0;
+  param_1[5] = 0;
+  *(undefined4 *)(param_1 + 6) = 0;
+  *(undefined1 (*) [16])(param_1 + 8) = (undefined1  [16])0x0;
+  *(undefined4 *)((longlong)param_1 + 0x44) = 0;
+  param_1[9] = 0;
+  param_1[10] = 0;
+  *(undefined4 *)(param_1 + 0xb) = 0;
+  *param_1 = BSGalaxy::ModuleState::vftable;
+  param_1[2] = BSGalaxy::ModuleState::vftable;
+  param_1[7] = BSGalaxy::ModuleState::vftable;
+  param_1[0xc] = BSComponentDB::ComponentFactory<class_BSGalaxy::BodyDrawData>::vftable;
+  param_1[0xd] = BSComponentDB::ComponentFactory<class_BSGalaxy::OrbitState>::vftable;
+  param_1[0xe] = BSComponentDB2::Detail::ComponentFactoryImpl<class_BSGalaxy::OrbitState>::vftable;
+  param_1[0xf] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::OrbitalData>::vftable
+  ;
+  param_1[0x10] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::OrbitedData>::vftable;
+  param_1[0x11] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::SatelliteCSVData>::vftable;
+  param_1[0x12] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::UnusedGalaxyCSVData>::vftable;
+  param_1[0x13] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::UnusedStarsCSVData>::vftable;
+  param_1[0x14] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::StarData>::vftable;
+  param_1[0x15] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTColorModifier>::vftable;
+  param_1[0x16] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTAtmosphereModifier>::vftable;
+  param_1[0x17] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTDatabaseID>::vftable;
+  param_1[0x18] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTSystemParsecLocation>::
+       vftable;
+  param_1[0x19] = BSComponentDB::ComponentFactory<struct_BSGalaxy::CTHighDetailInfo>::vftable;
+  param_1[0x1a] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTBodyType>::vftable
+  ;
+  param_1[0x1b] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTBrightnessModifier>::vftable;
+  param_1[0x1c] = BSComponentDB2::Detail::ComponentFactoryImpl<class_BSGalaxy::DynamicData>::vftable
+  ;
+  param_1[0x1d] = BSComponentDB::ComponentFactory<class_BSGalaxy::DynamicState>::vftable;
+  param_1[0x1e] = BSComponentDB::ComponentFactory<class_BSGalaxy::BodyPhysicsData>::vftable;
+  param_1[0x1f] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTBiomeData>::vftable;
+  param_1[0x20] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPerBiomeData>::vftable;
+  param_1[0x21] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTEditorBiomeData>::vftable;
+  param_1[0x22] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTAtmosphereData>::vftable;
+  param_1[0x23] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTCellData>::vftable
+  ;
+  param_1[0x24] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTResourceData>::vftable;
+  param_1[0x25] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPlanetOverlayData>::vftable;
+  param_1[0x26] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPlanetLocationIDs>::vftable;
+  param_1[0x27] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPlanetarySystemLocationID>::
+       vftable;
+  param_1[0x28] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTSTarDistance>::vftable;
+  param_1[0x29] = BSComponentDB::ComponentFactory<struct_BSGalaxy::DockingChildState>::vftable;
+  param_1[0x2a] = BSComponentDB::ComponentFactory<struct_BSGalaxy::DockingParentState>::vftable;
+  param_1[0x2b] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::PlayerAtBody>::vftable;
+  param_1[0x2c] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::OrbitOffset>::vftable;
+  param_1[0x2d] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTProxyFormPtr>::vftable;
+  param_1[0x2e] = BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::BodyChild>::vftable;
+  param_1[0x2f] =
+       BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::PlayerKnowledge>::vftable;
+  *(undefined4 *)(param_1 + 0x30) = 0;
+  lVar6 = ID_126578();
+  DVar4 = GetCurrentThreadId();
+  if (*(DWORD *)(lVar6 + 0x8c8) != DVar4) {
+    EnterCriticalSection((LPCRITICAL_SECTION)(lVar6 + 0x848));
+    *(DWORD *)(lVar6 + 0x8c8) = DVar4;
+  }
+  *(int *)(lVar6 + 0x8d0) = *(int *)(lVar6 + 0x8d0) + 1;
+  uVar8 = *(uint *)(lVar6 + 0x840) & 0xffff0000 | *(uint *)(lVar6 + 0x8d4);
+  do {
+    LOCK();
+    bVar9 = uVar8 == *(uint *)(lVar6 + 0x840);
+    if (bVar9) {
+      *(uint *)(lVar6 + 0x840) = uVar8 + 0x10000;
+    }
+    UNLOCK();
+  } while (!bVar9);
+  *(int *)(lVar6 + 0x8d0) = *(int *)(lVar6 + 0x8d0) + 1;
+  lVar1 = lVar6 + 0x898;
+  local_res18 = 0;
+  local_res20 = lVar6;
+  ID_139352(&local_res18,"BodyDraw",0);
+  local_b8 = local_res18;
+  local_res18 = 0;
+  local_c0 = param_1 + 0xc;
+  uVar3 = ID_126642(lVar1,&local_c0);
+  ID_139340(&local_b8);
+  local_res18 = 0;
+  ID_937669 = uVar3;
+  ID_139352(&local_res18,"OrbitState",0);
+  local_a8 = local_res18;
+  local_res18 = 0;
+  local_b0 = param_1 + 0xd;
+  uVar3 = ID_126642(lVar1,&local_b0);
+  ID_139340(&local_a8);
+  local_res18 = 0;
+  ID_938353 = uVar3;
+  ID_139352(&local_res18,"HighDetailInfo",0);
+  local_98 = local_res18;
+  local_a0 = param_1 + 0x19;
+  local_res18 = 0;
+  uVar3 = ID_126642(lVar1,&local_a0);
+  ID_139340(&local_98);
+  ID_139340(&local_res18);
+  local_res18 = 0;
+  ID_938181 = uVar3;
+  ID_139352(&local_res18,"DynamicState",0);
+  local_88 = local_res18;
+  local_90 = param_1 + 0x1d;
+  local_res18 = 0;
+  uVar3 = ID_126642(lVar1,&local_90);
+  ID_139340(&local_88);
+  ID_139340(&local_res18);
+  local_res18 = 0;
+  ID_938383 = uVar3;
+  ID_139352(&local_res18,"BodyPhysicsData",0);
+  local_78 = local_res18;
+  local_80 = param_1 + 0x1e;
+  local_res18 = 0;
+  uVar3 = ID_126642(lVar1,&local_80);
+  ID_139340(&local_78);
+  ID_139340(&local_res18);
+  local_res18 = 0;
+  ID_938385 = uVar3;
+  ID_139352(&local_res18,"DockingChildState",0);
+  local_68 = local_res18;
+  local_70 = param_1 + 0x29;
+  local_res18 = 0;
+  uVar3 = ID_126642(lVar1,&local_70);
+  ID_139340(&local_68);
+  ID_139340(&local_res18);
+  local_res18 = 0;
+  ID_939212 = uVar3;
+  ID_139352(&local_res18,"DockingParentState",0);
+  local_58[0] = local_res18;
+  local_60 = param_1 + 0x2a;
+  local_res18 = 0;
+  uVar3 = ID_126642(lVar1,&local_60);
+  ID_139340(local_58);
+  ID_139340(&local_res18);
+  LOCK();
+  ID_939211 = uVar3;
+  *(int *)(lVar6 + 0x840) = *(int *)(lVar6 + 0x840) + -0x10000;
+  UNLOCK();
+  piVar2 = (int *)(lVar6 + 0x8d0);
+  *piVar2 = *piVar2 + -1;
+  iVar5 = *(int *)(lVar6 + 0x8d0);
+  if (*piVar2 == 0) {
+    LeaveCriticalSection((LPCRITICAL_SECTION)(lVar6 + 0x848));
+    iVar5 = *(int *)(lVar6 + 0x8d0);
+  }
+  *(int *)(lVar6 + 0x8d0) = iVar5 + -1;
+  if (iVar5 + -1 == 0) {
+    *(undefined4 *)(lVar6 + 0x8c8) = 0;
+    LeaveCriticalSection((LPCRITICAL_SECTION)(lVar6 + 0x848));
+  }
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0xe,&ID_944203,"OrbitState",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0xf,&ID_937854,"Orbital",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x10,&ID_937856,"Orbited",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x11,&ID_937883,"Satellite",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x12,&ID_938338,"UnusedGalaxy",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x13,&ID_944204,"UnusedStars",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x14,&ID_937870,"StarData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x15,&ID_937886,"ColorModifier",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x16,&ID_938336,"AtmosphereModifier",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x17,&ID_937882,"DatabaseID",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x18,&ID_937881,"LocationParsecs",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x1a,&ID_937885,"BodyType",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x1b,&ID_938331,"BrightnessModifier",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x1c,&ID_938334,"DynamicData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x1f,&ID_938332,"BiomeData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x20,&ID_938158,"PerBiomeData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x21,&ID_938339,"EditorBiomeData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x22,&ID_938327,"AtmosphereData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x23,&ID_938337,"CellData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x24,&ID_944205,"ResourceData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x25,&ID_938335,"PlanetWorldSpaceData",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x26,&ID_938330,"PlanetLocationIDs",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x27,&ID_937884,"PlanetarySystemLocationID",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x28,&ID_937671,"StarDistance",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x2b,&ID_938384,"PlayerAtBody",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x2c,&ID_938413,"OrbitOffset",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x2e,&ID_937890,"BodyChild",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x2d,&ID_937887,"ProxyFormPtr",0);
+  uVar7 = ID_126727();
+  ID_126671(uVar7,param_1 + 0x2f,&ID_938333,"PlayerKnowledge",0);
+  return param_1;
+}
+
+
+
+======== ID_126671 / ID_126671 @ 142407440 ========
+
+void ID_126671(uint *param_1,undefined **param_2,uint *param_3,longlong param_4,uint *param_5)
+
+{
+  uint *puVar1;
+  undefined8 *puVar2;
+  uint uVar3;
+  uint uVar4;
+  longlong *plVar5;
+  bool bVar6;
+  undefined **ppuVar7;
+  char cVar8;
+  uint uVar9;
+  longlong lVar10;
+  undefined8 uVar11;
+  ulonglong uVar12;
+  longlong *plVar13;
+  uint *puVar14;
+  uint *puVar15;
+  uint *puVar16;
+  uint *puVar17;
+  uint *puVar18;
+  uint *puVar19;
+  bool bVar20;
+  uint *local_res8;
+  uint *local_res18 [2];
+  undefined **local_70;
+  uint *local_68;
+  undefined8 local_60;
+  undefined **local_58;
+  uint *local_50;
+  uint *local_48 [2];
+  
+  puVar1 = param_1 + 0x16;
+  local_res8 = param_1;
+  local_res18[0] = param_3;
+  ID_123863(puVar1);
+  puVar19 = (uint *)0x0;
+  puVar18 = puVar19;
+  if ((param_5 != (uint *)0x0) &&
+     (puVar18 = (uint *)0x0, *(char *)((longlong)param_5 + 0xe) == '\x03')) {
+    puVar18 = param_5;
+  }
+  *(ushort *)param_3 = 0xffff;
+  if (0xfffe < *param_1) {
+    plVar5 = *(longlong **)(param_1 + 2);
+    for (plVar13 = plVar5; plVar13 != plVar5 + (ulonglong)*param_1 * 3; plVar13 = plVar13 + 3) {
+      if (*plVar13 == 0) {
+        uVar12 = ((longlong)plVar13 - (longlong)plVar5) / 0x18;
+        if ((uint)uVar12 < 0xffff) {
+          *(ushort *)param_3 = (ushort)uVar12;
+          local_60 = 0;
+          local_70 = param_2;
+          local_68 = puVar18;
+          if (param_4 != 0) {
+            ID_139352(&local_60,param_4,0);
+            uVar12 = (ulonglong)(ushort)*param_3;
+          }
+          uVar11 = local_60;
+          uVar12 = uVar12 & 0xffff;
+          lVar10 = *(longlong *)(param_1 + 2);
+          *(undefined ***)(lVar10 + uVar12 * 0x18) = local_70;
+          *(uint **)(lVar10 + 8 + uVar12 * 0x18) = local_68;
+          puVar2 = (undefined8 *)(lVar10 + 0x10 + uVar12 * 0x18);
+          if (puVar2 == &local_60) goto LAB_1424078ef;
+          local_60 = 0;
+          puVar16 = (uint *)*puVar2;
+          *puVar2 = uVar11;
+          if ((puVar16 == (uint *)0x0) ||
+             (lVar10 = ID_139337(), *(char *)(lVar10 + 0x200c00) == '\0')) goto LAB_1424078ef;
+          goto LAB_1424077a0;
+        }
+        break;
+      }
+    }
+    goto LAB_14240795d;
+  }
+  local_48[0] = (uint *)0x0;
+  local_58 = param_2;
+  local_50 = puVar18;
+  if (param_4 != 0) {
+    ID_139352(local_48,param_4,0);
+  }
+  puVar17 = local_48[0];
+  puVar16 = local_50;
+  ppuVar7 = local_58;
+  local_70 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+  local_68 = param_1;
+  uVar9 = ID_123859(param_1,&local_70,param_1[1],0x18);
+  if (uVar9 != 0xffffffff) {
+    puVar2 = (undefined8 *)(*(longlong *)(param_1 + 2) + (ulonglong)uVar9 * 0x18);
+    *puVar2 = ppuVar7;
+    puVar2[1] = puVar16;
+    local_48[0] = (uint *)0x0;
+    puVar2[2] = puVar17;
+    puVar17 = puVar19;
+  }
+  *(ushort *)local_res18[0] = (ushort)uVar9;
+  if ((puVar17 != (uint *)0x0) && (lVar10 = ID_139337(), *(char *)(lVar10 + 0x200c00) != '\0')) {
+LAB_142407560:
+    bVar6 = false;
+    uVar9 = puVar17[4];
+    while (uVar9 != 1) {
+      LOCK();
+      bVar20 = uVar9 == puVar17[4];
+      if (bVar20) {
+        puVar17[4] = uVar9 - 1;
+      }
+      UNLOCK();
+      param_1 = local_res8;
+      if (bVar20) goto LAB_1424078f9;
+      uVar9 = puVar17[4];
+    }
+    uVar9 = puVar17[5];
+    puVar16 = (uint *)(lVar10 + (ulonglong)(uVar9 >> 2 & 0xff) * 0xc + 0x200000);
+    puVar15 = puVar19;
+LAB_1424075a5:
+    uVar4 = *puVar16;
+    if ((uVar4 & 1) == 0) {
+      LOCK();
+      uVar3 = *puVar16;
+      if (uVar4 == uVar3) {
+        *puVar16 = uVar4 | 1;
+      }
+      UNLOCK();
+      if (uVar4 == uVar3) goto LAB_1424075cf;
+    }
+    if ((uint)puVar15 < 100) {
+      puVar15 = (uint *)(ulonglong)((uint)puVar15 + 1);
+    }
+    else {
+      puVar15 = (uint *)0x0;
+      Sleep(0);
+    }
+    goto LAB_1424075a5;
+  }
+LAB_1424078f9:
+  uVar9 = *local_res18[0];
+  if (((ushort)uVar9 != 0xffff) && (puVar18 != (uint *)0x0)) {
+    local_res8 = *(uint **)(param_1 + 10);
+    local_res18[0] = puVar18;
+    cVar8 = ID_59533(param_1 + 4,&local_res8,local_res18);
+    if (cVar8 != '\0') {
+      puVar2 = (undefined8 *)(*(longlong *)(param_1 + 8) + (longlong)local_res8 * 0x18);
+      *puVar2 = local_res18[0];
+      *(undefined2 *)(puVar2 + 1) = 0;
+    }
+    *(ushort *)(*(longlong *)(param_1 + 8) + 8 + (longlong)local_res8 * 0x18) = (ushort)uVar9;
+  }
+LAB_14240795d:
+  if (puVar1 != (uint *)0x0) {
+    ID_35983(puVar1);
+  }
+  return;
+LAB_1424077a0:
+  bVar6 = false;
+  uVar9 = puVar16[4];
+  while (uVar9 != 1) {
+    LOCK();
+    bVar20 = uVar9 == puVar16[4];
+    if (bVar20) {
+      puVar16[4] = uVar9 - 1;
+    }
+    UNLOCK();
+    param_1 = local_res8;
+    if (bVar20) goto LAB_1424078ef;
+    uVar9 = puVar16[4];
+  }
+  uVar9 = puVar16[5];
+  puVar17 = (uint *)(lVar10 + (ulonglong)(uVar9 >> 2 & 0xff) * 0xc + 0x200000);
+  puVar15 = puVar19;
+LAB_1424077e5:
+  uVar4 = *puVar17;
+  if ((uVar4 & 1) == 0) {
+    LOCK();
+    uVar3 = *puVar17;
+    if (uVar4 == uVar3) {
+      *puVar17 = uVar4 | 1;
+    }
+    UNLOCK();
+    if (uVar4 == uVar3) goto LAB_14240780f;
+  }
+  if ((uint)puVar15 < 100) {
+    puVar15 = (uint *)(ulonglong)((uint)puVar15 + 1);
+  }
+  else {
+    puVar15 = (uint *)0x0;
+    Sleep(0);
+  }
+  goto LAB_1424077e5;
+LAB_14240780f:
+  LOCK();
+  uVar4 = *puVar17;
+  *puVar17 = *puVar17 + (puVar17[2] & 4 | 2);
+  UNLOCK();
+  WakeByAddressAll(puVar17);
+  uVar3 = puVar17[1];
+  puVar15 = puVar19;
+  while ((uVar4 & 0xfffffff8) != uVar3) {
+    if ((uint)puVar15 < 100) {
+      puVar15 = (uint *)(ulonglong)((uint)puVar15 + 1);
+    }
+    else {
+      Sleep(0);
+      puVar15 = puVar19;
+    }
+    uVar3 = puVar17[1];
+  }
+  LOCK();
+  puVar15 = puVar16 + 4;
+  uVar4 = *puVar15;
+  *puVar15 = *puVar15 - 1;
+  UNLOCK();
+  if (uVar4 == 1) {
+    puVar15 = (uint *)(lVar10 + (ulonglong)(uVar9 >> 2) * 8);
+    do {
+      puVar14 = puVar15;
+      puVar15 = *(uint **)puVar14;
+      if (puVar15 == (uint *)0x0) goto LAB_142407891;
+    } while (puVar15 != puVar16);
+    *(undefined8 *)puVar14 = *(undefined8 *)puVar15;
+    bVar6 = true;
+  }
+LAB_142407891:
+  uVar9 = puVar17[2];
+  puVar17[2] = uVar9 + 4;
+  LOCK();
+  *puVar17 = *puVar17 - (uVar9 & 4 | 3);
+  UNLOCK();
+  WakeByAddressAll(puVar17);
+  param_1 = local_res8;
+  if (!bVar6) goto LAB_1424078ef;
+  puVar17 = puVar19;
+  if ((puVar16[5] >> 1 & 1) != 0) {
+    puVar17 = *(uint **)(puVar16 + 2);
+  }
+  uVar11 = ID_35721();
+  ID_123793(uVar11,puVar16,0);
+  puVar16 = puVar17;
+  param_1 = local_res8;
+  if (puVar17 == (uint *)0x0) goto LAB_1424078ef;
+  goto LAB_1424077a0;
+LAB_1424078ef:
+  ID_139340(&local_60);
+  goto LAB_1424078f9;
+LAB_1424075cf:
+  LOCK();
+  uVar4 = *puVar16;
+  *puVar16 = *puVar16 + (puVar16[2] & 4 | 2);
+  UNLOCK();
+  WakeByAddressAll(puVar16);
+  uVar3 = puVar16[1];
+  puVar15 = puVar19;
+  while ((uVar4 & 0xfffffff8) != uVar3) {
+    if ((uint)puVar15 < 100) {
+      puVar15 = (uint *)(ulonglong)((uint)puVar15 + 1);
+    }
+    else {
+      Sleep(0);
+      puVar15 = puVar19;
+    }
+    uVar3 = puVar16[1];
+  }
+  LOCK();
+  puVar15 = puVar17 + 4;
+  uVar4 = *puVar15;
+  *puVar15 = *puVar15 - 1;
+  UNLOCK();
+  if (uVar4 == 1) {
+    puVar15 = (uint *)(lVar10 + (ulonglong)(uVar9 >> 2) * 8);
+    do {
+      puVar14 = puVar15;
+      puVar15 = *(uint **)puVar14;
+      if (puVar15 == (uint *)0x0) goto LAB_142407651;
+    } while (puVar15 != puVar17);
+    *(undefined8 *)puVar14 = *(undefined8 *)puVar15;
+    bVar6 = true;
+  }
+LAB_142407651:
+  uVar9 = puVar16[2];
+  puVar16[2] = uVar9 + 4;
+  LOCK();
+  *puVar16 = *puVar16 - (uVar9 & 4 | 3);
+  UNLOCK();
+  WakeByAddressAll(puVar16);
+  param_1 = local_res8;
+  if (!bVar6) goto LAB_1424078f9;
+  puVar16 = puVar19;
+  if ((puVar17[5] >> 1 & 1) != 0) {
+    puVar16 = *(uint **)(puVar17 + 2);
+  }
+  uVar11 = ID_35721();
+  ID_123793(uVar11,puVar17,0);
+  puVar17 = puVar16;
+  param_1 = local_res8;
+  if (puVar16 == (uint *)0x0) goto LAB_1424078f9;
+  goto LAB_142407560;
+}
+
+
+
+======== ID_49168 / ID_49168 @ 14067c260 ========
+
+void ID_49168(undefined8 param_1,longlong *param_2,longlong *param_3,uint param_4,int *param_5,
+             int *param_6)
+
+{
+  ushort uVar1;
+  undefined8 uVar2;
+  longlong lVar3;
+  uint uVar4;
+  uint uVar5;
+  uint uVar6;
+  uint uVar7;
+  ushort uVar8;
+  uint uVar9;
+  uint uVar10;
+  int iVar11;
+  uint uVar12;
+  longlong local_28;
+  longlong *local_20;
+  uint local_18;
+  ushort local_14;
+  undefined1 local_12;
+  
+  local_28 = *param_2;
+  if (local_28 != 0) {
+    LOCK();
+    *(int *)(local_28 + 0x10) = *(int *)(local_28 + 0x10) + 1;
+    UNLOCK();
+  }
+  local_20 = param_3;
+  local_18 = param_4;
+  uVar2 = ID_42269();
+  lVar3 = ID_36148(uVar2,param_2);
+  uVar6 = 0;
+  uVar7 = 0;
+  if (lVar3 == 0) {
+    local_14 = 0;
+    uVar12 = uVar6;
+  }
+  else {
+    local_14 = *(ushort *)(lVar3 + 0x10);
+    uVar12 = (uint)local_14;
+  }
+  uVar8 = (ushort)uVar12;
+  local_12 = (**(code **)(*param_3 + 8))(param_3);
+  uVar5 = 0xffffffff;
+  uVar12 = uVar6;
+  if (*param_5 == 0) {
+LAB_14067c339:
+    ID_49238(param_5,uVar12,&local_28);
+    uVar8 = local_14;
+  }
+  else {
+    iVar11 = *param_5 + -1;
+    uVar10 = uVar7;
+    uVar9 = uVar6;
+    if (-1 < iVar11) {
+      do {
+        uVar12 = uVar5;
+        if (uVar5 != 0xffffffff) goto LAB_14067c339;
+        uVar4 = ((int)(iVar11 - uVar9) >> 1) + uVar9;
+        uVar12 = *(uint *)(*(longlong *)(param_5 + 2) + 0x10 + (ulonglong)uVar4 * 0x18);
+        if (uVar12 < param_4) {
+          uVar10 = uVar4 + 1;
+          uVar4 = uVar5;
+        }
+        else {
+          uVar10 = uVar9;
+          if (param_4 < uVar12) {
+            iVar11 = uVar4 - 1;
+            uVar4 = uVar5;
+          }
+        }
+        uVar5 = uVar4;
+        uVar9 = uVar10;
+      } while ((int)uVar10 <= iVar11);
+      uVar12 = uVar5;
+      if (uVar5 != 0xffffffff) goto LAB_14067c339;
+    }
+    uVar12 = uVar10;
+    if (uVar10 != 0xffffffff) goto LAB_14067c339;
+  }
+  if (*param_6 != 0) {
+    iVar11 = *param_6 + -1;
+    uVar12 = uVar6;
+    uVar6 = 0xffffffff;
+    if (-1 < iVar11) {
+      do {
+        if (uVar6 != 0xffffffff) goto LAB_14067c3b1;
+        uVar5 = ((int)(iVar11 - uVar12) >> 1) + uVar12;
+        uVar1 = *(ushort *)(*(longlong *)(param_6 + 2) + 0x14 + (ulonglong)uVar5 * 0x18);
+        if (uVar1 < uVar8) {
+          uVar7 = uVar5 + 1;
+          uVar5 = uVar6;
+        }
+        else {
+          uVar7 = uVar12;
+          if (uVar8 < uVar1) {
+            iVar11 = uVar5 - 1;
+            uVar5 = uVar6;
+          }
+        }
+        uVar12 = uVar7;
+        uVar6 = uVar5;
+      } while ((int)uVar7 <= iVar11);
+      if (uVar5 != 0xffffffff) goto LAB_14067c3b1;
+    }
+    uVar6 = uVar7;
+    if (uVar7 == 0xffffffff) goto LAB_14067c3c2;
+  }
+LAB_14067c3b1:
+  ID_49238(param_6,uVar6,&local_28);
+LAB_14067c3c2:
+  ID_139340(&local_28);
+  return;
+}
+
+
+
+======== ID_49206 / ID_49206 @ 14067e5e0 ========
+
+undefined ** ID_49206(void)
+
+{
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_945531) {
+    _Init_thread_header(&ID_945531);
+    if (ID_945531 == -1) {
+      atexit((_func_5014 *)&ID_194782);
+      _Init_thread_footer(&ID_945531);
+      return &ID_837341;
+    }
+  }
+  return &ID_837341;
+}
+
+
+
+======== ID_41769 / ID_41769 @ 140449190 ========
+
+undefined * ID_41769(void)
+
+{
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_945150) {
+    _Init_thread_header(&ID_945150);
+    if (ID_945150 == -1) {
+      ID_139352(&ID_945151,"BGSScannable",0);
+      atexit(ID_192743);
+      _Init_thread_footer(&ID_945150);
+      return &ID_945151;
+    }
+  }
+  return &ID_945151;
+}
+
+
+
+======== ID_17021 / ID_17021 @ 14016f9b0 ========
+
+void ID_17021(void)
+
+{
+  longlong lVar1;
+  undefined8 uVar2;
+  
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_947125) {
+    _Init_thread_header(&ID_947125);
+    if (ID_947125 == -1) {
+      ID_947126 = 0;
+      ID_139352(&ID_947126,"Scannable_Component",0);
+      atexit(ID_208471);
+      _Init_thread_footer(&ID_947125);
+    }
+  }
+  if (ID_947126 == 0) {
+    lVar1 = 0;
+  }
+  else if ((*(uint *)(ID_947126 + 0x14) >> 1 & 1) == 0) {
+    lVar1 = ID_947126 + 0x18;
+  }
+  else {
+    lVar1 = ID_139339(*(undefined8 *)(ID_947126 + 8));
+  }
+  uVar2 = ID_126727();
+  ID_126671(uVar2,&ID_827821,&ID_939118,lVar1,0);
+  uVar2 = ID_41769();
+  lVar1 = ID_49206();
+  ID_49168(lVar1 + 0x80,uVar2,&ID_827820,2,lVar1 + 0x70,lVar1 + 0x80);
+  atexit((_func_5014 *)&ID_208472);
+  return;
+}
+
+
+

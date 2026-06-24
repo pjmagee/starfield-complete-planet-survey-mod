@@ -26,7 +26,7 @@ target("CompletePlanetSurvey", function()
     add_rules("commonlib.plugin")
 
     -- plugin metadata
-    set_license("MIT")
+    set_license("GPL-3.0-or-later")
     on_config(function(target)
         target:data_set("commonlib.plugin.config", {
             author = "pjmagee",

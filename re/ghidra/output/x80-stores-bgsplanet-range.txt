@@ -1,0 +1,26 @@
+Stores to [reg+0x80] in [140785000,1407d0000]:
+
+  1407881ff  MOV qword ptr [R15 + 0x80],R14   in ID_51725@140788140
+  140789c7d  MOV dword ptr [R13 + 0x80],R15D   in ID_51730@140789780
+  14078aa54  MOV dword ptr [RCX + 0x80],EDX   in ID_51735@14078aa30
+  14078ae96  MOV dword ptr [RCX + 0x80],R14D   in ID_51735@14078aa30
+  1407918a8  MOV qword ptr [RBX + 0x80],RSI   in ID_51817@1407917c0
+  140791ba0  MOV qword ptr [RDI + 0x80],RSI   in ID_51821@140791b30
+  140791ccd  MOV dword ptr [RDI + 0x80],ESI   in ID_51822@140791c20
+  14079433a  MOV qword ptr [RSI + 0x80],RCX   in ID_51845@140794250
+  14079d909  MOV dword ptr [RSI + 0x80],EBX   in ID_51920@14079d7d0
+  14079e8b5  MOV qword ptr [RSI + 0x80],RAX   in ID_51928@14079e7c0
+  1407a2034  MOV dword ptr [RBX + 0x80],EAX   in ID_51947@1407a1f50
+  1407a2376  MOV qword ptr [RDI + 0x80],RAX   in ID_51948@1407a2310
+  1407b0249  MOV dword ptr [RDI + 0x80],R12D   in ID_52035@1407b0180
+  1407b3e10  MOV qword ptr [RBX + 0x80],RAX   in ID_52103@1407b3d60
+  1407b3e3e  MOV qword ptr [RBX + 0x80],R8   in ID_52103@1407b3d60
+  1407b4a99  MOV qword ptr [RBX + 0x80],RAX   in ID_52111@1407b4980
+  1407b567e  MOV dword ptr [R14 + 0x80],EBX   in ID_52130@1407b55a0
+  1407b5bb0  MOV qword ptr [RBX + 0x80],RAX   in ID_52131@1407b5b50
+  1407c150d  MOV qword ptr [RDI + 0x80],R15   in ID_52228@1407c1430
+  1407c36c2  MOV qword ptr [RBX + 0x80],RDI   in ID_52242@1407c3630
+  1407c3d46  MOV qword ptr [RBX + 0x80],RAX   in ID_52255@1407c3ce0
+  1407c64ac  MOV qword ptr [RSI + 0x80],RBX   in ID_52302@1407c6410
+  1407c729f  MOV qword ptr [RBX + 0x80],RDX   in ID_52313@1407c7230
+  1407c798a  MOV qword ptr [RBX + 0x80],RDI   in ID_52325@1407c7940

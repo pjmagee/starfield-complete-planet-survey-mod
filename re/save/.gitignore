@@ -1,0 +1,5 @@
+# Decompressed save bodies (multi-MB, regenerated on demand by parse_sfs.py)
+body_*.bin
+_tmp_body.bin
+*.sfs
+__pycache__/

@@ -1,0 +1,180 @@
+==== BSComponentDB2::Detail::CreateAndDeleteCommand<class_<lambda_ed1860e4f1c0285962af7667c97f6e95>,class_BSComponentDB2::Detail::EdgeKey_const&___ptr64,struct_BSGalaxy::CTPerBiomeData&___ptr64>::vftable_meta_ptr @ 144b41268 ====
+  +0x0 -> 144fd8868
+  +0x8 -> 140777a50  `scalar_deleting_destructor'
+  +0x10 -> 140775350  ID_51465
+  +0x18 -> 1402b7970  ID_35679
+  +0x20 -> 144fd8930
+  +0x28 -> 1402c8c10  ID_36089
+  +0x30 -> 140775430  ID_51479
+  +0x38 -> 1402b7970  ID_35679
+  +0x40 -> 144fd88b8
+  +0x48 -> 1402b6740  ID_35634
+  +0x50 -> 140775410  ID_51477
+  +0x58 -> 1402b7970  ID_35679
+  +0x60 -> 144fd8890
+  +0x68 -> 1403ecdc0  ID_40365
+  +0x70 -> 140775420  ID_51478
+  +0x78 -> 1402b7970  ID_35679
+
+==== BSComponentDB2::Detail::CreateAndDeleteCommand<class_<lambda_ed1860e4f1c0285962af7667c97f6e95>,class_BSComponentDB2::Detail::EdgeKey_const&___ptr64,struct_BSGalaxy::CTPerBiomeData&___ptr64>::vftable @ 144b41270 ====
+  +0x0 -> 140777a50  `scalar_deleting_destructor'
+  +0x8 -> 140775350  ID_51465
+  +0x10 -> 1402b7970  ID_35679
+  +0x18 -> 144fd8930
+  +0x20 -> 1402c8c10  ID_36089
+  +0x28 -> 140775430  ID_51479
+  +0x30 -> 1402b7970  ID_35679
+  +0x38 -> 144fd88b8
+  +0x40 -> 1402b6740  ID_35634
+  +0x48 -> 140775410  ID_51477
+  +0x50 -> 1402b7970  ID_35679
+  +0x58 -> 144fd8890
+  +0x60 -> 1403ecdc0  ID_40365
+  +0x68 -> 140775420  ID_51478
+  +0x70 -> 1402b7970  ID_35679
+  +0x78 -> 144fd8610
+
+==== BSComponentDB2::Detail::CreateAndDeleteCommand<class_<lambda_d71acbe8d588db85e1b22c43cf84837b>,class_BSComponentDB2::Detail::EdgeKey_const&___ptr64,struct_BSGalaxy::CTPerBiomeData_const&___ptr64>::vftable_meta_ptr @ 144b41488 ====
+  +0x0 -> 144fd8750
+  +0x8 -> 140777a50  `scalar_deleting_destructor'
+  +0x10 -> 140775350  ID_51465
+  +0x18 -> 1402b7970  ID_35679
+  +0x20 -> 144fd86b0
+  +0x28 -> 1402c8c10  ID_36089
+  +0x30 -> 140775360  ID_51466
+  +0x38 -> 1402b7970  ID_35679
+  +0x40 -> 144fd8558
+  +0x48 -> 140778100  `scalar_deleting_destructor'
+  +0x50 -> 1407780d0  ID_51551
+  +0x58 -> 144fd8530
+  +0x60 -> 1403a8ad0  ID_39401
+  +0x68 -> 1407780a0  ID_51550
+  +0x70 -> 144fd8908
+  +0x78 -> 1403ec080  ID_40332
+
+==== BSComponentDB2::Detail::CreateAndDeleteCommand<class_<lambda_d71acbe8d588db85e1b22c43cf84837b>,class_BSComponentDB2::Detail::EdgeKey_const&___ptr64,struct_BSGalaxy::CTPerBiomeData_const&___ptr64>::vftable @ 144b41490 ====
+  +0x0 -> 140777a50  `scalar_deleting_destructor'
+  +0x8 -> 140775350  ID_51465
+  +0x10 -> 1402b7970  ID_35679
+  +0x18 -> 144fd86b0
+  +0x20 -> 1402c8c10  ID_36089
+  +0x28 -> 140775360  ID_51466
+  +0x30 -> 1402b7970  ID_35679
+  +0x38 -> 144fd8558
+  +0x40 -> 140778100  `scalar_deleting_destructor'
+  +0x48 -> 1407780d0  ID_51551
+  +0x50 -> 144fd8530
+  +0x58 -> 1403a8ad0  ID_39401
+  +0x60 -> 1407780a0  ID_51550
+  +0x68 -> 144fd8908
+  +0x70 -> 1403ec080  ID_40332
+  +0x78 -> 140775060  ID_51459
+
+==== BSTVSOTree_detail::TObjectWrapper<class_BSComponentDB2::Detail::Edge<1,struct_BSGalaxy::CTPerBiomeData>_>::vftable_meta_ptr @ 144b414c8 ====
+  +0x0 -> 144fd8558
+  +0x8 -> 140778100  `scalar_deleting_destructor'
+  +0x10 -> 1407780d0  ID_51551
+  +0x18 -> 144fd8530
+  +0x20 -> 1403a8ad0  ID_39401
+  +0x28 -> 1407780a0  ID_51550
+  +0x30 -> 144fd8908
+  +0x38 -> 1403ec080  ID_40332
+  +0x40 -> 140775060  ID_51459
+  +0x48 -> 1402b7970  ID_35679
+  +0x50 -> 144fd83f0
+  +0x58 -> 140776ab0  `scalar_deleting_destructor'
+  +0x60 -> 1407767b0  ID_51499
+  +0x68 -> 144fd84e0
+  +0x70 -> 1403a82d0  ID_39389
+  +0x78 -> 140776860  ID_51501
+
+==== BSTVSOTree_detail::TObjectWrapper<class_BSComponentDB2::Detail::Edge<1,struct_BSGalaxy::CTPerBiomeData>_>::vftable @ 144b414d0 ====
+  +0x0 -> 140778100  `scalar_deleting_destructor'
+  +0x8 -> 1407780d0  ID_51551
+  +0x10 -> 144fd8530
+  +0x18 -> 1403a8ad0  ID_39401
+  +0x20 -> 1407780a0  ID_51550
+  +0x28 -> 144fd8908
+  +0x30 -> 1403ec080  ID_40332
+  +0x38 -> 140775060  ID_51459
+  +0x40 -> 1402b7970  ID_35679
+  +0x48 -> 144fd83f0
+  +0x50 -> 140776ab0  `scalar_deleting_destructor'
+  +0x58 -> 1407767b0  ID_51499
+  +0x60 -> 144fd84e0
+  +0x68 -> 1403a82d0  ID_39389
+  +0x70 -> 140776860  ID_51501
+  +0x78 -> 144fd8508
+
+==== BSTVSOTree_detail::TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_BSGalaxy::CTPerBiomeData>_>::vftable_meta_ptr @ 144d63218 ====
+  +0x0 -> 1452d3080
+  +0x8 -> 1423271a0  `scalar_deleting_destructor'
+  +0x10 -> 142326fe0  ID_124675
+  +0x18 -> 1452d30d0
+  +0x20 -> 142327250  ID_124683
+  +0x28 -> 142327030  ID_124676
+  +0x30 -> 1452d3008
+  +0x38 -> 1403a8340  ID_39390
+  +0x40 -> 142326f20  ID_124673
+  +0x48 -> 1452d3058
+  +0x50 -> 1423270e0  `scalar_deleting_destructor'
+  +0x58 -> 142326f60  ID_124674
+  +0x60 -> 1452d3030
+  +0x68 -> 1403a82d0  ID_39389
+  +0x70 -> 142326ee0  ID_124672
+  +0x78 -> 1452d3520
+
+==== BSTVSOTree_detail::TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_BSGalaxy::CTPerBiomeData>_>::vftable @ 144d63220 ====
+  +0x0 -> 1423271a0  `scalar_deleting_destructor'
+  +0x8 -> 142326fe0  ID_124675
+  +0x10 -> 1452d30d0
+  +0x18 -> 142327250  ID_124683
+  +0x20 -> 142327030  ID_124676
+  +0x28 -> 1452d3008
+  +0x30 -> 1403a8340  ID_39390
+  +0x38 -> 142326f20  ID_124673
+  +0x40 -> 1452d3058
+  +0x48 -> 1423270e0  `scalar_deleting_destructor'
+  +0x50 -> 142326f60  ID_124674
+  +0x58 -> 1452d3030
+  +0x60 -> 1403a82d0  ID_39389
+  +0x68 -> 142326ee0  ID_124672
+  +0x70 -> 1452d3520
+  +0x78 -> 1423203d0  ID_124592
+
+==== BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPerBiomeData>::vftable_meta_ptr @ 144d635e0 ====
+  +0x0 -> 1452d3750
+  +0x8 -> 1402b78a0  ID_35667
+  +0x10 -> 14036d270  ID_38417
+  +0x18 -> 14036d270  ID_38417
+  +0x20 -> 1402b7970  ID_35679
+  +0x28 -> 1402b7970  ID_35679
+  +0x30 -> 142324b90  ID_124652
+  +0x38 -> 142324b90  ID_124652
+  +0x40 -> 1452d36d8
+  +0x48 -> 1402b78a0  ID_35667
+  +0x50 -> 14036d270  ID_38417
+  +0x58 -> 14036d270  ID_38417
+  +0x60 -> 1402b7970  ID_35679
+  +0x68 -> 1402b7970  ID_35679
+  +0x70 -> 142322f10  ID_124626
+  +0x78 -> 142322ee0  ID_124625
+
+==== BSComponentDB2::Detail::ComponentFactoryImpl<struct_BSGalaxy::CTPerBiomeData>::vftable @ 144d635e8 ====
+  +0x0 -> 1402b78a0  ID_35667
+  +0x8 -> 14036d270  ID_38417
+  +0x10 -> 14036d270  ID_38417
+  +0x18 -> 1402b7970  ID_35679
+  +0x20 -> 1402b7970  ID_35679
+  +0x28 -> 142324b90  ID_124652
+  +0x30 -> 142324b90  ID_124652
+  +0x38 -> 1452d36d8
+  +0x40 -> 1402b78a0  ID_35667
+  +0x48 -> 14036d270  ID_38417
+  +0x50 -> 14036d270  ID_38417
+  +0x58 -> 1402b7970  ID_35679
+  +0x60 -> 1402b7970  ID_35679
+  +0x68 -> 142322f10  ID_124626
+  +0x70 -> 142322ee0  ID_124625
+  +0x78 -> 1452d3660
+
