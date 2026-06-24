@@ -12,7 +12,7 @@ Three commands, each taking a **category string** — a comma list of any of
 | `CompleteLifePlanets` | every world **with** life | `cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "resources,traits,fauna,flora"` |
 | `CompleteAllPlanets` | the **whole galaxy** (barren + life) | `cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"` |
 
-`CompleteAllPlanets` is a thin wrapper that runs `CompleteBarrenPlanets` then `CompleteLifePlanets` (so it shows both of their completion popups).
+`CompleteAllPlanets` runs both galaxy sweeps as one cohesive operation: it shows the immersive intro (the `CPSRecallMessage` modal) once, suppresses the two sweeps' individual result popups, and shows a **single** combined result. The two underlying commands (`CompleteBarrenPlanets`/`CompleteLifePlanets`) gained an optional `abShowResult` arg (default `true`) and now return their world count — the console `cgf` calls are unaffected.
 
 Pick exactly what gets marked: `"traits"` alone, `"resources,traits"`, `"all"`, etc.
 

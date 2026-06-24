@@ -395,7 +395,9 @@ EndFunction
 ;   cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "resources,traits"
 ; Barren = worlds with no flora/fauna. Resources are written by the sweep as it discovers each
 ; world (always applied); "traits" additionally marks each world's traits known.
-Function CompleteBarrenPlanets(string asCategories) global
+; abShowResult=false suppresses the result popup (CompleteAllPlanets shows ONE combined result instead);
+; the immersive CPSRecallMessage intro always shows. Returns the count of barren worlds fully surveyed.
+int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true) global
     CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
     bool doTraits = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     ; Immersive framing as a MODAL popup — the CK-authored MESG record CPSRecallMessage (0x807),
@@ -469,8 +471,12 @@ Function CompleteBarrenPlanets(string asCategories) global
 
     ; Unmissable completion signal — a MODAL Debug.MessageBox, NOT a toast (toasts queue behind the
     ; Survey Data slate cascade and surface buried, minutes later). Honest wording: barren worlds are
-    ; fully done; living worlds need an on-planet scan.
-    Debug.MessageBox("Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — land on one and run CompleteSurvey to catalogue its life.  Done in " + (secTotal as int) + "s.")
+    ; fully done; living worlds need an on-planet scan. Suppressed when CompleteAllPlanets runs us
+    ; (it shows ONE combined result for the whole galaxy).
+    If abShowResult
+        Debug.MessageBox("Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — land on one and run CompleteSurvey to catalogue its life.  Done in " + (secTotal as int) + "s.")
+    EndIf
+    Return fullyComplete
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
@@ -624,14 +630,16 @@ EndFunction
 ; reload. Note: completing anything on a never-visited world discovers it (drops its Survey Data slate).
 ;   cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "resources,traits,fauna,flora"
 ;   cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "traits"
-Function CompleteLifePlanets(string asCategories) global
+; abShowResult=false suppresses the result popup (CompleteAllPlanets shows ONE combined result instead).
+; Returns the count of life-bearing worlds processed.
+int Function CompleteLifePlanets(string asCategories, bool abShowResult = true) global
     CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
     bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
     bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     bool doSpecies   = _WantsSpecies(asCategories)
     If !doResources && !doTraits && !doSpecies
         Debug.Notification("CompleteLifePlanets: nothing selected (resources,traits,fauna,flora,all)")
-        Return
+        Return 0
     EndIf
 
     float t0 = Utility.GetCurrentRealTime()
@@ -683,20 +691,27 @@ Function CompleteLifePlanets(string asCategories) global
 
     float secs = Utility.GetCurrentRealTime() - t0
     CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets[" + asCategories + "]: " + worlds + " life worlds, " + greened + " greened in " + secs + "s")
-    Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + ").  " + greened + " greened.  Done in " + (secs as int) + "s.")
+    If abShowResult
+        Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + ").  " + greened + " greened.  Done in " + (secs as int) + "s.")
+    EndIf
+    Return worlds
 EndFunction
 
 ; Complete EVERY planet/moon in the galaxy — barren AND life-bearing — for the given categories, in
-; ONE command. Runs both galaxy sweeps: CompleteBarrenPlanets (lifeless worlds) then CompleteLifePlanets
-; (life worlds). Together they cover the whole galaxy (the barren sweep deliberately skips living
-; worlds, so both are needed). DATA + ref-free species green are written galaxy-wide; the in-world trait
-; OBJECTS still finish on-foot / auto-resolve on arrival (see CompleteLifePlanets). Each sweep shows its
-; own completion popup.
+; ONE cohesive command. Shows the immersive CPSRecallMessage intro (the "main MSG") ONCE, runs both
+; galaxy sweeps with their individual result popups SUPPRESSED, then shows ONE combined result. Together
+; the two sweeps cover the whole galaxy (the barren sweep deliberately skips living worlds, so both are
+; needed). DATA + ref-free species green are written galaxy-wide; the in-world trait OBJECTS still finish
+; on-foot / auto-resolve on arrival (see CompleteLifePlanets).
 ;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"
 ;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "resources,traits"
 Function CompleteAllPlanets(string asCategories) global
-    CompleteBarrenPlanets(asCategories)
-    CompleteLifePlanets(asCategories)
+    CompletePlanetSurveyNative.CancelPendingAutoComplete()
+    ; CompleteBarrenPlanets shows the immersive CPSRecallMessage intro; both run with abShowResult=false
+    ; so neither pops its own box — we present ONE cohesive combined result for the whole galaxy.
+    int barren = CompleteBarrenPlanets(asCategories, false)
+    int life   = CompleteLifePlanets(asCategories, false)
+    Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
 EndFunction
 
 ; True if the category list asks for creatures (any of fauna/flora/species/creatures, or "all").
