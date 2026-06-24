@@ -1,0 +1,135 @@
+======== ID_124688 / ID_124688 @ 142327804 ========
+
+void ID_124688(longlong param_1)
+
+{
+  ID_124592(param_1 + -0x10);
+  return;
+}
+
+
+
+======== ID_124689 / ID_124689 @ 142327810 ========
+
+void ID_124689(longlong param_1)
+
+{
+  ID_124592(param_1 + -0x38);
+  return;
+}
+
+
+
+======== ID_124591 / ID_124591 @ 142320040 ========
+
+void ID_124591(undefined8 *param_1)
+
+{
+  int *piVar1;
+  DWORD DVar2;
+  int iVar3;
+  longlong lVar4;
+  uint uVar5;
+  bool bVar6;
+  
+  *param_1 = BSGalaxy::ModuleState::vftable;
+  param_1[2] = BSGalaxy::ModuleState::vftable;
+  param_1[7] = BSGalaxy::ModuleState::vftable;
+  ID_126680(&ID_944203);
+  ID_126680(&ID_937854);
+  ID_126680(&ID_937856);
+  ID_126680(&ID_937883);
+  ID_126680(&ID_938338);
+  ID_126680(&ID_944204);
+  ID_126680(&ID_937870);
+  ID_126680(&ID_937886);
+  ID_126680(&ID_938336);
+  ID_126680(&ID_937882);
+  ID_126680(&ID_937881);
+  ID_126680(&ID_937885);
+  ID_126680(&ID_938331);
+  ID_126680(&ID_938334);
+  ID_126680(&ID_938332);
+  ID_126680(&ID_938158);
+  ID_126680(&ID_938339);
+  ID_126680(&ID_938327);
+  ID_126680(&ID_938337);
+  ID_126680(&ID_944205);
+  ID_126680(&ID_938335);
+  ID_126680(&ID_938330);
+  ID_126680(&ID_937884);
+  ID_126680(&ID_937671);
+  ID_126680(&ID_938384);
+  ID_126680(&ID_938413);
+  ID_126680(&ID_937890);
+  ID_126680(&ID_938333);
+  ID_126680(&ID_937887);
+  lVar4 = ID_126578();
+  DVar2 = GetCurrentThreadId();
+  if (*(DWORD *)(lVar4 + 0x8c8) != DVar2) {
+    EnterCriticalSection((LPCRITICAL_SECTION)(lVar4 + 0x848));
+    *(DWORD *)(lVar4 + 0x8c8) = DVar2;
+  }
+  *(int *)(lVar4 + 0x8d0) = *(int *)(lVar4 + 0x8d0) + 1;
+  uVar5 = *(uint *)(lVar4 + 0x840) & 0xffff0000 | *(uint *)(lVar4 + 0x8d4);
+  do {
+    LOCK();
+    bVar6 = uVar5 == *(uint *)(lVar4 + 0x840);
+    if (bVar6) {
+      *(uint *)(lVar4 + 0x840) = uVar5 + 0x10000;
+    }
+    UNLOCK();
+  } while (!bVar6);
+  *(int *)(lVar4 + 0x8d0) = *(int *)(lVar4 + 0x8d0) + 1;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_937669 * 0x10) = 0;
+  ID_937669 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938353 * 0x10) = 0;
+  ID_938353 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938181 * 0x10) = 0;
+  ID_938181 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938383 * 0x10) = 0;
+  ID_938383 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_939212 * 0x10) = 0;
+  ID_939212 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_939211 * 0x10) = 0;
+  ID_939211 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938385 * 0x10) = 0;
+  ID_938385 = 0;
+  LOCK();
+  *(int *)(lVar4 + 0x840) = *(int *)(lVar4 + 0x840) + -0x10000;
+  UNLOCK();
+  piVar1 = (int *)(lVar4 + 0x8d0);
+  *piVar1 = *piVar1 + -1;
+  iVar3 = *(int *)(lVar4 + 0x8d0);
+  if (*piVar1 == 0) {
+    LeaveCriticalSection((LPCRITICAL_SECTION)(lVar4 + 0x848));
+    iVar3 = *(int *)(lVar4 + 0x8d0);
+  }
+  *(int *)(lVar4 + 0x8d0) = iVar3 + -1;
+  if (iVar3 + -1 == 0) {
+    *(undefined4 *)(lVar4 + 0x8c8) = 0;
+    LeaveCriticalSection((LPCRITICAL_SECTION)(lVar4 + 0x848));
+  }
+  param_1[0x2a] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x29] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x1e] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x1d] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x19] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0xd] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0xc] = BSComponentDB::IComponentFactory::vftable;
+  if (param_1[9] != 0) {
+    ID_35771(param_1[9],*(int *)((longlong)param_1 + 0x44) << 3);
+    param_1[9] = 0;
+    param_1[8] = 0;
+  }
+  if (param_1[4] != 0) {
+    ID_35771(param_1[4],*(int *)((longlong)param_1 + 0x1c) << 3);
+    param_1[4] = 0;
+    param_1[3] = 0;
+  }
+  ID_944202 = 0;
+  return;
+}
+
+
+

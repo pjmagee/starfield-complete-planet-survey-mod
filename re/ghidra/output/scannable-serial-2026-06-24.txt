@@ -1,0 +1,307 @@
+======== ID_83043 / ID_83043 @ 14130ad90 ========
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+ulonglong ID_83043(longlong param_1,longlong param_2)
+
+{
+  uint *puVar1;
+  uint uVar2;
+  char cVar3;
+  int iVar4;
+  longlong lVar5;
+  char cVar6;
+  ulonglong uVar7;
+  undefined8 *puVar8;
+  undefined8 *puVar9;
+  int iVar10;
+  longlong local_res8;
+  longlong local_res10;
+  undefined8 *local_88;
+  longlong local_80;
+  uint local_78;
+  undefined8 local_70;
+  undefined8 uStack_68;
+  longlong local_60;
+  longlong local_58;
+  undefined1 local_50 [24];
+  longlong *local_38;
+  char local_30;
+  
+  ID_126668(param_1 + 0x238,&local_88);
+  cVar3 = *(char *)(param_2 + 0x14);
+  iVar4 = *(int *)(param_2 + 0x18);
+  iVar10 = *(int *)(param_2 + 0x1c);
+  local_res10 = (ulonglong)CONCAT24(ID_939118,*(undefined4 *)(param_2 + 0x20)) << 0x10;
+  local_res8 = param_1;
+  ID_126711(&local_res8,local_50);
+  if (local_30 != '\0') {
+    local_70 = _ID_501138;
+    uStack_68 = _UNK_144f09628;
+    local_60 = 0;
+    local_58 = 0xfe0;
+    cVar6 = ID_38418(local_res8 + 0x268,&local_70,&local_res10,0x30);
+    lVar5 = local_60;
+    if (cVar6 != '\0') {
+      ID_126656(*(undefined8 *)(local_60 + -0x18));
+      puVar8 = (undefined8 *)((ulonglong)*(ushort *)(lVar5 + 0x12 + local_58 * 4) + lVar5);
+      *puVar8 = BSTVSOTree_detail::
+                TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_ScannableComponent>_>
+                ::vftable;
+      puVar8[2] = local_res10;
+      lVar5 = *local_38;
+      puVar8[3] = lVar5;
+      puVar9 = (undefined8 *)0x0;
+      if (lVar5 != 0) {
+        LOCK();
+        *(longlong *)(lVar5 + 8) = *(longlong *)(lVar5 + 8) + 1;
+        UNLOCK();
+        puVar9 = (undefined8 *)puVar8[3];
+      }
+      *puVar9 = puVar8 + 2;
+      *(undefined1 *)(puVar8 + 5) = 0;
+      *(int *)(puVar8 + 4) = iVar10;
+      if (iVar4 != 0) {
+        iVar10 = iVar4;
+      }
+      *(int *)((longlong)puVar8 + 0x24) = iVar10;
+    }
+    ID_126689(local_res8,local_50);
+    if (local_30 != '\0') {
+      if (cVar3 != '\0') {
+        *(undefined1 *)(*(longlong *)*local_38 + 0x18) = 1;
+      }
+      goto LAB_14130aee3;
+    }
+  }
+  lVar5 = *(longlong *)*local_38;
+  if (*(int *)(lVar5 + 0x14) != iVar4) {
+    *(int *)(lVar5 + 0x14) = iVar4;
+    *(bool *)(lVar5 + 0x18) = cVar3 == '\x01';
+  }
+LAB_14130aee3:
+  puVar9 = local_88;
+  if ((local_78 < *(uint *)(local_80 + 4)) && (*(uint *)(local_80 + 4) = local_78, local_78 == 0)) {
+    LOCK();
+    *(uint *)(local_88 + 0x43) =
+         *(int *)(local_88 + 0x43) - (*(int *)(local_88 + 0x47) - 1U & 1 | 2);
+    UNLOCK();
+  }
+  iVar4 = *(int *)((longlong)local_88 + 0x234);
+  uVar2 = iVar4 - 1;
+  *(uint *)((longlong)local_88 + 0x234) = uVar2;
+  *(int *)(local_88 + 0x46) = *(int *)(local_88 + 0x46) + -1;
+  if (iVar4 == 1) {
+    *(undefined4 *)(local_88 + 0x48) = 0x40;
+    LOCK();
+    puVar1 = (uint *)((longlong)local_88 + 0x22c);
+    uVar2 = *puVar1;
+    *puVar1 = *puVar1 + 1;
+    UNLOCK();
+  }
+  uVar7 = (ulonglong)uVar2;
+  local_88 = (undefined8 *)0x0;
+  if (puVar9 != (undefined8 *)0x0) {
+    LOCK();
+    puVar1 = (uint *)(puVar9 + 1);
+    uVar2 = *puVar1;
+    uVar7 = (ulonglong)uVar2;
+    *puVar1 = *puVar1 - 1;
+    UNLOCK();
+    if (uVar2 == 1) {
+      uVar7 = (**(code **)*puVar9)(puVar9,1);
+    }
+  }
+  return uVar7;
+}
+
+
+
+======== ID_83046 / ID_83046 @ 14130b080 ========
+
+void ID_83046(longlong param_1,undefined8 *param_2)
+
+{
+  undefined8 *puVar1;
+  
+  *param_2 = BSTVSOTree_detail::
+             TObjectWrapper<class_BSComponentDB2::Detail::StoredComponent<1,struct_ScannableComponent>_>
+             ::vftable;
+  param_2[2] = *(undefined8 *)(param_1 + 0x10);
+  puVar1 = *(undefined8 **)(param_1 + 0x18);
+  *(undefined8 *)(param_1 + 0x18) = 0;
+  param_2[3] = puVar1;
+  *puVar1 = param_2 + 2;
+  param_2[4] = *(undefined8 *)(param_1 + 0x20);
+  *(undefined4 *)(param_2 + 5) = *(undefined4 *)(param_1 + 0x28);
+  return;
+}
+
+
+
+======== ID_83037 / ID_83037 @ 14130a5f0 ========
+
+void ID_83037(longlong param_1)
+
+{
+  ID_83043(*(undefined8 *)(param_1 + 0x28),param_1);
+  return;
+}
+
+
+
+======== ID_83042 / ID_83042 @ 14130ac30 ========
+
+ulonglong ID_83042(longlong param_1,undefined4 *param_2,undefined8 param_3,undefined8 param_4)
+
+{
+  uint *puVar1;
+  uint uVar2;
+  int iVar3;
+  undefined8 *puVar4;
+  longlong lVar5;
+  int *piVar6;
+  int *piVar7;
+  ulonglong uVar8;
+  longlong lVar9;
+  int *piVar10;
+  longlong lVar11;
+  bool bVar12;
+  undefined4 local_res8 [2];
+  longlong local_res10;
+  undefined8 *puVar13;
+  undefined1 local_48 [32];
+  
+  puVar4 = *(undefined8 **)(param_1 + 0x238);
+  lVar11 = 0;
+  if (puVar4 != (undefined8 *)0x0) {
+    LOCK();
+    *(int *)(puVar4 + 1) = *(int *)(puVar4 + 1) + 1;
+    UNLOCK();
+    lVar11 = *(longlong *)(param_1 + 0x238);
+  }
+  puVar13 = puVar4;
+  piVar7 = (int *)ID_126655(lVar11 + 0x10);
+  local_res10 = (ulonglong)CONCAT24(ID_938333,*param_2) << 0x10;
+  uVar8 = ID_126806(param_1 + 0x268,local_48,&local_res10,param_4,puVar13,piVar7);
+  lVar11 = *(longlong *)(uVar8 + 0x10);
+  if ((*(longlong *)(uVar8 + 0x18) != 0xfe0) || (lVar11 != 0)) {
+    iVar3 = param_2[2];
+    local_res8[0] = param_2[1];
+    bVar12 = false;
+    lVar11 = (ulonglong)*(ushort *)(lVar11 + 0x12 + *(longlong *)(uVar8 + 0x18) * 4) + lVar11;
+    lVar5 = *(longlong *)(lVar11 + 0x68);
+    if (lVar5 != *(longlong *)(lVar11 + 0x70)) {
+      lVar9 = ID_124901(lVar11 + 0x38,local_res8);
+      if (lVar9 != lVar5) {
+        lVar11 = lVar9 * 0x30 + *(longlong *)(lVar11 + 0x60);
+        piVar10 = *(int **)(lVar11 + 8);
+        if (piVar10 != *(int **)(lVar11 + 0x10)) {
+          piVar6 = *(int **)(lVar11 + 0x10);
+          bVar12 = piVar10 == piVar6;
+          if (!bVar12) {
+            do {
+              if (*piVar10 == iVar3) break;
+              piVar10 = piVar10 + 1;
+            } while (piVar10 != piVar6);
+            bVar12 = piVar10 == piVar6;
+          }
+          bVar12 = !bVar12;
+        }
+      }
+    }
+    uVar8 = *(ulonglong *)(param_2 + 4);
+    *(bool *)uVar8 = bVar12;
+  }
+  *piVar7 = *piVar7 + -1;
+  if (*piVar7 == 0) {
+    LOCK();
+    puVar1 = (uint *)((longlong)puVar4 + 0x21c);
+    uVar8 = (ulonglong)*puVar1;
+    *puVar1 = *puVar1 + 4;
+    UNLOCK();
+  }
+  if (puVar4 != (undefined8 *)0x0) {
+    LOCK();
+    puVar1 = (uint *)(puVar4 + 1);
+    uVar2 = *puVar1;
+    uVar8 = (ulonglong)uVar2;
+    *puVar1 = *puVar1 - 1;
+    UNLOCK();
+    if (uVar2 == 1) {
+      uVar8 = (**(code **)*puVar4)(puVar4,1);
+    }
+  }
+  return uVar8;
+}
+
+
+
+======== ID_83044 / ID_83044 @ 14130af80 ========
+
+void ID_83044(longlong param_1)
+
+{
+  ID_83045(*(undefined8 *)(param_1 + 0x18));
+  return;
+}
+
+
+
+======== ID_83045 / ID_83045 @ 14130af90 ========
+
+ulonglong ID_83045(longlong param_1,longlong param_2)
+
+{
+  uint *puVar1;
+  uint uVar2;
+  int iVar3;
+  undefined8 *puVar4;
+  ulonglong uVar5;
+  longlong local_res10 [3];
+  undefined8 *local_48;
+  longlong local_40;
+  uint local_38;
+  undefined1 local_30 [40];
+  
+  local_res10[0] = param_2;
+  ID_126668(param_1 + 0x238,&local_48);
+  local_res10[0] = param_1;
+  ID_126705(local_res10,local_30,ID_939118,0,0xffffffff);
+  puVar4 = local_48;
+  if ((local_38 < *(uint *)(local_40 + 4)) && (*(uint *)(local_40 + 4) = local_38, local_38 == 0)) {
+    LOCK();
+    *(uint *)(local_48 + 0x43) =
+         *(int *)(local_48 + 0x43) - (*(int *)(local_48 + 0x47) - 1U & 1 | 2);
+    UNLOCK();
+  }
+  iVar3 = *(int *)((longlong)local_48 + 0x234);
+  uVar2 = iVar3 - 1;
+  *(uint *)((longlong)local_48 + 0x234) = uVar2;
+  *(int *)(local_48 + 0x46) = *(int *)(local_48 + 0x46) + -1;
+  if (iVar3 == 1) {
+    *(undefined4 *)(local_48 + 0x48) = 0x40;
+    LOCK();
+    puVar1 = (uint *)((longlong)local_48 + 0x22c);
+    uVar2 = *puVar1;
+    *puVar1 = *puVar1 + 1;
+    UNLOCK();
+  }
+  uVar5 = (ulonglong)uVar2;
+  local_48 = (undefined8 *)0x0;
+  if (puVar4 != (undefined8 *)0x0) {
+    LOCK();
+    puVar1 = (uint *)(puVar4 + 1);
+    uVar2 = *puVar1;
+    uVar5 = (ulonglong)uVar2;
+    *puVar1 = *puVar1 - 1;
+    UNLOCK();
+    if (uVar2 == 1) {
+      uVar5 = (**(code **)*puVar4)(puVar4,1);
+    }
+  }
+  return uVar5;
+}
+
+
+

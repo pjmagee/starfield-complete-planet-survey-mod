@@ -1,0 +1,8 @@
+142e883e0  scheduler_resource_allocation_error
+142e883e0  ??0scheduler_resource_allocation_error@Concurrency@@QEAA@J@Z
+142e8a310  scheduler_resource_allocation_error
+142e8a310  ??0scheduler_resource_allocation_error@Concurrency@@QEAA@J@Z
+ff00001478  DeallocationStack
+ff00001788  DeallocationBStore
+
+# total: 6

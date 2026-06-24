@@ -1,0 +1,1022 @@
+{
+ "traits": {
+  "04": {
+   "trait_kw": "0x00225594",
+   "trait_edid": "PlanetTrait04CharredEcosystem",
+   "overlays": [
+    {
+     "lctn": "0x00001C84",
+     "edid": "OverlayTraitCharredEcosystemMd02WaterLocation",
+     "refs": [
+      "0x002C75D5",
+      "0x002CAF09"
+     ]
+    },
+    {
+     "lctn": "0x00014800",
+     "edid": "OverlayTraitCharredEcosystemSm01WaterLocation",
+     "refs": [
+      "0x002CCBA7"
+     ]
+    },
+    {
+     "lctn": "0x0016A8E5",
+     "edid": "OverlayTraitCharredEcosystemSm01Location",
+     "refs": [
+      "0x0002DC3F"
+     ]
+    },
+    {
+     "lctn": "0x0016A8E6",
+     "edid": "OverlayTraitCharredEcosystemMd02Location",
+     "refs": [
+      "0x0002DA02",
+      "0x0002DA1D"
+     ]
+    },
+    {
+     "lctn": "0x0016A8E7",
+     "edid": "OverlayTraitCharredEcosystemMd01Location",
+     "refs": [
+      "0x00000B1E",
+      "0x00030741"
+     ]
+    },
+    {
+     "lctn": "0x002D6B65",
+     "edid": "OverlayTraitCharredEcosystemMd01WaterLocation",
+     "refs": [
+      "0x002C53F3",
+      "0x002C60E3"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00000B1E",
+    "0x0002DA02",
+    "0x0002DA1D",
+    "0x0002DC3F",
+    "0x00030741",
+    "0x002C53F3",
+    "0x002C60E3",
+    "0x002C75D5",
+    "0x002CAF09",
+    "0x002CCBA7"
+   ]
+  },
+  "24": {
+   "trait_kw": "0x00225584",
+   "trait_edid": "PlanetTrait24TurbulentLithosphere",
+   "overlays": [
+    {
+     "lctn": "0x0002B0F8",
+     "edid": "OverlayTraitTurbulentLithosphereMed01Location",
+     "refs": [
+      "0x0002B098"
+     ]
+    },
+    {
+     "lctn": "0x0002B0FE",
+     "edid": "OverlayTraitTurbulentLithosphereSm01Location",
+     "refs": [
+      "0x0002B0BC"
+     ]
+    },
+    {
+     "lctn": "0x0002B101",
+     "edid": "OverlayTraitTurbulentLithosphereSm02Location",
+     "refs": [
+      "0x0002B0E6"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0002B098",
+    "0x0002B0BC",
+    "0x0002B0E6"
+   ]
+  },
+  "25": {
+   "trait_kw": "0x00221980",
+   "trait_edid": "PlanetTrait25ExtinctionEvent",
+   "overlays": [
+    {
+     "lctn": "0x0002B1D0",
+     "edid": "OverlayTraitExtinctionEventSm01Location",
+     "refs": [
+      "0x0016FD90",
+      "0x0016FD91"
+     ]
+    },
+    {
+     "lctn": "0x0002B1D1",
+     "edid": "OverlayTraitExtinctionEventMed01Location",
+     "refs": [
+      "0x00041A0B",
+      "0x00041A0C",
+      "0x00041A0D"
+     ]
+    },
+    {
+     "lctn": "0x0002B1D2",
+     "edid": "OverlayTraitExtinctionEventMed02Location",
+     "refs": [
+      "0x0002BFCA",
+      "0x0002BFCB"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0002BFCA",
+    "0x0002BFCB",
+    "0x00041A0B",
+    "0x00041A0C",
+    "0x00041A0D",
+    "0x0016FD90",
+    "0x0016FD91"
+   ]
+  },
+  "05": {
+   "trait_kw": "0x00225593",
+   "trait_edid": "PlanetTrait05ContinualConductor",
+   "overlays": [
+    {
+     "lctn": "0x000317DC",
+     "edid": "OverlayTraitContinualConductorMd01Location",
+     "refs": [
+      "0x00031767",
+      "0x00031788"
+     ]
+    },
+    {
+     "lctn": "0x000317DD",
+     "edid": "OverlayTraitContinualConductorSm02Location",
+     "refs": [
+      "0x000317E8"
+     ]
+    },
+    {
+     "lctn": "0x0010A466",
+     "edid": "OverlayTraitContualConductorSm01Location",
+     "refs": [
+      "0x000CC5B7"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00031767",
+    "0x00031788",
+    "0x000317E8",
+    "0x000CC5B7"
+   ]
+  },
+  "14": {
+   "trait_kw": "0x0022558D",
+   "trait_edid": "PlanetTrait14GlobalGlacialRecession",
+   "overlays": [
+    {
+     "lctn": "0x0010A455",
+     "edid": "OverlayTraitGlobalGlacialRecessionSm02Location",
+     "refs": [
+      "0x00061B5B"
+     ]
+    },
+    {
+     "lctn": "0x0010A456",
+     "edid": "OverlayTraitGlobalGlacialRecessionSm01Location",
+     "refs": [
+      "0x00061B95"
+     ]
+    },
+    {
+     "lctn": "0x0010A457",
+     "edid": "OverlayTraitGlobalGlacialRecessionMed01Location",
+     "refs": [
+      "0x000D2D33"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00061B5B",
+    "0x00061B95",
+    "0x000D2D33"
+   ]
+  },
+  "11": {
+   "trait_kw": "0x00290819",
+   "trait_edid": "PlanetTrait11EnergeticRifting",
+   "overlays": [
+    {
+     "lctn": "0x0010A45B",
+     "edid": "OverlayTraitEnergeticRiftingMd02Location",
+     "refs": [
+      "0x00030A1C"
+     ]
+    },
+    {
+     "lctn": "0x0028FF1F",
+     "edid": "OverlayTraitEnergeticRiftingSm01Location",
+     "refs": [
+      "0x00030A2D"
+     ]
+    },
+    {
+     "lctn": "0x002A31BC",
+     "edid": "OverlayTraitEnergeticRiftingMed01Location",
+     "refs": [
+      "0x00033354",
+      "0x00033350"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00030A1C",
+    "0x00030A2D",
+    "0x00033350",
+    "0x00033354"
+   ]
+  },
+  "16": {
+   "trait_kw": "0x0022558B",
+   "trait_edid": "PlanetTrait16PrimedForLife",
+   "overlays": [
+    {
+     "lctn": "0x0010A45C",
+     "edid": "OverlayTraitPrimedLifeSm01Location",
+     "refs": [
+      "0x00030A51"
+     ]
+    },
+    {
+     "lctn": "0x0010A45D",
+     "edid": "OverlayTraitPrimedLifeMd01Location",
+     "refs": [
+      "0x00030A8C"
+     ]
+    },
+    {
+     "lctn": "0x0010A45E",
+     "edid": "OverlayTraitPrimedLifeMd02Location",
+     "refs": [
+      "0x00030A76",
+      "0x00030A75",
+      "0x00030A77"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00030A51",
+    "0x00030A75",
+    "0x00030A76",
+    "0x00030A77",
+    "0x00030A8C"
+   ]
+  },
+  "08": {
+   "trait_kw": "0x00225591",
+   "trait_edid": "PlanetTrait08DiseasedBiosphere",
+   "overlays": [
+    {
+     "lctn": "0x0010A45F",
+     "edid": "OverlayTraitDiseasedBiosphereSm01Location",
+     "refs": [
+      "0x00041A1E"
+     ]
+    },
+    {
+     "lctn": "0x0010A460",
+     "edid": "OverlayTraitDiseasedBiosphereMed01Location",
+     "refs": [
+      "0x00041A0F",
+      "0x00041A0E",
+      "0x00041A10"
+     ]
+    },
+    {
+     "lctn": "0x0010A461",
+     "edid": "OverlayTraitDiseasedBiosphereMed02Location",
+     "refs": [
+      "0x00041A11",
+      "0x00041A1C"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00041A0E",
+    "0x00041A0F",
+    "0x00041A10",
+    "0x00041A11",
+    "0x00041A1C",
+    "0x00041A1E"
+   ]
+  },
+  "18": {
+   "trait_kw": "0x0022558A",
+   "trait_edid": "PlanetTrait18PrismaticPlumes",
+   "overlays": [
+    {
+     "lctn": "0x0010A462",
+     "edid": "OverlayTraitPrismaticPlumesMd01Location",
+     "refs": [
+      "0x00030A9B"
+     ]
+    },
+    {
+     "lctn": "0x0010A463",
+     "edid": "OverlayTraitPrismaticPlumesSm01Location",
+     "refs": [
+      "0x0005D7BD"
+     ]
+    },
+    {
+     "lctn": "0x0010A464",
+     "edid": "OverlayTraitPrismaticPlumesSm02Location",
+     "refs": [
+      "0x001C0336"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00030A9B",
+    "0x0005D7BD",
+    "0x001C0336"
+   ]
+  },
+  "09": {
+   "trait_kw": "0x00225590",
+   "trait_edid": "PlanetTrait09EcologicalConsortium",
+   "overlays": [
+    {
+     "lctn": "0x0010A468",
+     "edid": "OverlayTraitEcologicalConsortiumSm02Location",
+     "refs": [
+      "0x0003189C"
+     ]
+    },
+    {
+     "lctn": "0x0010A469",
+     "edid": "OverlayTraitEcologicalConsortiumSm01Location",
+     "refs": [
+      "0x0003188D"
+     ]
+    },
+    {
+     "lctn": "0x0010A46A",
+     "edid": "OverlayTraitEcologicalConsortiumMd01Location",
+     "refs": [
+      "0x000318DC",
+      "0x000318C4",
+      "0x000318B5"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0003188D",
+    "0x0003189C",
+    "0x000318B5",
+    "0x000318C4",
+    "0x000318DC"
+   ]
+  },
+  "10": {
+   "trait_kw": "0x0022558F",
+   "trait_edid": "PlanetTrait10EmergingTectonics",
+   "overlays": [
+    {
+     "lctn": "0x0010A46C",
+     "edid": "OverlayTraitEmergingTectonicsMed01Location",
+     "refs": [
+      "0x0003192F"
+     ]
+    },
+    {
+     "lctn": "0x0010A46D",
+     "edid": "OverlayTraitEmergingTectonicsMed02Location",
+     "refs": [
+      "0x0000362F"
+     ]
+    },
+    {
+     "lctn": "0x0010A46E",
+     "edid": "OverlayTraitEmergingTectonicsSm01Location",
+     "refs": [
+      "0x00033393"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0000362F",
+    "0x0003192F",
+    "0x00033393"
+   ]
+  },
+  "22": {
+   "trait_kw": "0x00225586",
+   "trait_edid": "PlanetTrait22SolarStormSeasons",
+   "overlays": [
+    {
+     "lctn": "0x0010A470",
+     "edid": "OverlayTraitSolarStormsSeasonsMed02Location",
+     "refs": [
+      "0x000F31E6",
+      "0x00156436"
+     ]
+    },
+    {
+     "lctn": "0x0016A8E8",
+     "edid": "OverlayTraitSolarStormsSeasonsMed01Location",
+     "refs": [
+      "0x001677B0",
+      "0x000C1974"
+     ]
+    },
+    {
+     "lctn": "0x00251813",
+     "edid": "OverlayTraitSolarStormsSeasonsLg01LifeLocation",
+     "refs": [
+      "0x001698E7",
+      "0x001698E8",
+      "0x0016C959"
+     ]
+    },
+    {
+     "lctn": "0x00251814",
+     "edid": "OverlayTraitSolarStormsSeasonsMed02LifeLocation",
+     "refs": [
+      "0x0016F013",
+      "0x0016F687"
+     ]
+    },
+    {
+     "lctn": "0x00251815",
+     "edid": "OverlayTraitSolarStormsSeasonsMed01LifeLocation",
+     "refs": [
+      "0x0016E927",
+      "0x0016EFCD"
+     ]
+    },
+    {
+     "lctn": "0x003807D9",
+     "edid": "OverlayTraitSolarStormsSeasonsLg01newLocation",
+     "refs": [
+      "0x000C1259",
+      "0x000C12C9",
+      "0x000C1253"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x000C1253",
+    "0x000C1259",
+    "0x000C12C9",
+    "0x000C1974",
+    "0x000F31E6",
+    "0x00156436",
+    "0x001677B0",
+    "0x001698E7",
+    "0x001698E8",
+    "0x0016C959",
+    "0x0016E927",
+    "0x0016EFCD",
+    "0x0016F013",
+    "0x0016F687"
+   ]
+  },
+  "21": {
+   "trait_kw": "0x00225587",
+   "trait_edid": "PlanetTrait21SlushySubsurfaceSeas",
+   "overlays": [
+    {
+     "lctn": "0x0010A471",
+     "edid": "OverlayTraitSlushySubsurfaceSeasSm02Location",
+     "refs": [
+      "0x00159F79",
+      "0x00159F3F"
+     ]
+    },
+    {
+     "lctn": "0x00167844",
+     "edid": "OverlayTraitSlushySubsurfaceSeasMed01Location",
+     "refs": [
+      "0x00162AB9",
+      "0x00162ABA"
+     ]
+    },
+    {
+     "lctn": "0x0016A8E4",
+     "edid": "OverlayTraitSlushySubsurfaceSeasSm01Location",
+     "refs": [
+      "0x00162AB6"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00159F3F",
+    "0x00159F79",
+    "0x00162AB6",
+    "0x00162AB9",
+    "0x00162ABA"
+   ]
+  },
+  "12": {
+   "trait_kw": "0x0022558E",
+   "trait_edid": "PlanetTrait12FrozenEcosystem",
+   "overlays": [
+    {
+     "lctn": "0x0010A472",
+     "edid": "OverlayTraitFrozenEcosystemMed01Location",
+     "refs": [
+      "0x003D0C50",
+      "0x000468C2"
+     ]
+    },
+    {
+     "lctn": "0x0010A473",
+     "edid": "OverlayTraitFrozenEcosystemSm02Location",
+     "refs": [
+      "0x000470BC",
+      "0x000470BB"
+     ]
+    },
+    {
+     "lctn": "0x0010A474",
+     "edid": "OverlayTraitFrozenEcosystemSm01Location",
+     "refs": [
+      "0x00046710"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00046710",
+    "0x000468C2",
+    "0x000470BB",
+    "0x000470BC",
+    "0x003D0C50"
+   ]
+  },
+  "23": {
+   "trait_kw": "0x00225585",
+   "trait_edid": "PlanetTrait23SonorousLithosphere",
+   "overlays": [
+    {
+     "lctn": "0x0010A475",
+     "edid": "OverlayTraitSonorousLilthosphereMed02Location",
+     "refs": [
+      "0x00159FC5",
+      "0x000B06E9"
+     ]
+    },
+    {
+     "lctn": "0x0016A8EA",
+     "edid": "OverlayTraitSonorousLithosphereMed01Location",
+     "refs": [
+      "0x001628BB",
+      "0x001628BA"
+     ]
+    },
+    {
+     "lctn": "0x0016A8EB",
+     "edid": "OverlayTraitSonorousLithosphereSm01Location",
+     "refs": [
+      "0x001628A5"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x000B06E9",
+    "0x00159FC5",
+    "0x001628A5",
+    "0x001628BA",
+    "0x001628BB"
+   ]
+  },
+  "20": {
+   "trait_kw": "0x00225588",
+   "trait_edid": "PlanetTrait20SentientMicrobialColonies",
+   "overlays": [
+    {
+     "lctn": "0x0010A476",
+     "edid": "OverlayTraitSentientMicrobialColoniesMed01Location",
+     "refs": [
+      "0x00159EB2",
+      "0x00159F10"
+     ]
+    },
+    {
+     "lctn": "0x0021D242",
+     "edid": "OverlayTraitSentientMicrobialColoniesMed02Location",
+     "refs": [
+      "0x0016776F",
+      "0x00167770"
+     ]
+    },
+    {
+     "lctn": "0x003807B9",
+     "edid": "OverlayTraitSentientMicrobialColoniesLg01newLocation",
+     "refs": [
+      "0x002EA231",
+      "0x002EA0D1"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00159EB2",
+    "0x00159F10",
+    "0x0016776F",
+    "0x00167770",
+    "0x002EA0D1",
+    "0x002EA231"
+   ]
+  },
+  "03": {
+   "trait_kw": "0x00225595",
+   "trait_edid": "PlanetTrait03BolideBombardment",
+   "overlays": [
+    {
+     "lctn": "0x0012ABC6",
+     "edid": "OverlayTraitBolideBombardmentMed03Location",
+     "refs": [
+      "0x0002B2B7"
+     ]
+    },
+    {
+     "lctn": "0x0012ABC7",
+     "edid": "OverlayTraitBolideBombardmentMed02Location",
+     "refs": [
+      "0x0002AEF1"
+     ]
+    },
+    {
+     "lctn": "0x0012ABC8",
+     "edid": "OverlayTraitBolideBombardmentMed01Location",
+     "refs": [
+      "0x0000C400"
+     ]
+    },
+    {
+     "lctn": "0x00251810",
+     "edid": "OverlayTraitBolideBombardmentMed01LifeLocation",
+     "refs": [
+      "0x0016457A"
+     ]
+    },
+    {
+     "lctn": "0x00251811",
+     "edid": "OverlayTraitBolideBombardmentMed02LifeLocation",
+     "refs": [
+      "0x0016676E"
+     ]
+    },
+    {
+     "lctn": "0x00251812",
+     "edid": "OverlayTraitBolideBombardmentMed03LifeLocation",
+     "refs": [
+      "0x001695B6"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0000C400",
+    "0x0002AEF1",
+    "0x0002B2B7",
+    "0x0016457A",
+    "0x0016676E",
+    "0x001695B6"
+   ]
+  },
+  "19": {
+   "trait_kw": "0x00225589",
+   "trait_edid": "PlanetTrait19PsychotropicBiota",
+   "overlays": [
+    {
+     "lctn": "0x0012C4AA",
+     "edid": "OverlayTraitPsychotropicBiotaSm02Location",
+     "refs": [
+      "0x0012C4AC"
+     ]
+    },
+    {
+     "lctn": "0x00167845",
+     "edid": "OverlayTraitPsychotropicBiotaSm01Location",
+     "refs": [
+      "0x0012C4C0"
+     ]
+    },
+    {
+     "lctn": "0x0016A8E3",
+     "edid": "OverlayTraitPsychotropicBiotaMed01newLocation",
+     "refs": [
+      "0x0012444B",
+      "0x0012444A"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0012444A",
+    "0x0012444B",
+    "0x0012C4AC",
+    "0x0012C4C0"
+   ]
+  },
+  "06": {
+   "trait_kw": "0x00225592",
+   "trait_edid": "PlanetTrait06CorallineLandmass",
+   "overlays": [
+    {
+     "lctn": "0x0014BBB1",
+     "edid": "OverlayTraitCorallineLandmassMed03Location",
+     "refs": [
+      "0x0014BBCE",
+      "0x0003496B"
+     ]
+    },
+    {
+     "lctn": "0x00167843",
+     "edid": "OverlayTraitCorallineLandmassMed02Location",
+     "refs": [
+      "0x0014BBE0",
+      "0x00034809"
+     ]
+    },
+    {
+     "lctn": "0x00167846",
+     "edid": "OverlayTraitCorallineLandmassMed01Location",
+     "refs": [
+      "0x0014BBED",
+      "0x00034643"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00034643",
+    "0x00034809",
+    "0x0003496B",
+    "0x0014BBCE",
+    "0x0014BBE0",
+    "0x0014BBED"
+   ]
+  },
+  "01": {
+   "trait_kw": "0x00225596",
+   "trait_edid": "PlanetTrait01AmphibiousFoothold",
+   "overlays": [
+    {
+     "lctn": "0x0014EBB6",
+     "edid": "OverlayTraitAmphibiousFootholdMed02Location",
+     "refs": [
+      "0x0014EBAB",
+      "0x0014EBA3"
+     ]
+    },
+    {
+     "lctn": "0x0014EBB7",
+     "edid": "OverlayTraitAmphibiousFootholdMed01Location",
+     "refs": [
+      "0x0014EBAE",
+      "0x0014EBB1"
+     ]
+    },
+    {
+     "lctn": "0x0014EBB8",
+     "edid": "OverlayTraitAmphibiousFootholdSM01Location",
+     "refs": [
+      "0x0014EBBB"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0014EBA3",
+    "0x0014EBAB",
+    "0x0014EBAE",
+    "0x0014EBB1",
+    "0x0014EBBB"
+   ]
+  },
+  "00": {
+   "trait_kw": "0x00225597",
+   "trait_edid": "PlanetTrait00AeriformLife",
+   "overlays": [
+    {
+     "lctn": "0x0016A8EE",
+     "edid": "OverlayTraitAeriformLifeMed01Location",
+     "refs": [
+      "0x001AC668",
+      "0x00160CCF",
+      "0x001AC659",
+      "0x00160CC0",
+      "0x00160CC5"
+     ]
+    },
+    {
+     "lctn": "0x0016A8EF",
+     "edid": "OverlayTraitAeriformLifeSm01Location",
+     "refs": [
+      "0x00160CBC"
+     ]
+    },
+    {
+     "lctn": "0x0016A8F0",
+     "edid": "OverlayTraitAeriformLifeSm02Location",
+     "refs": [
+      "0x00160CB1"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00160CB1",
+    "0x00160CBC",
+    "0x00160CC0",
+    "0x00160CC5",
+    "0x00160CCF",
+    "0x001AC659",
+    "0x001AC668"
+   ]
+  },
+  "15": {
+   "trait_kw": "0x0022558C",
+   "trait_edid": "PlanetTrait15PeltedFields",
+   "overlays": [
+    {
+     "lctn": "0x00173A10",
+     "edid": "OverlayTraitPeltedFieldMed01Location",
+     "refs": [
+      "0x00061CA9",
+      "0x001739F7",
+      "0x001739F5",
+      "0x0013C381"
+     ]
+    },
+    {
+     "lctn": "0x00173A11",
+     "edid": "OverlayTraitPeltedFieldSm02Location",
+     "refs": [
+      "0x00173A04"
+     ]
+    },
+    {
+     "lctn": "0x00173A12",
+     "edid": "OverlayTraitPeltedFieldSm01Location",
+     "refs": [
+      "0x00173A0F"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00061CA9",
+    "0x0013C381",
+    "0x001739F5",
+    "0x001739F7",
+    "0x00173A04",
+    "0x00173A0F"
+   ]
+  },
+  "17": {
+   "trait_kw": "0x0029081A",
+   "trait_edid": "PlanetTrait17PrimordialNetwork",
+   "overlays": [
+    {
+     "lctn": "0x0022BF15",
+     "edid": "OverlayTraitPrimordialNetworkMed02Location",
+     "refs": [
+      "0x002E9149",
+      "0x002E914A"
+     ]
+    },
+    {
+     "lctn": "0x0023CAD4",
+     "edid": "OverlayTraitPrimordialNetworkSm01Location",
+     "refs": [
+      "0x0023869B"
+     ]
+    },
+    {
+     "lctn": "0x0023CAD5",
+     "edid": "OverlayTraitPrimordialNetworkMed01Location",
+     "refs": [
+      "0x0023BC74",
+      "0x0023BC6D"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x0023869B",
+    "0x0023BC6D",
+    "0x0023BC74",
+    "0x002E9149",
+    "0x002E914A"
+   ]
+  },
+  "07": {
+   "trait_kw": "0x00246C66",
+   "trait_edid": "PlanetTrait07CrystallineCrust",
+   "overlays": [
+    {
+     "lctn": "0x0022BF31",
+     "edid": "OverlayTraitCrystallineCrustLg01Location",
+     "refs": [
+      "0x00163AC9",
+      "0x00163ACA"
+     ]
+    },
+    {
+     "lctn": "0x0023CAD2",
+     "edid": "OverlayTraitCrystallineCrustLg02Location",
+     "refs": [
+      "0x00163ADB"
+     ]
+    },
+    {
+     "lctn": "0x0023CAD3",
+     "edid": "OverlayTraitCrystallineGrottoSm01Location",
+     "refs": [
+      "0x00163ADC"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00163AC9",
+    "0x00163ACA",
+    "0x00163ADB",
+    "0x00163ADC"
+   ]
+  },
+  "02": {
+   "trait_kw": "0x0029081C",
+   "trait_edid": "PlanetTrait02BoiledSeas",
+   "overlays": [
+    {
+     "lctn": "0x0027D7CD",
+     "edid": "OverlayTraitBoiledSeasMed02Location",
+     "refs": [
+      "0x00120DD3",
+      "0x00120DD0",
+      "0x00120DD1",
+      "0x00027053"
+     ]
+    },
+    {
+     "lctn": "0x0027D7CE",
+     "edid": "OverlayTraitBoiledSeasMed01Location",
+     "refs": [
+      "0x00120DCD",
+      "0x00120DCE"
+     ]
+    },
+    {
+     "lctn": "0x0030ECA1",
+     "edid": "OverlayTraitBoiledSeasSM01Location",
+     "refs": [
+      "0x00120DCB"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x00027053",
+    "0x00120DCB",
+    "0x00120DCD",
+    "0x00120DCE",
+    "0x00120DD0",
+    "0x00120DD1",
+    "0x00120DD3"
+   ]
+  },
+  "13": {
+   "trait_kw": "0x0029081B",
+   "trait_edid": "PlanetTrait13GaseousFont",
+   "overlays": [
+    {
+     "lctn": "0x0027D7D4",
+     "edid": "OverlayTraitGaseousFontMed02Location",
+     "refs": [
+      "0x00238710",
+      "0x002386F5",
+      "0x002386D9"
+     ]
+    },
+    {
+     "lctn": "0x0027D7D5",
+     "edid": "OverlayTraitGaseousFontMed01Location",
+     "refs": [
+      "0x00238750",
+      "0x00238730"
+     ]
+    },
+    {
+     "lctn": "0x0030F083",
+     "edid": "OverlayTraitGaseousFontMed03Location",
+     "refs": [
+      "0x002E8E86"
+     ]
+    }
+   ],
+   "all_refs": [
+    "0x002386D9",
+    "0x002386F5",
+    "0x00238710",
+    "0x00238730",
+    "0x00238750",
+    "0x002E8E86"
+   ]
+  }
+ }
+}

@@ -1,0 +1,778 @@
+======== ID_126727 / ID_126727 @ 14240c6d0 ========
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined4 * ID_126727(void)
+
+{
+  undefined8 *puVar1;
+  undefined8 uVar2;
+  uint uVar3;
+  undefined **local_38;
+  undefined4 *local_30;
+  undefined1 local_28 [16];
+  undefined8 local_18 [2];
+  
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_952758) {
+    _Init_thread_header(&ID_952758);
+    if (ID_952758 == -1) {
+      _ID_952759 = ZEXT816(0);
+      _ID_952763 = 0;
+      _ID_952764 = 0;
+      _ID_952765 = 0;
+      _ID_952766 = 0;
+      _ID_952767 = 0xffffffffffffffff;
+      _ID_952768 = 0xffffffffffffffff;
+      _ID_952769 = 0xffffffff;
+      _ID_952770 = 0;
+      local_28 = (undefined1  [16])0x0;
+      local_18[0] = 0;
+      ID_139352(local_18,&ID_392439,0);
+      local_38 = BSTArrayAllocatorFunctor<class_BSTArrayHeapAllocator>::vftable;
+      local_30 = &ID_952759;
+      uVar3 = ID_123859(&ID_952759,&local_38,ID_952760,0x18);
+      uVar2 = local_18[0];
+      if (uVar3 != 0xffffffff) {
+        puVar1 = (undefined8 *)(ID_952761 + (ulonglong)uVar3 * 0x18);
+        *puVar1 = local_28._0_8_;
+        puVar1[1] = local_28._8_8_;
+        local_18[0] = 0;
+        puVar1[2] = uVar2;
+      }
+      ID_139340(local_18);
+      atexit(ID_218898);
+      _Init_thread_footer(&ID_952758);
+      return &ID_952759;
+    }
+  }
+  return &ID_952759;
+}
+
+
+
+======== ID_124591 / ID_124591 @ 142320040 ========
+
+void ID_124591(undefined8 *param_1)
+
+{
+  int *piVar1;
+  DWORD DVar2;
+  int iVar3;
+  longlong lVar4;
+  uint uVar5;
+  bool bVar6;
+  
+  *param_1 = BSGalaxy::ModuleState::vftable;
+  param_1[2] = BSGalaxy::ModuleState::vftable;
+  param_1[7] = BSGalaxy::ModuleState::vftable;
+  ID_126680(&ID_944203);
+  ID_126680(&ID_937854);
+  ID_126680(&ID_937856);
+  ID_126680(&ID_937883);
+  ID_126680(&ID_938338);
+  ID_126680(&ID_944204);
+  ID_126680(&ID_937870);
+  ID_126680(&ID_937886);
+  ID_126680(&ID_938336);
+  ID_126680(&ID_937882);
+  ID_126680(&ID_937881);
+  ID_126680(&ID_937885);
+  ID_126680(&ID_938331);
+  ID_126680(&ID_938334);
+  ID_126680(&ID_938332);
+  ID_126680(&ID_938158);
+  ID_126680(&ID_938339);
+  ID_126680(&ID_938327);
+  ID_126680(&ID_938337);
+  ID_126680(&ID_944205);
+  ID_126680(&ID_938335);
+  ID_126680(&ID_938330);
+  ID_126680(&ID_937884);
+  ID_126680(&ID_937671);
+  ID_126680(&ID_938384);
+  ID_126680(&ID_938413);
+  ID_126680(&ID_937890);
+  ID_126680(&ID_938333);
+  ID_126680(&ID_937887);
+  lVar4 = ID_126578();
+  DVar2 = GetCurrentThreadId();
+  if (*(DWORD *)(lVar4 + 0x8c8) != DVar2) {
+    EnterCriticalSection((LPCRITICAL_SECTION)(lVar4 + 0x848));
+    *(DWORD *)(lVar4 + 0x8c8) = DVar2;
+  }
+  *(int *)(lVar4 + 0x8d0) = *(int *)(lVar4 + 0x8d0) + 1;
+  uVar5 = *(uint *)(lVar4 + 0x840) & 0xffff0000 | *(uint *)(lVar4 + 0x8d4);
+  do {
+    LOCK();
+    bVar6 = uVar5 == *(uint *)(lVar4 + 0x840);
+    if (bVar6) {
+      *(uint *)(lVar4 + 0x840) = uVar5 + 0x10000;
+    }
+    UNLOCK();
+  } while (!bVar6);
+  *(int *)(lVar4 + 0x8d0) = *(int *)(lVar4 + 0x8d0) + 1;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_937669 * 0x10) = 0;
+  ID_937669 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938353 * 0x10) = 0;
+  ID_938353 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938181 * 0x10) = 0;
+  ID_938181 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938383 * 0x10) = 0;
+  ID_938383 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_939212 * 0x10) = 0;
+  ID_939212 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_939211 * 0x10) = 0;
+  ID_939211 = 0;
+  *(undefined8 *)(*(longlong *)(lVar4 + 0x8a0) + (ulonglong)ID_938385 * 0x10) = 0;
+  ID_938385 = 0;
+  LOCK();
+  *(int *)(lVar4 + 0x840) = *(int *)(lVar4 + 0x840) + -0x10000;
+  UNLOCK();
+  piVar1 = (int *)(lVar4 + 0x8d0);
+  *piVar1 = *piVar1 + -1;
+  iVar3 = *(int *)(lVar4 + 0x8d0);
+  if (*piVar1 == 0) {
+    LeaveCriticalSection((LPCRITICAL_SECTION)(lVar4 + 0x848));
+    iVar3 = *(int *)(lVar4 + 0x8d0);
+  }
+  *(int *)(lVar4 + 0x8d0) = iVar3 + -1;
+  if (iVar3 + -1 == 0) {
+    *(undefined4 *)(lVar4 + 0x8c8) = 0;
+    LeaveCriticalSection((LPCRITICAL_SECTION)(lVar4 + 0x848));
+  }
+  param_1[0x2a] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x29] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x1e] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x1d] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0x19] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0xd] = BSComponentDB::IComponentFactory::vftable;
+  param_1[0xc] = BSComponentDB::IComponentFactory::vftable;
+  if (param_1[9] != 0) {
+    ID_35771(param_1[9],*(int *)((longlong)param_1 + 0x44) << 3);
+    param_1[9] = 0;
+    param_1[8] = 0;
+  }
+  if (param_1[4] != 0) {
+    ID_35771(param_1[4],*(int *)((longlong)param_1 + 0x1c) << 3);
+    param_1[4] = 0;
+    param_1[3] = 0;
+  }
+  ID_944202 = 0;
+  return;
+}
+
+
+
+======== ID_124592 / ID_124592 @ 1423203d0 ========
+
+undefined8 ID_124592(undefined8 param_1,ulonglong param_2)
+
+{
+  ID_124591();
+  if ((param_2 & 1) != 0) {
+    ID_182799(param_1,0x188);
+  }
+  return param_1;
+}
+
+
+
+======== ID_99379 / ID_99379 @ 141883e40 ========
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+undefined8 * ID_99379(undefined8 *param_1,undefined8 param_2)
+
+{
+  undefined8 *puVar1;
+  undefined8 *puVar2;
+  char cVar3;
+  undefined8 uVar4;
+  undefined8 *puVar5;
+  undefined8 uVar6;
+  HANDLE pvVar7;
+  undefined8 uVar8;
+  longlong *plVar9;
+  longlong lVar10;
+  longlong lVar11;
+  undefined4 uVar12;
+  undefined8 in_stack_fffffffffffffb88;
+  undefined4 uVar13;
+  undefined **local_440;
+  undefined *local_438;
+  undefined ***local_420;
+  undefined **local_418;
+  undefined *local_410;
+  undefined ***local_3f8;
+  undefined4 local_3f0;
+  undefined4 local_3ec;
+  undefined4 local_3e8;
+  undefined1 local_3e0 [80];
+  undefined4 local_390;
+  undefined8 local_38c;
+  undefined1 local_380 [80];
+  undefined8 local_330 [4];
+  undefined8 *local_310;
+  undefined8 local_308 [4];
+  undefined8 *local_2e8;
+  undefined1 local_2e0 [56];
+  undefined8 local_2a8;
+  undefined1 local_2a0 [56];
+  undefined8 local_268;
+  WCHAR local_258 [268];
+  
+  uVar8 = ID_936862;
+  uVar13 = (undefined4)((ulonglong)in_stack_fffffffffffffb88 >> 0x20);
+  *param_1 = Main::vftable;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  param_1[4] = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  param_1[4] = 0;
+  param_1[6] = 0;
+  puVar1 = param_1 + 8;
+  uVar4 = ID_123808(local_330,0x40000);
+  local_3f0 = 0x40000;
+  local_3ec = 8;
+  local_3e8 = 8;
+  ID_123890(local_3e0,uVar4);
+  uVar4 = 1;
+  if (local_2e8 == local_308) {
+    uVar6 = 0;
+LAB_141883efc:
+    (**(code **)*local_2e8)(local_2e8,uVar6);
+  }
+  else {
+    uVar6 = uVar4;
+    if (local_2e8 != (undefined8 *)0x0) goto LAB_141883efc;
+  }
+  local_2e8 = (undefined8 *)0x0;
+  if (local_310 == local_330) {
+    uVar6 = 0;
+LAB_141883f24:
+    (**(code **)*local_310)(local_310,uVar6);
+  }
+  else {
+    uVar6 = uVar4;
+    if (local_310 != (undefined8 *)0x0) goto LAB_141883f24;
+  }
+  local_310 = (undefined8 *)0x0;
+  uVar6 = CONCAT44(uVar13,local_3e8);
+  ID_123889(puVar1,local_3e0,local_3f0,local_3ec,uVar6);
+  uVar13 = (undefined4)((ulonglong)uVar6 >> 0x20);
+  ID_39307(local_3e0);
+  puVar2 = param_1 + 0x40;
+  local_390 = 0x2000;
+  local_38c = 0x10;
+  ID_123808(local_380,0x2000);
+  *puVar2 = 0;
+  param_1[0x41] = 0;
+  param_1[0x42] = 0;
+  *(undefined4 *)(param_1 + 0x43) = 0;
+  *(undefined8 *)((longlong)param_1 + 0x21c) = 0x1d;
+  ID_123889(param_1 + 0x48,local_380,local_390,local_38c & 0xffffffff,
+            CONCAT44(uVar13,local_38c._4_4_));
+  param_1[0x87] = 0;
+  ID_39307(local_380);
+  param_1[0x88] = 0;
+  *(undefined4 *)(param_1 + 0x89) = 0;
+  *(undefined1 *)((longlong)param_1 + 0x44c) = 0;
+  *(undefined4 *)(param_1 + 0x8a) = 0;
+  *(undefined4 *)((longlong)param_1 + 0x454) = 0;
+  *(undefined1 *)(param_1 + 0x8b) = 0;
+  *(undefined2 *)((longlong)param_1 + 0x45b) = 0;
+  puVar5 = param_1 + 0x8c;
+  lVar10 = 3;
+  lVar11 = 3;
+  do {
+    *puVar5 = 0;
+    *(undefined4 *)(puVar5 + 1) = 0;
+    puVar5[2] = 0;
+    puVar5 = puVar5 + 3;
+    lVar11 = lVar11 + -1;
+  } while (lVar11 != 0);
+  puVar5 = param_1 + 0x95;
+  do {
+    *puVar5 = 0;
+    *(undefined4 *)(puVar5 + 1) = 0;
+    puVar5[2] = 0;
+    puVar5 = puVar5 + 3;
+    lVar10 = lVar10 + -1;
+  } while (lVar10 != 0);
+  *(undefined4 *)(param_1 + 5) = 0;
+  *(undefined2 *)((longlong)param_1 + 0x2c) = 0;
+  *(undefined2 *)((longlong)param_1 + 0x459) = 0;
+  *(undefined1 *)((longlong)param_1 + 0x2e) = 0;
+  if (ID_944233 == 0) {
+    ID_944233 = ID_136579(&ID_953276);
+  }
+  uVar6 = ID_126727();
+  ID_126671(uVar6,&ID_831412,&ID_944228,"BSBind::DirectoryComponent",&ID_930399);
+  uVar6 = ID_126727();
+  ID_126671(uVar6,&ID_831428,&ID_944229,"BSBind::ControllerComponent",&ID_930407);
+  uVar6 = ID_126727();
+  ID_126671(uVar6,&ID_831429,&ID_944230,"BSComponentDB2::OuterEdge",&ID_930430);
+  uVar6 = ID_126727();
+  ID_126671(uVar6,&ID_831430,&ID_944231,"BSComponentDB2::DataParentEdge",&ID_930431);
+  uVar6 = ID_126727();
+  ID_126671(uVar6,&ID_831431,&ID_938496,"BSForces::ForceReceiverComponent",&ID_930449);
+  if (ID_944232 == (undefined *)0x0) {
+    _ID_952810 = BSBind::ModuleState::vftable;
+    ID_944232 = &ID_952810;
+  }
+  if (ID_937677 == (undefined *)0x0) {
+    ID_937677 = &ID_949963;
+    _ID_949965 = (undefined1  [16])0x0;
+    _ID_949966 = BSService::Detail::TSubscriberTable<struct_BSService::Commands::NewFrame>::vftable;
+    _ID_949967 = 0;
+    _ID_949968 = 0;
+    _ID_949969 = 0;
+    _ID_949970 = 0;
+    _ID_949972 = 1;
+    _ID_949971 = &ID_949966;
+    _ID_949963 = BSFrameManager::vftable;
+    _ID_949964 = BSFrameManager::vftable;
+    ID_139495(puVar2,&ID_949964);
+    ID_937677 = &ID_949963;
+  }
+  if (ID_937679 == (undefined *)0x0) {
+    _ID_949943 = (undefined1  [16])0x0;
+    ID_937679 = &ID_949942;
+    _ID_949942 = GenericFrameUpdateOperationsService::vftable;
+    _ID_949944 = GenericFrameUpdateOperationsService::vftable;
+    ID_949945 = puVar2;
+    if ((*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_937683) &&
+       (_Init_thread_header(&ID_937683), ID_937683 == -1)) {
+      ID_937682 = 0;
+      ID_139352(&ID_937682,"OnFrameUpdateOperationComponent",0);
+      atexit(ID_192307);
+      _Init_thread_footer(&ID_937683);
+    }
+    if (ID_937682 == 0) {
+      lVar10 = 0;
+    }
+    else if ((*(uint *)(ID_937682 + 0x14) >> 1 & 1) == 0) {
+      lVar10 = ID_937682 + 0x18;
+    }
+    else {
+      lVar10 = ID_139339(*(undefined8 *)(ID_937682 + 8));
+    }
+    uVar6 = ID_126727();
+    ID_126671(uVar6,&ID_819371,&ID_937681,lVar10,0);
+    local_440 = stl::unique_function_impl::detail::
+                TypeErasedFuncImpl<class_<lambda_af37dbc58291228fa17575f3f5514807>,bool>::vftable;
+    local_438 = &ID_949942;
+    local_420 = &local_440;
+    ID_139496(ID_949945,&ID_949942,&local_440);
+    if (local_420 == &local_440) {
+      uVar6 = 0;
+LAB_141884347:
+      (*(code *)**local_420)(local_420,uVar6);
+    }
+    else {
+      uVar6 = uVar4;
+      if (local_420 != (undefined ***)0x0) goto LAB_141884347;
+    }
+    ID_937679 = &ID_949942;
+  }
+  ID_136319();
+  if (ID_938328 == (undefined *)0x0) {
+    ID_938328 = &ID_949919;
+    _ID_949919 = BSResource2::
+                 DB<struct_BGSPlanet::BaseProcGenDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>
+                 ::vftable;
+    ID_136949(&ID_949920,&ID_949921,0x20);
+    _ID_949920 = BSResource2::
+                 CacheType<class_BSResource2::TEntryType<0,struct_BGSPlanet::BaseProcGenDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>,32>
+                 ::vftable;
+    _eh_vector_constructor_iterator_(&ID_949921,0x40,0x20,ID_35629,ID_35606);
+    _ID_949922 = 8;
+    ID_938328 = &ID_949919;
+  }
+  if (ID_938342 == (undefined *)0x0) {
+    ID_938342 = &ID_949915;
+    _ID_949915 = BSResource2::
+                 DB<struct_BGSPlanet::ProcGenLayersDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>
+                 ::vftable;
+    ID_136949(&ID_949916,&ID_949917,0x20);
+    _ID_949916 = BSResource2::
+                 CacheType<class_BSResource2::TEntryType<0,struct_BGSPlanet::ProcGenLayersDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>,32>
+                 ::vftable;
+    _eh_vector_constructor_iterator_(&ID_949917,0x40,0x20,ID_35629,ID_35606);
+    _ID_949918 = 8;
+    ID_938342 = &ID_949915;
+  }
+  if (ID_937612 == (undefined *)0x0) {
+    ID_937612 = &ID_949923;
+    _ID_949923 = BSResource2::
+                 DB<struct_BGSPlanet::ProcGenDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>
+                 ::vftable;
+    ID_136949(&ID_949924,&ID_949925,0x20);
+    _ID_949924 = BSResource2::
+                 CacheType<class_BSResource2::TEntryType<0,struct_BGSPlanet::ProcGenDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>,32>
+                 ::vftable;
+    _eh_vector_constructor_iterator_(&ID_949925,0x40,0x20,ID_35629,ID_35606);
+    _ID_949926 = 8;
+    ID_937612 = &ID_949923;
+  }
+  if (ID_937607 == 0) {
+    ID_937607 = ID_72497(&ID_949812);
+  }
+  if (ID_937606 != (undefined *)0x0) goto LAB_141884606;
+  ID_937606 = &ID_949950;
+  _ID_949952 = (undefined1  [16])0x0;
+  _ID_949950 = BGSFadeManager::vftable;
+  _ID_949951 = BGSFadeManager::vftable;
+  _ID_949954 = 0;
+  _ID_949955 = 0;
+  _ID_949956 = 0;
+  _ID_949957 = 0;
+  local_418 = stl::unique_function_impl::detail::
+              TypeErasedFuncImpl<class_<lambda_f4cc8a43e357d2702f2343473bbcfed1>,bool>::vftable;
+  local_410 = &ID_949950;
+  local_3f8 = &local_418;
+  _ID_949953 = puVar2;
+  ID_139496(puVar2,&ID_949951,&local_418);
+  if (local_3f8 == &local_418) {
+    uVar4 = 0;
+LAB_1418845f9:
+    (*(code *)**local_3f8)(local_3f8,uVar4);
+  }
+  else if (local_3f8 != (undefined ***)0x0) goto LAB_1418845f9;
+  ID_937606 = &ID_949950;
+LAB_141884606:
+  if (ID_938078 == 0) {
+    ID_938078 = ID_121119(&ID_949927,puVar2);
+  }
+  lVar10 = *(longlong *)ThreadLocalStoragePointer;
+  cVar3 = *(char *)(lVar10 + 0xbc);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  uVar13 = *(undefined4 *)(lVar10 + 0x1d4);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = 0x7d;
+  if (ID_937828 == (undefined *)0x0) {
+    ID_937828 = &ID_945082;
+    _ID_945082 = BSResource2::
+                 DB<struct_CellRefDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>::vftable;
+    ID_136949(&ID_945083,&ID_945084,0x400,1);
+    _ID_945083 = BSResource2::
+                 CacheType<class_BSResource2::TEntryType<0,struct_CellRefDB::DBTraits,struct_BSResource2::DBDefaultStreamPolicy>,1024>
+                 ::vftable;
+    _eh_vector_constructor_iterator_(&ID_945084,0x40,0x400,ID_35629,ID_35606);
+    _ID_945088 = 8;
+    ID_937828 = &ID_945082;
+  }
+  if (ID_937609 == 0) {
+    ID_937609 = ID_51725(&ID_945580,puVar2);
+  }
+  if (ID_937672 == (undefined *)0x0) {
+    _ID_945579 = BGSSurface::Manager::vftable;
+    ID_937672 = &ID_945579;
+  }
+  uVar4 = ID_126727();
+  ID_126671(uVar4,&ID_822987,&ID_895041,"Overlay",0);
+  uVar4 = ID_126727();
+  ID_126671(uVar4,&ID_819208,&ID_937675,"BGSPlanetWorldSpace",0);
+  uVar4 = ID_126727();
+  ID_126671(uVar4,&ID_819366,&ID_937674,"PlanetWorldSpaceData",0);
+  ID_937006 = 0;
+  ID_937007 = 0;
+  ID_937008 = &ID_51554;
+  uVar4 = ID_99495();
+  ID_123821(uVar4,&ID_821677);
+  if (*(char *)(lVar10 + 0xbc) == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = uVar13;
+  if (ID_944248 == 0) {
+    ID_944248 = ID_129154(&ID_952885,puVar2,1);
+  }
+  if (ID_944277 == 0) {
+    ID_944277 = ID_129569(&ID_952887,puVar2);
+  }
+  if (ID_944202 == 0) {
+    ID_944202 = ID_124590(&ID_952673);
+  }
+  ID_124699();
+  if (ID_937889 == (undefined *)0x0) {
+    ID_945229 = 0;
+    ID_937889 = &ID_945228;
+    _ID_945228 = BSResource2::
+                 DB<struct_BSGalaxy::BiomeMapDB::DBTraits,class_BSResource2::DBResourceStreamPolicy>
+                 ::vftable;
+    ID_136949(&ID_945230,&ID_945231,0x20,1);
+    _ID_945230 = BSResource2::
+                 CacheType<class_BSResource2::TEntryType<0,struct_BSGalaxy::BiomeMapDB::DBTraits,class_BSResource2::DBResourceStreamPolicy>,32>
+                 ::vftable;
+    _eh_vector_constructor_iterator_(&ID_945231,0x40,0x20,ID_35629,ID_35606);
+    _ID_945232 = 8;
+    ID_937889 = &ID_945228;
+  }
+  if ((*(int *)(lVar10 + 0xb8) < ID_953323) && (_Init_thread_header(&ID_953323), ID_953323 == -1)) {
+    ID_839419 = 0;
+    ID_839418 = (undefined *)BSResource::_anon_C7F837E6::LocationTree::vftable;
+    _ID_839420 = ID_944374;
+    _ID_839421 = ID_944375;
+    atexit(ID_220415);
+    _Init_thread_footer(&ID_953323);
+  }
+  *(undefined8 *)(ID_937889 + 0x10) = ID_944374;
+  if (ID_939779 == (undefined *)0x0) {
+    _ID_949907 = BSFocusShadowManager::vftable;
+    _ID_949908 = 0;
+    _ID_949909 = 0x80000000;
+    _ID_949910 = 0;
+    ID_939779 = &ID_949907;
+  }
+  cVar3 = *(char *)(lVar10 + 0xbc);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  uVar13 = *(undefined4 *)(lVar10 + 0x1d4);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = 0x62;
+  ID_49184();
+  uVar4 = ID_40307();
+  ID_123821(uVar4,&ID_820797);
+  uVar4 = ID_40306();
+  ID_123821(uVar4,&ID_820798);
+  cVar3 = *(char *)(lVar10 + 0xbc);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = uVar13;
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  uVar13 = *(undefined4 *)(lVar10 + 0x1d4);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = 0x55;
+  ID_883606 = &ID_949973;
+  _ID_949973 = puVar1;
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = uVar13;
+  if (ID_939778 == 0) {
+    ID_939778 = ID_128767(&ID_949962,puVar2);
+  }
+  param_1[6] = param_2;
+  param_1[7] = uVar8;
+  pvVar7 = GetCurrentThread();
+  MultiByteToWideChar(0xfde9,0,"Main",-1,local_258,0x104);
+  SetThreadDescription(pvVar7,local_258);
+  cVar3 = *(char *)(lVar10 + 0xbc);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  uVar13 = *(undefined4 *)(lVar10 + 0x1d4);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = 0x2d;
+  if (ID_939818 == (undefined *)0x0) {
+    _ID_949706 = ZEXT816(0);
+    _ID_949708 = 0;
+    _ID_949709 = 0;
+    ID_939818 = &ID_949705;
+    _ID_949705 = BGSFootstepManager::vftable;
+    _ID_949710 = BGSFootstepManager::vftable;
+    _ID_949711 = BGSFootstepManager::vftable;
+    uVar8 = ID_99495();
+    ID_123821(uVar8,&ID_949710);
+    ID_939818 = &ID_949705;
+  }
+  if (ID_937810 == (undefined *)0x0) {
+    ID_937810 = &ID_949502;
+    _ID_949502 = BGSImpactManager::vftable;
+    _ID_949503 = BGSImpactManager::vftable;
+    _ID_949504 = BGSImpactManager::vftable;
+    _ID_949505 = BGSImpactManager::vftable;
+    _ID_949506 = 0;
+    _ID_949507 = 0;
+    _ID_949508 = 0;
+    _ID_949509 = 0;
+    _ID_949510 = 0;
+    _ID_949511 = 0;
+    _ID_949512 = 0;
+    uRam00000001462bf7b0 = 0;
+    _ID_949513 = 0;
+    _ID_949514 = 0;
+    _ID_949515 = 0;
+    _ID_949516 = 0;
+    _ID_949517 = 1;
+    _ID_949518 = 0;
+    ID_99120();
+    ID_937810 = &ID_949502;
+  }
+  ID_123821(ID_939818,ID_937810);
+  ID_36179(uVar13);
+  cVar3 = *(char *)(lVar10 + 0xbc);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  uVar13 = *(undefined4 *)(lVar10 + 0x1d4);
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = 0x2c;
+  uVar12 = 0x2c;
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+    uVar12 = *(undefined4 *)(lVar10 + 0x1d4);
+    cVar3 = *(char *)(lVar10 + 0xbc);
+  }
+  if (cVar3 == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  *(undefined4 *)(lVar10 + 0x1d4) = 0x2c;
+  if (ID_938439 == (undefined *)0x0) {
+    ID_938439 = &ID_945734;
+    _ID_945734 = BGSEchoListener::vftable;
+    ID_59294(&ID_945735);
+    ID_59294(&ID_945736);
+    ID_59294(&ID_945737);
+    _ID_945738 = 0;
+    _ID_945739 = 0;
+    _ID_945740 = 0;
+    _ID_945741 = 0;
+    ID_123931(&ID_945738);
+    ID_938439 = &ID_945734;
+  }
+  if (ID_894470 == 0) {
+    ID_894470 = 1;
+  }
+  ID_36179(uVar12);
+  ID_73455();
+  if (ID_938683 == (undefined *)0x0) {
+    ID_938683 = &ID_946318;
+    _ID_946318 = BGSAudio_Internal::LooseAudioRegistrar::vftable;
+    _ID_946319 = BGSAudio_Internal::LooseAudioRegistrar::vftable;
+    ID_123821(ID_944376 + 0x10,&ID_946318);
+    ID_938683 = &ID_946318;
+  }
+  ID_130971();
+  if (*(char *)(lVar10 + 0xbc) == '\0') {
+    __dyn_tls_on_demand_init();
+  }
+  uVar12 = *(undefined4 *)(lVar10 + 0x1d4);
+  ID_36179(0x2d);
+  uVar8 = ID_99495();
+  ID_123821(uVar8,&ID_828916);
+  uVar8 = ID_64149();
+  ID_123821(uVar8,&ID_828914);
+  ID_36179(uVar12);
+  ID_36179(uVar13);
+  ID_131092(ID_944248 + 0x90);
+  if (ID_937806 == 0) {
+    ID_937806 = ID_40245(&ID_945065,puVar2);
+  }
+  if (ID_937678 == 0) {
+    ID_937678 = ID_39426(&ID_949946,puVar2);
+  }
+  if (ID_939814 == 0) {
+    ID_939814 = ID_99339(&ID_949949,puVar2);
+  }
+  ID_72753();
+  if (ID_939816 == (undefined *)0x0) {
+    ID_939816 = &ID_1142878;
+    _ID_1142878 = BSResource::Server::ResourceServerDebug::vftable;
+    _ID_1142879 = BSResource::Server::ResourceServerDebug::vftable;
+    _ID_1142880 = 0;
+    _ID_1142881 = 0;
+    _ID_1142882 = 0;
+    _ID_1142883 = 0;
+    _ID_1142884 = ZEXT816(0);
+    _ID_1142886 = 0;
+    _ID_1142887 = 0;
+    _ID_1142888 = 0;
+    _ID_1142889 = 0;
+    _ID_1142890 = 0;
+    _ID_1142891 = 0;
+    _ID_1142892 = ID_500613;
+    _ID_1142893 = 0;
+    uVar8 = ID_137552();
+    ID_123821(uVar8,&ID_1142879);
+    ID_939816 = &ID_1142878;
+  }
+  if (ID_939148 == 0) {
+    ID_939148 = ID_120668(&ID_949500);
+  }
+  ID_120860();
+  if (ID_938100 == 0) {
+    ID_938100 = ID_120934(&ID_949498);
+  }
+  ID_99497();
+  if (ID_939821 == (undefined *)0x0) {
+    ID_939821 = &ID_949482;
+    _ID_949482 = DownloadAll::vftable;
+    _ID_949483 = 0;
+    _ID_949484 = 0;
+    plVar9 = (longlong *)ID_35720();
+    _ID_949485 = *plVar9;
+    if (_ID_949485 != 0) {
+      LOCK();
+      *(int *)(_ID_949485 + 0x10) = *(int *)(_ID_949485 + 0x10) + 1;
+      UNLOCK();
+    }
+    _ID_949486 = ZEXT816(0);
+    local_2a8 = 0;
+    local_268 = 0;
+    ID_120795(&ID_949482,local_2a0,local_2e0);
+    ID_939821 = &ID_949482;
+  }
+  if (ID_938177 == 0) {
+    ID_938177 = ID_120819(&ID_949499);
+  }
+  if (ID_939156 == 0) {
+    ID_939156 = ID_120868(&ID_949497);
+  }
+  if (ID_939819 == (undefined *)0x0) {
+    _ID_949494 = Upsell::vftable;
+    _ID_949495 = 0;
+    ID_949496 = 0;
+    ID_939819 = &ID_949494;
+  }
+  return param_1;
+}
+
+
+
+======== ID_126578 / ID_126578 @ 142401c50 ========
+
+undefined * ID_126578(void)
+
+{
+  if (*(int *)(*(longlong *)ThreadLocalStoragePointer + 0xb8) < ID_952731) {
+    _Init_thread_header(&ID_952731);
+    if (ID_952731 == -1) {
+      ID_126544();
+      atexit(ID_218896);
+      _Init_thread_footer(&ID_952731);
+      return &ID_952732;
+    }
+  }
+  return &ID_952732;
+}
+
+
+

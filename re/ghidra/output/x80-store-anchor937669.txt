@@ -1,0 +1,4 @@
+Functions with a 4-byte store to [reg+0x80] that also reference ID_937669:
+
+=== ID_48892 @ 140662e60 ===   first store: 140662fa8  MOV dword ptr [RBP + 0x80],EAX
+=== ID_89298 @ 1415592a0 ===   first store: 14155b680  MOV dword ptr [RBP + -0x80],EAX

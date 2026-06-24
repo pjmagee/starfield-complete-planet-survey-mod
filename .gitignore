@@ -42,3 +42,4 @@ compile_commands.json
 # Python bytecode cache (RE tooling)
 __pycache__/
 *.pyc
+mcps/

@@ -1,0 +1,172 @@
+"iObjectScannedLevel:BIEvents" @ 144b01768 (1 refs)
+    <- 14000b0ea in ID_550@14000b0e0 [ID_550]
+"iObjectScannedFrequencyMS:BIEvents" @ 144b01788 (1 refs)
+    <- 14000b0b7 in ID_549@14000b0b0 [ID_549]
+"iPlanetScannedLevel:BIEvents" @ 144b018b0 (1 refs)
+    <- 14000af6a in ID_542@14000af60 [ID_542]
+"iPlanetScannedFrequencyMS:BIEvents" @ 144b018d0 (1 refs)
+    <- 14000af37 in ID_541@14000af30 [ID_541]
+"PlanetScannedv2" @ 144b02498 (1 refs)
+    <- 140333eb1 in ID_37581@140332ba0 [ID_37581]
+"ObjectScannedv2" @ 144b02658 (1 refs)
+    <- 140334037 in ID_37581@140332ba0 [ID_37581]
+"Fauna Fully Scanned" @ 144b382c8 (11 refs)
+    <- 14017e5d7 in ID_1014059@14017e5d0 [ID_1014059]
+    <- 1401bd9c7 in ID_22137@1401bd9c0 [ID_22137]
+    <- 1401714f7 in ID_1013730@1401714f0 [ID_1013730]
+    <- 1400b0aa7 in ID_7881@1400b0aa0 [ID_7881]
+    <- 1414eb2b5 in ID_88202@1414eae20 [ID_88202]
+    <- 14018a0b7 in ID_18594@14018a0b0 [ID_18594]
+    <- 1401c5b87 in ID_22667@1401c5b80 [ID_22667]
+    <- 140684d13 in ID_49316@140684110 [ID_49316]
+    <- 140042c57 in ID_3525@140042c50 [ID_3525]
+    <- 14590ded8 in (no func)
+    <- 14590dee0 in (no func)
+"Unique Creatures Scanned" @ 144b382e0 (11 refs)
+    <- 14017e667 in ID_1014062@14017e660 [ID_1014062]
+    <- 1401bda57 in ID_22140@1401bda50 [ID_22140]
+    <- 140171587 in ID_1013733@140171580 [ID_1013733]
+    <- 1400b0b37 in ID_7884@1400b0b30 [ID_7884]
+    <- 1414eb522 in ID_88202@1414eae20 [ID_88202]
+    <- 14018a147 in ID_18597@14018a140 [ID_18597]
+    <- 1401c5c17 in ID_22670@1401c5c10 [ID_22670]
+    <- 140684d79 in ID_49316@140684110 [ID_49316]
+    <- 140042ce7 in ID_3528@140042ce0 [ID_3528]
+    <- 14590df38 in (no func)
+    <- 14590df40 in (no func)
+"Planets Scanned" @ 144b38518 (11 refs)
+    <- 14017e517 in ID_1014055@14017e510 [ID_1014055]
+    <- 1401bd907 in ID_22133@1401bd900 [ID_22133]
+    <- 140171437 in ID_1013726@140171430 [ID_1013726]
+    <- 1400b09e7 in ID_7877@1400b09e0 [ID_7877]
+    <- 1414eaf79 in ID_88202@1414eae20 [ID_88202]
+    <- 140189ff7 in ID_18590@140189ff0 [ID_18590]
+    <- 1401c5ac7 in ID_22663@1401c5ac0 [ID_22663]
+    <- 140684c8b in ID_49316@140684110 [ID_49316]
+    <- 140042b97 in ID_3521@140042b90 [ID_3521]
+    <- 14590de58 in (no func)
+    <- 14590de60 in (no func)
+"Flora Fully Scanned" @ 144b38528 (11 refs)
+    <- 14017e5a7 in ID_1014058@14017e5a0 [ID_1014058]
+    <- 1401bd997 in ID_22136@1401bd990 [ID_22136]
+    <- 1401714c7 in ID_1013729@1401714c0 [ID_1013729]
+    <- 1400b0a77 in ID_7880@1400b0a70 [ID_7880]
+    <- 1414eb1e6 in ID_88202@1414eae20 [ID_88202]
+    <- 14018a087 in ID_18593@14018a080 [ID_18593]
+    <- 1401c5b57 in ID_22666@1401c5b50 [ID_22666]
+    <- 140684cf1 in ID_49316@140684110 [ID_49316]
+    <- 140042c27 in ID_3524@140042c20 [ID_3524]
+    <- 14590deb8 in (no func)
+    <- 14590dec0 in (no func)
+"sMiscStatUniqueCreaturesScanned" @ 144b38db8 (3 refs)
+    <- 1438b0175 in ID_195070@1438b0130 [ID_195070]
+    <- 1438b0169 in ID_195070@1438b0130 [ID_195070]
+    <- 14590df48 in (no func)
+"sMiscStatPlanetsScanned" @ 144b38f78 (3 refs)
+    <- 1438afed5 in ID_195063@1438afe90 [ID_195063]
+    <- 1438afec9 in ID_195063@1438afe90 [ID_195063]
+    <- 14590de68 in (no func)
+"sMiscStatFaunaFullyScanned" @ 144b38fe8 (3 refs)
+    <- 1438b0055 in ID_195067@1438b0010 [ID_195067]
+    <- 1438b0049 in ID_195067@1438b0010 [ID_195067]
+    <- 14590dee8 in (no func)
+"sMiscStatFloraFullyScanned" @ 144b39008 (3 refs)
+    <- 1438afff5 in ID_195066@1438affb0 [ID_195066]
+    <- 1438affe9 in ID_195066@1438affb0 [ID_195066]
+    <- 14590dec8 in (no func)
+"ScriptSetObjectScanned" @ 144b569a0 (2 refs)
+    <- 140067352 in ID_4726@140067080 [ID_4726]
+    <- 140067359 in ID_4726@140067080 [ID_4726]
+"UnscannedActorKilled" @ 144b569d0 (2 refs)
+    <- 1400672a1 in ID_4726@140067080 [ID_4726]
+    <- 1400672a8 in ID_4726@140067080 [ID_4726]
+"ScannedObjectKeywordUnlocked" @ 144b56a10 (2 refs)
+    <- 1400672dc in ID_4726@140067080 [ID_4726]
+    <- 1400672e3 in ID_4726@140067080 [ID_4726]
+"HandScannerObjectScanned" @ 144b56a58 (2 refs)
+    <- 14006722b in ID_4726@140067080 [ID_4726]
+    <- 140067232 in ID_4726@140067080 [ID_4726]
+"HandScannerResourceScanned" @ 144b56a78 (2 refs)
+    <- 1400671f0 in ID_4726@140067080 [ID_4726]
+    <- 1400671f7 in ID_4726@140067080 [ID_4726]
+"ObjectsScanned" @ 144b56ab0 (2 refs)
+    <- 140067157 in ID_4726@140067080 [ID_4726]
+    <- 14006715e in ID_4726@140067080 [ID_4726]
+"IsCelestialBodyScanned >> %0.2f" @ 144ba5f50 (1 refs)
+    <- 140be35c0 in ID_65020@140be3530 [ID_65020]
+"Check if a object has been scanned." @ 144bcf630 (2 refs)
+    <- 1400e247f in ID_7982@1400bff20 [ID_7982]
+    <- 1400e2486 in ID_7982@1400bff20 [ID_7982]
+"IsScanned" @ 144bcfb38 (3 refs)
+    <- 1400e2456 in ID_7982@1400bff20 [ID_7982]
+    <- 1400e245d in ID_7982@1400bff20 [ID_7982]
+    <- 14208c0f7 in ID_118497@1420881f0 [ID_118497]
+"IsCelestialBodyScanned" @ 144bcfdd8 (2 refs)
+    <- 1400e3282 in ID_7982@1400bff20 [ID_7982]
+    <- 1400e3289 in ID_7982@1400bff20 [ID_7982]
+"Get whether the celestial body is scanned." @ 144bcfe38 (2 refs)
+    <- 1400e32ab in ID_7982@1400bff20 [ID_7982]
+    <- 1400e32b2 in ID_7982@1400bff20 [ID_7982]
+"HandScannerBountyTargetScannedDO" @ 144c06ad0 (1 refs)
+    <- 14012825f in ID_13103@140128250 [ID_13103]
+"fScannedCompassDistanceMult" @ 144c07048 (1 refs)
+    <- 14012789c in ID_13059@140127890 [ID_13059]
+"uLocationTraitRefsScanned" @ 144c7e9a0 (1 refs)
+    <- 141597d82 in ID_90486@141597d40 [ID_90486]
+"$ScanMapMarker_Unscanned" @ 144c7eba0 (1 refs)
+    <- 14159e9bd in ID_90518@14159b890 [ID_90518]
+"scanned" @ 144c9a280 (1 refs)
+    <- 1416ace11 in ID_94477@1416acd90 [ID_94477]
+"bScanned" @ 144c9ccd8 (1 refs)
+    <- 1416e5c9b in ID_95079@1416e5be0 [ID_95079]
+"aHighlightScannableOutlineColorHigh_Scanned:Monocle" @ 144cae630 (1 refs)
+    <- 1401b0358 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorLow_Scanned:Monocle" @ 144cae668 (1 refs)
+    <- 1401b03e6 in ID_21338@1401afdb0 [ID_21338]
+"fHighlightOutlineColorPulseTime_Scanned:Monocle" @ 144cae6a0 (1 refs)
+    <- 1401b0466 in ID_21338@1401afdb0 [ID_21338]
+"fHighlightScannableOutlineThickness_Scanned:Monocle" @ 144cae6d0 (1 refs)
+    <- 1401b04e5 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableFillColor_Scanned:Monocle" @ 144cae708 (1 refs)
+    <- 1401b0572 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorHigh_TargetScanned:Monocle" @ 144cae738 (1 refs)
+    <- 1401b0600 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableFillColor_FullyScanned:Monocle" @ 144caec80 (1 refs)
+    <- 1401b0aca in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorHigh_TargetFullyScanned:Monocle" @ 144caecb8 (1 refs)
+    <- 1401b0b58 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorLow_TargetFullyScanned:Monocle" @ 144caecf8 (1 refs)
+    <- 1401b0be6 in ID_21338@1401afdb0 [ID_21338]
+"fHighlightOutlineColorPulseTime_TargetFullyScanned:Monocle" @ 144caed38 (1 refs)
+    <- 1401b0c66 in ID_21338@1401afdb0 [ID_21338]
+"fHighlightScannableOutlineThickness_TargetFullyScanned:Monocle" @ 144caed78 (1 refs)
+    <- 1401b0ce5 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableFillColor_TargetFullyScanned:Monocle" @ 144caedb8 (1 refs)
+    <- 1401b0d72 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorLow_TargetScanned:Monocle" @ 144caee60 (1 refs)
+    <- 1401b068e in ID_21338@1401afdb0 [ID_21338]
+"fHighlightOutlineColorPulseTime_TargetScanned:Monocle" @ 144caeea0 (1 refs)
+    <- 1401b070e in ID_21338@1401afdb0 [ID_21338]
+"fHighlightScannableOutlineThickness_TargetScanned:Monocle" @ 144caeed8 (1 refs)
+    <- 1401b078d in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableFillColor_TargetScanned:Monocle" @ 144caef18 (1 refs)
+    <- 1401b0822 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorHigh_FullyScanned:Monocle" @ 144caef50 (1 refs)
+    <- 1401b08b0 in ID_21338@1401afdb0 [ID_21338]
+"aHighlightScannableOutlineColorLow_FullyScanned:Monocle" @ 144caef90 (1 refs)
+    <- 1401b093e in ID_21338@1401afdb0 [ID_21338]
+"fHighlightOutlineColorPulseTime_FullyScanned:Monocle" @ 144caefc8 (1 refs)
+    <- 1401b09be in ID_21338@1401afdb0 [ID_21338]
+"fHighlightScannableOutlineThickness_FullyScanned:Monocle" @ 144caf000 (1 refs)
+    <- 1401b0a3d in ID_21338@1401afdb0 [ID_21338]
+"SetScanned" @ 144d38e48 (1 refs)
+    <- 14208e3cc in ID_118497@1420881f0 [ID_118497]
+"OnScanned" @ 144d47b68 (1 refs)
+    <- 1401f7ce7 in ID_25798@1401f7ce0 [ID_25798]
+"OnPlayerScannedObject" @ 144d47b78 (1 refs)
+    <- 1401f7cb7 in ID_25797@1401f7cb0 [ID_25797]
+".?AV?$BSTEventSink@UScannedEvent@ScannableUtils@@@@" @ 1459bf3b0 (0 refs)
+".?AV?$BSTEventSource@UObjectScannedEvent@@@@" @ 145a78180 (0 refs)
+".?AV?$BSTEventSource@UScannedEvent@ScannableUtils@@@@" @ 145ad3b70 (0 refs)
+".?AV?$BSTEventSink@UObjectScannedEvent@@@@" @ 145b83678 (0 refs)
+".?AUScannedToMiscStatHandler@?A0x2dc050ad@@" @ 145ba9af0 (0 refs)

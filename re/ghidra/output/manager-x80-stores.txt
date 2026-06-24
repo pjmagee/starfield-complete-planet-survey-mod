@@ -1,0 +1,984 @@
+Functions referencing ID_937609: 392
+Instructions touching [reg + 0x80] in those functions:
+
+=== ID_58301 @ 1409a7080 ===
+  [W] 1409a70f2  CALL qword ptr [RAX + 0x80]   (CALL)
+
+=== ID_97092 @ 14178a560 ===
+  [R] 14178a56b  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_99453 @ 141895190 ===
+  [R] 141895654  MOV RCX,qword ptr [RAX + 0x80]   (MOV)
+
+=== ID_51382 @ 14076e460 ===
+  [R] 14076e4cb  MOV EAX,dword ptr [RDX + 0x80]   (MOV)
+
+=== ID_69322 @ 140d720e0 ===
+  [W] 140d721d4  MOV dword ptr [RBP + 0x80],R13D   (MOV)
+
+=== ID_51607 @ 14077ec40 ===
+  [R] 14077ecf2  MOV EBX,dword ptr [RDX + 0x80]   (MOV)
+  [R] 14077eed7  MOV EDX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 14077f0d9  MOV EAX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14077f126  LEA RCX,[RBP + 0x80]   (LEA)
+  [R] 14077f238  MOV EDX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 14077f435  MOV EAX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14077f5b2  MOV EDX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 14077f7b0  MOV EAX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14077f919  MOV EDX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 14077fb16  MOV EAX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14077fc31  MOV EBX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14077fea4  MOV ECX,dword ptr [R10 + 0x80]   (MOV)
+
+=== ID_85138 @ 141428970 ===
+  [R] 1414289ed  MOV R14D,0x80   (MOV)
+
+=== ID_58291 @ 1409a38b0 ===
+  [W] 1409a38f4  CALL qword ptr [RAX + 0x80]   (CALL)
+  [W] 1409a3912  CALL qword ptr [RAX + 0x80]   (CALL)
+  [W] 1409a3a75  MOV dword ptr [R14 + 0x80],ECX   (MOV)
+
+=== ID_99797 @ 1418ac9a0 ===
+  [R] 1418acbb5  MOV EBX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1418acdf4  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418ad084  MOV ESI,dword ptr [RAX + 0x80]   (MOV)
+  [W] 1418ad0df  MOV dword ptr [RBP + 0x80],0xffffffff   (MOV)
+
+=== ID_99471 @ 14189a5a0 ===
+  [R] 14189a62a  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_114466 @ 141eea1b0 ===
+  [R] 141eea210  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_51822 @ 140791c20 ===
+  [W] 140791ccd  MOV dword ptr [RDI + 0x80],ESI   (MOV)
+
+=== ID_51387 @ 14076e820 ===
+  [R] 14076e9f0  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 14076ea2f  MOV EDX,dword ptr [RBP + 0x80]   (MOV)
+  [R] 14076ea56  MOV EAX,dword ptr [RBP + 0x80]   (MOV)
+  [W] 14076ea65  MOV dword ptr [RBP + 0x80],EAX   (MOV)
+  [R] 14076eac6  MOV ECX,dword ptr [RBP + 0x80]   (MOV)
+
+=== ID_102695 @ 141a3b5f0 ===
+  [R] 141a3b68f  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [W] 141a3b7f2  MOV qword ptr [RBP + 0x80],R13   (MOV)
+  [R] 141a3b805  LEA RAX,[RBP + 0x80]   (LEA)
+  [R] 141a3b837  MOV RBX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 141a3b843  MOV qword ptr [RBP + 0x80],R13   (MOV)
+
+=== ID_76016 @ 141038950 ===
+  [R] 141038bc9  MOVZX R15D,word ptr [RDI + 0x80]   (MOVZX)
+
+=== ID_58182 @ 140995cd0 ===
+  [W] 140995d77  MOV dword ptr [RBX + 0x80],EBP   (MOV)
+  [R] 140995de8  MOV RAX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_51326 @ 14076ac30 ===
+  [W] 14076ac6c  VMOVAPS xmmword ptr [RSP + 0x80],XMM7   (VMOVAPS)
+  [R] 14076acba  MOV EAX,dword ptr [RDX + 0x80]   (MOV)
+  [R] 14076ae6b  VMOVAPS XMM7,xmmword ptr [RSP + 0x80]   (VMOVAPS)
+
+=== ID_69309 @ 140d6fc90 ===
+  [R] 140d70198  VMULSS XMM1,XMM7,dword ptr [RBX + 0x80]   (VMULSS)
+  [R] 140d702b9  VMOVUPS XMM11,xmmword ptr [RBX + 0x80]   (VMOVUPS)
+  [W] 140d706d5  VMOVDQU xmmword ptr [RBP + 0x80],XMM0   (VMOVDQU)
+  [W] 140d7077c  MOV qword ptr [RBP + 0x80],RCX   (MOV)
+  [R] 140d708a8  LEA RCX,[RBP + 0x80]   (LEA)
+
+=== ID_62770 @ 140b038f0 ===
+  [R] 140b03a05  MOV EDX,dword ptr [R14 + 0x80]   (MOV)
+  [R] 140b03ac9  LEA RCX,[R14 + 0x80]   (LEA)
+
+=== ID_70709 @ 140def8a0 ===
+  [W] 140defb71  CMP qword ptr [RBP + 0x80],RAX   (CMP)
+  [R] 140df0403  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_49573 @ 140693810 ===
+  [R] 14069389e  MOV ECX,dword ptr [RSI + 0x80]   (MOV)
+
+=== ID_102632 @ 141a22dd0 ===
+  [W] 141a23510  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 141a2383c  MOV RDI,qword ptr [RBP + 0x80]   (MOV)
+  [R] 141a23859  MOV RDI,qword ptr [RBP + 0x80]   (MOV)
+  [R] 141a23bc1  VMOVSD XMM0,qword ptr [RCX + 0x80]   (VMOVSD)
+  [R] 141a246f1  MOV RBX,qword ptr [RBP + 0x80]   (MOV)
+  [R] 141a24738  VMOVSD XMM0,qword ptr [RSI + 0x80]   (VMOVSD)
+  [R] 141a24ed6  MOV RBX,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_98421 @ 1418225e0 ===
+  [W] 14182281a  MOV qword ptr [RSP + 0x80],RAX   (MOV)
+  [R] 141822832  LEA RDX,[RSP + 0x80]   (LEA)
+
+=== ID_97702 @ 1417c91e0 ===
+  [R] 1417c9224  MOV EBX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1417c9293  VMOVSD XMM0,qword ptr [RAX + 0x80]   (VMOVSD)
+
+=== ID_105535 @ 141b86120 ===
+  [R] 141b87116  OR dword ptr [RBP + 0x7a0],0x80   (OR)
+  [W] 141b87927  MOV qword ptr [RBP + 0x80],R8   (MOV)
+  [R] 141b87e58  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 141b87e61  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 141b87ed7  MOV ECX,0x80   (MOV)
+
+=== ID_102653 @ 141a2d920 ===
+  [W] 141a2e01c  MOV dword ptr [RBP + 0x80],EAX   (MOV)
+
+=== ID_78279 @ 1410f21b0 ===
+  [W] 1410f2579  VMOVSS dword ptr [RBP + 0x80],XMM2   (VMOVSS)
+
+=== ID_46570 @ 1405a10e0 ===
+  [R] 1405a24b4  MOV R8D,dword ptr [RDX + 0x80]   (MOV)
+  [W] 1405a24da  MOV qword ptr [RBP + 0x80],R14   (MOV)
+  [R] 1405a2647  MOV R14,qword ptr [RBP + 0x80]   (MOV)
+  [R] 1405a27c0  MOV RDX,qword ptr [R15 + 0x80]   (MOV)
+
+=== ID_58309 @ 1409a8420 ===
+  [R] 1409a87e1  LEA RCX,[RSP + 0x80]   (LEA)
+  [R] 1409a87ee  LEA RCX,[RSP + 0x80]   (LEA)
+  [R] 1409a8821  LEA RCX,[RSP + 0x80]   (LEA)
+  [R] 1409a882e  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_121273 @ 1421b56a0 ===
+  [R] 1421b5876  MOV RCX,qword ptr [RBX + 0x80]   (MOV)
+  [W] 1421b5d33  CALL qword ptr [RAX + 0x80]   (CALL)
+
+=== ID_47877 @ 1405fdcf0 ===
+  [R] 1405fe1c4  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1405fe1f1  MOV RDI,qword ptr [RAX + 0x80]   (MOV)
+
+=== ID_72870 @ 140ed7440 ===
+  [R] 140ed74b5  MOV RBX,qword ptr [RAX + 0x80]   (MOV)
+  [R] 140ed756d  VMULSS XMM0,XMM4,dword ptr [RBX + 0x80]   (VMULSS)
+
+=== ID_99818 @ 1418b3120 ===
+  [R] 1418b3196  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418b3375  MOV EBX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_57627 @ 140954430 ===
+  [R] 140954738  MOV RAX,qword ptr [R8 + 0x80]   (MOV)
+  [R] 140954756  LEA RDX,[R8 + 0x80]   (LEA)
+  [R] 1409548ea  LEA RAX,[RCX + 0x80]   (LEA)
+  [R] 140954911  LEA RAX,[RCX + 0x80]   (LEA)
+  [R] 140954af2  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 140954b17  MOV EAX,dword ptr [RBP + 0x80]   (MOV)
+  [R] 140954c4c  LEA RAX,[R12 + 0x80]   (LEA)
+
+=== ID_46995 @ 1405c1080 ===
+  [W] 1405c1a4e  VMOVSD qword ptr [RBP + 0x80],XMM0   (VMOVSD)
+  [R] 1405c1a5f  LEA RAX,[RBP + 0x80]   (LEA)
+
+=== ID_39290 @ 1403a18e0 ===
+  [W] 1403a1916  CMP dword ptr [RBX + 0x80],0x0   (CMP)
+
+=== ID_97093 @ 14178a5a0 ===
+  [R] 14178ab01  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14178ac76  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_51893 @ 1407990a0 ===
+  [R] 1407992e0  MOV R8D,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14079935a  MOV R8D,dword ptr [RCX + 0x80]   (MOV)
+
+=== ID_68566 @ 140d19400 ===
+  [R] 140d19c86  VMOVSD XMM6,qword ptr [RDI + 0x80]   (VMOVSD)
+  [W] 140d19da1  VMOVSD qword ptr [RBP + 0x80],XMM0   (VMOVSD)
+
+=== ID_47559 @ 1405e7490 ===
+  [W] 1405e7586  VMOVDQU xmmword ptr [RSP + 0x80],XMM0   (VMOVDQU)
+
+=== ID_99803 @ 1418ae540 ===
+  [R] 1418ae6db  MOV EBX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418ae7dc  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418ae900  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418aefdc  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [W] 1418af036  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 1418af5c0  MOV EBX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418af677  MOV EDI,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1418af79a  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418af7cb  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_58130 @ 140992450 ===
+  [W] 1409924f4  MOV dword ptr [RBX + 0x80],EBP   (MOV)
+  [R] 1409925a1  MOV RCX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_65688 @ 140c09c00 ===
+  [W] 140c09c77  CMP dword ptr [RCX + 0x80],EAX   (CMP)
+
+=== ID_72872 @ 140ed8810 ===
+  [W] 140ed88d6  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_121358 @ 1421bd2e0 ===
+  [W] 1421bd32f  CALL qword ptr [RAX + 0x80]   (CALL)
+
+=== ID_51347 @ 14076c080 ===
+  [W] 14076c0fb  MOV dword ptr [RSP + 0x80],EAX   (MOV)
+  [R] 14076c107  LEA RCX,[RSP + 0x80]   (LEA)
+  [R] 14076c11b  MOV EAX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_46021 @ 1405780a0 ===
+  [W] 140578d14  XADD.LOCK dword ptr [RCX + 0x80],EAX   (XADD.LOCK)
+
+=== ID_69316 @ 140d71820 ===
+  [R] 140d719dc  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_104593 @ 141b14550 ===
+  [W] 141b147d8  MOV dword ptr [RSP + 0x80],ESI   (MOV)
+  [R] 141b15141  MOV RDX,qword ptr [RAX + 0x80]   (MOV)
+  [R] 141b1589f  VMOVSS XMM2,dword ptr [R15 + 0x80]   (VMOVSS)
+  [R] 141b15d11  MOV EDI,dword ptr [RSP + 0x80]   (MOV)
+  [W] 141b15d1a  MOV dword ptr [RSP + 0x80],EDI   (MOV)
+
+=== ID_51964 @ 1407a6160 ===
+  [R] 1407a62a2  MOV RAX,qword ptr [R14 + 0x80]   (MOV)
+
+=== ID_97104 @ 14178d060 ===
+  [W] 14178d266  VMOVSS dword ptr [RSP + 0x80],XMM6   (VMOVSS)
+  [R] 14178d299  LEA R8,[RSP + 0x80]   (LEA)
+  [R] 14178d2b8  VSUBSS XMM1,XMM0,dword ptr [RSP + 0x80]   (VSUBSS)
+
+=== ID_99394 @ 141887490 ===
+  [R] 14188769a  MOV EDI,dword ptr [RAX + 0x80]   (MOV)
+  [W] 14188785e  MOV qword ptr [RSP + 0x80],RAX   (MOV)
+  [R] 141887892  LEA RCX,[RSP + 0x80]   (LEA)
+  [W] 1418878f1  MOV qword ptr [RSP + 0x80],RAX   (MOV)
+
+=== ID_58264 @ 14099f980 ===
+  [R] 14099fd36  CMP ECX,0x80   (CMP)
+
+=== ID_54788 @ 14086ad90 ===
+  [W] 14086ae07  MOV dword ptr [RSP + 0x80],ESI   (MOV)
+  [W] 14086ae6e  CMP dword ptr [RAX + 0x80],EBX   (CMP)
+
+=== ID_101333 @ 141963480 ===
+  [R] 141963571  VMOVUPS XMM0,xmmword ptr [RDI + 0x80]   (VMOVUPS)
+  [R] 1419636da  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 1419636e1  MOV qword ptr [RBP + 0x80],RBX   (MOV)
+  [R] 141963916  LEA R8,[RDI + 0x80]   (LEA)
+
+=== ID_94933 @ 1416d7860 ===
+  [W] 1416d7cd1  CMP dword ptr [RAX + 0x80],ECX   (CMP)
+
+=== ID_39312 @ 1403a3530 ===
+  [R] 1403a353e  SUB RSP,0x80   (SUB)
+  [R] 1403a3662  LEA R11,[RSP + 0x80]   (LEA)
+
+=== ID_105392 @ 141b794b0 ===
+  [R] 141b794be  SUB RSP,0x80   (SUB)
+  [R] 141b7964f  LEA R11,[RSP + 0x80]   (LEA)
+
+=== ID_99802 @ 1418ae0b0 ===
+  [R] 1418ae0ee  MOV ESI,dword ptr [RCX + 0x80]   (MOV)
+
+=== ID_99831 @ 1418b54b0 ===
+  [W] 1418b56a2  MOV dword ptr [RSP + 0x80],EBP   (MOV)
+  [R] 1418b56b8  LEA R8,[RSP + 0x80]   (LEA)
+
+=== ID_51725 @ 140788140 ===
+  [W] 140788197  MOV qword ptr [RBP + 0x80],RCX   (MOV)
+  [W] 1407881d2  MOV qword ptr [RBP + 0x80],RDX   (MOV)
+  [W] 1407881ff  MOV qword ptr [R15 + 0x80],R14   (MOV)
+  [W] 14078820d  MOV qword ptr [RBP + 0x80],RDI   (MOV)
+  [W] 14078849c  MOV qword ptr [RBP + 0x80],R14   (MOV)
+  [R] 14078854d  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 140788574  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 140788583  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 140788b6e  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [W] 140788e7c  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [W] 1407891e6  MOV qword ptr [RBP + 0x80],RCX   (MOV)
+
+=== ID_104982 @ 141b44c80 ===
+  [R] 141b44e76  MOV RBX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_98482 @ 14182a0b0 ===
+  [R] 14182a850  MOV EDX,0x80   (MOV)
+
+=== ID_69287 @ 140d6c580 ===
+  [W] 140d6c59e  VMOVAPS xmmword ptr [RSP + 0x80],XMM7   (VMOVAPS)
+  [R] 140d6ca03  VMOVSS XMM2,dword ptr [RBX + 0x80]   (VMOVSS)
+  [R] 140d6cec3  VMOVAPS XMM7,xmmword ptr [RSP + 0x80]   (VMOVAPS)
+
+=== ID_120280 @ 142144f40 ===
+  [W] 142145861  MOV qword ptr [RSP + 0x80],RSI   (MOV)
+  [W] 1421458d2  MOV qword ptr [RSP + 0x80],R15   (MOV)
+  [R] 14214594e  MOV RAX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_83021 @ 141309460 ===
+  [W] 14130946a  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_121573 @ 1421d5f50 ===
+  [R] 1421d6010  LEA RAX,[RSI + 0x80]   (LEA)
+  [W] 1421d6422  VMOVSS dword ptr [RSP + 0x80],XMM2   (VMOVSS)
+  [R] 1421d643d  LEA RAX,[RSP + 0x80]   (LEA)
+  [R] 1421d65b2  MOV ECX,dword ptr [RDI + 0x80]   (MOV)
+
+=== ID_99817 @ 1418b20c0 ===
+  [W] 1418b2739  CMP dword ptr [RDX + 0x80],EAX   (CMP)
+  [W] 1418b2a8b  MOV qword ptr [RBP + 0x80],RBX   (MOV)
+  [W] 1418b2c78  CMP dword ptr [RAX + 0x80],ECX   (CMP)
+  [W] 1418b2dc5  CMP qword ptr [RBP + 0x80],0x0   (CMP)
+  [R] 1418b2de9  MOV RSI,qword ptr [RBP + 0x80]   (MOV)
+  [W] 1418b2f45  MOV qword ptr [RBP + 0x80],R14   (MOV)
+
+=== ID_58111 @ 14098a9d0 ===
+  [R] 14098ad0a  MOV dword ptr [RBP + -0x54],0x80   (MOV)
+  [R] 14098ad78  MOV EDX,0x80   (MOV)
+  [R] 14098ae37  MOV EAX,0x80   (MOV)
+  [R] 14098b352  MOV EDX,0x80   (MOV)
+  [W] 14098c005  VMOVSS dword ptr [RBP + 0x80],XMM9   (VMOVSS)
+  [W] 14098c3d5  VMOVSS dword ptr [RBP + 0x80],XMM1   (VMOVSS)
+  [W] 14098cfc5  VMOVSS dword ptr [RSP + 0x80],XMM2   (VMOVSS)
+  [W] 14098d075  VMOVSS dword ptr [RSP + 0x80],XMM2   (VMOVSS)
+  [W] 14098d12b  VMOVSS dword ptr [RSP + 0x80],XMM3   (VMOVSS)
+  [W] 14098d1dd  VMOVSS dword ptr [RSP + 0x80],XMM2   (VMOVSS)
+  [W] 14098d2a5  VMOVSS dword ptr [RSP + 0x80],XMM4   (VMOVSS)
+  [W] 14098d367  VMOVSS dword ptr [RSP + 0x80],XMM3   (VMOVSS)
+  [W] 14098d425  VMOVSS dword ptr [RSP + 0x80],XMM7   (VMOVSS)
+  [W] 14098d4c3  VMOVSS dword ptr [RSP + 0x80],XMM3   (VMOVSS)
+  [W] 14098d578  VMOVSS dword ptr [RSP + 0x80],XMM2   (VMOVSS)
+  [W] 14098d613  VMOVSS dword ptr [RSP + 0x80],XMM2   (VMOVSS)
+
+=== ID_54786 @ 14086a9c0 ===
+  [W] 14086aa37  MOV dword ptr [RSP + 0x80],ESI   (MOV)
+  [W] 14086aa9e  CMP dword ptr [RAX + 0x80],EBX   (CMP)
+
+=== ID_51910 @ 14079ad00 ===
+  [R] 14079add1  MOV R10D,dword ptr [RAX + 0x80]   (MOV)
+  [W] 14079b7bc  MOV qword ptr [RSP + 0x80],RDI   (MOV)
+  [R] 14079b86d  LEA RDX,[RSP + 0x80]   (LEA)
+  [R] 14079b89a  LEA RDX,[RSP + 0x80]   (LEA)
+  [R] 14079b8aa  MOV RCX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_46019 @ 140577120 ===
+  [R] 140577795  MOV R14,qword ptr [RBP + 0x80]   (MOV)
+  [R] 1405778c5  MOV R14,qword ptr [RBP + 0x80]   (MOV)
+  [R] 140577c47  MOV R14,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_63450 @ 140b54dc0 ===
+  [W] 140b551a4  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_109137 @ 141d010a0 ===
+  [W] 141d01333  VMOVSS dword ptr [RBP + 0x80],XMM0   (VMOVSS)
+
+=== ID_70536 @ 140ddf1b0 ===
+  [R] 140de019e  LEA RCX,[R14 + 0x80]   (LEA)
+  [R] 140de0206  LEA RCX,[R14 + 0x80]   (LEA)
+  [R] 140de19ac  VMOVUPS XMM3,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+  [W] 140de19b8  VMOVUPS xmmword ptr [RBP + 0x80],XMM3   (VMOVUPS)
+  [R] 140de19c4  VMOVUPS XMM1,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+
+=== ID_99794 @ 1418ac0e0 ===
+  [W] 1418ac21d  MOV dword ptr [RSP + 0x80],EAX   (MOV)
+  [R] 1418ac369  MOV EAX,dword ptr [RSP + 0x80]   (MOV)
+
+=== ID_99898 @ 1418bc4e0 ===
+  [W] 1418bc515  MOV qword ptr [RSP + 0x80],R14   (MOV)
+  [W] 1418bc55d  CMP dword ptr [RCX + 0x80],EAX   (CMP)
+  [R] 1418bc6c6  MOV R14,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_51611 @ 140780510 ===
+  [R] 140780b16  MOV R8D,dword ptr [RAX + 0x80]   (MOV)
+  [R] 140780b8b  MOV R8D,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_63176 @ 140b281d0 ===
+  [R] 140b28221  VMOVSD XMM0,qword ptr [RBX + 0x80]   (VMOVSD)
+
+=== ID_62313 @ 140acf930 ===
+  [R] 140ad04ca  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 140ad0531  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_52267 @ 1407c49e0 ===
+  [R] 1407c4b6f  MOV EAX,dword ptr [RBX + 0x80]   (MOV)
+
+=== ID_90530 @ 1415a08c0 ===
+  [R] 1415a0b67  LEA RCX,[RDI + 0x80]   (LEA)
+
+=== ID_51867 @ 140795de0 ===
+  [R] 140796120  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_69327 @ 140d73d40 ===
+  [R] 140d73e4a  VMOVSS XMM2,dword ptr [RAX + 0x80]   (VMOVSS)
+  [R] 140d74109  VMOVAPS XMM8,xmmword ptr [RSP + 0x80]   (VMOVAPS)
+
+=== ID_69344 @ 140d77140 ===
+  [W] 140d77203  VMOVUPS xmmword ptr [RSP + 0x80],XMM0   (VMOVUPS)
+
+=== ID_120287 @ 142146780 ===
+  [W] 1421471b5  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 14214786b  MOV R9,qword ptr [RBP + 0x80]   (MOV)
+  [R] 142147a22  VMOVSS XMM1,dword ptr [RBX + 0x80]   (VMOVSS)
+  [R] 142147d49  MOV RAX,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_85133 @ 1414274c0 ===
+  [W] 141427630  CALL qword ptr [RAX + 0x80]   (CALL)
+
+=== ID_121292 @ 1421b83a0 ===
+  [R] 1421b8485  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_51324 @ 14076a9c0 ===
+  [R] 14076aa3b  LEA R8,[RSP + 0x80]   (LEA)
+
+=== ID_57664 @ 14095e920 ===
+  [R] 14095e98e  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_97909 @ 1417e38d0 ===
+  [W] 1417e3970  CMP dword ptr [RCX + 0x80],R13D   (CMP)
+  [R] 1417e39a9  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [W] 1417e39ff  MOV qword ptr [RSP + 0x80],RBX   (MOV)
+  [W] 1417e3a59  MOV qword ptr [RSP + 0x80],RCX   (MOV)
+  [R] 1417e3a7d  MOV RBX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_54792 @ 14086b520 ===
+  [W] 14086b597  MOV dword ptr [RSP + 0x80],ESI   (MOV)
+  [W] 14086b5fe  CMP dword ptr [RAX + 0x80],EBX   (CMP)
+
+=== ID_51691 @ 140785da0 ===
+  [R] 140785da8  SUB RSP,0x80   (SUB)
+  [R] 140785f07  ADD RSP,0x80   (ADD)
+
+=== ID_51740 @ 14078b9a0 ===
+  [R] 14078c009  MOV EDX,dword ptr [R14 + 0x80]   (MOV)
+
+=== ID_54790 @ 14086b150 ===
+  [W] 14086b1c7  MOV dword ptr [RSP + 0x80],ESI   (MOV)
+  [W] 14086b22e  CMP dword ptr [RAX + 0x80],EBX   (CMP)
+
+=== ID_38248 @ 140362de0 ===
+  [W] 140362f26  CALL qword ptr [RAX + 0x80]   (CALL)
+
+=== ID_114324 @ 141ee0020 ===
+  [R] 141ee0236  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 141ee029e  LEA RCX,[RDI + 0x80]   (LEA)
+
+=== ID_99795 @ 1418ac440 ===
+  [R] 1418ac50c  VADDSS XMM1,XMM1,dword ptr [RBP + 0x80]   (VADDSS)
+  [R] 1418ac6f3  LEA RCX,[RBP + 0x80]   (LEA)
+
+=== ID_58159 @ 140993550 ===
+  [W] 1409935ec  MOV dword ptr [RBX + 0x80],0x5   (MOV)
+
+=== ID_90518 @ 14159b890 ===
+  [W] 14159c5bc  MOV qword ptr [RBP + 0x80],RDX   (MOV)
+  [W] 14159c5d6  MOV byte ptr [RBP + 0x80],DL   (MOV)
+  [R] 14159c5dc  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 14159c5f0  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 14159c634  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 14159c63f  CMOVNC RDX,qword ptr [RBP + 0x80]   (CMOVNC)
+  [R] 14159c873  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 14159d206  CMP byte ptr [RBX + 0x80],DIL   (CMP)
+  [W] 14159d20f  MOV byte ptr [RBX + 0x80],DIL   (MOV)
+  [W] 14159d2aa  CMP dword ptr [RSI + 0x80],0x0   (CMP)
+  [W] 14159d2b5  MOV dword ptr [RSI + 0x80],EAX   (MOV)
+  [W] 14159d6ce  CMP dword ptr [RSI + 0x80],R13D   (CMP)
+  [W] 14159d6db  MOV dword ptr [RSI + 0x80],R13D   (MOV)
+  [W] 14159da7e  CMP dword ptr [RSI + 0x80],0x0   (CMP)
+  [W] 14159da87  MOV dword ptr [RSI + 0x80],R13D   (MOV)
+  [W] 14159dc28  CMP dword ptr [RSI + 0x80],R13D   (CMP)
+  [W] 14159dc31  MOV dword ptr [RSI + 0x80],R13D   (MOV)
+  [W] 14159e076  CMP dword ptr [RSI + 0x80],R13D   (CMP)
+  [W] 14159e07f  MOV dword ptr [RSI + 0x80],R13D   (MOV)
+  [W] 14159e23e  CMP dword ptr [RSI + 0x80],R13D   (CMP)
+  [W] 14159e247  MOV dword ptr [RSI + 0x80],R13D   (MOV)
+
+=== ID_104553 @ 141b0e870 ===
+  [R] 141b0eb20  VMOVUPS XMM4,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+
+=== ID_103844 @ 141ad9450 ===
+  [W] 141ad98de  MOV dword ptr [RBP + 0x80],EAX   (MOV)
+  [R] 141ad98e4  VMOVSS XMM1,dword ptr [RBP + 0x80]   (VMOVSS)
+
+=== ID_64498 @ 140bbb940 ===
+  [W] 140bbcc1f  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+
+=== ID_72099 @ 140e8fd10 ===
+  [R] 140e8fd1a  SUB RSP,0x80   (SUB)
+  [R] 140e8fe63  ADD RSP,0x80   (ADD)
+
+=== ID_98782 @ 141859470 ===
+  [R] 14185947b  SUB RSP,0x80   (SUB)
+  [R] 1418597fe  ADD RSP,0x80   (ADD)
+
+=== ID_119971 @ 142125be0 ===
+  [R] 142125c75  VMOVSS XMM7,dword ptr [R14 + 0x80]   (VMOVSS)
+
+=== ID_85127 @ 1414264b0 ===
+  [R] 1414265c6  MOVSXD R8,dword ptr [RAX + 0x80]   (MOVSXD)
+
+=== ID_72877 @ 140ed9900 ===
+  [R] 140eda1fb  VMULSS XMM5,XMM0,dword ptr [RAX + 0x80]   (VMULSS)
+
+=== ID_99827 @ 1418b4460 ===
+  [R] 1418b44a9  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_57622 @ 140952970 ===
+  [R] 140953084  MOV R14D,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1409530c9  LEA RCX,[RSP + 0x80]   (LEA)
+  [R] 140953191  LEA RDX,[RSP + 0x80]   (LEA)
+  [R] 1409531ae  MOV R8,qword ptr [RSP + RAX*0x8 + 0x80]   (MOV)
+  [R] 140953318  LEA RDX,[RSP + 0x80]   (LEA)
+  [R] 140953339  MOV R8,qword ptr [RSP + RAX*0x8 + 0x80]   (MOV)
+  [R] 140953404  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_48318 @ 140624180 ===
+  [W] 14062440b  CALL qword ptr [RAX + 0x80]   (CALL)
+  [R] 140624a9b  VMOVUPS XMM0,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+  [W] 140624aa7  VMOVUPS xmmword ptr [RBP + 0x80],XMM0   (VMOVUPS)
+  [R] 140625003  CMP EAX,0x80   (CMP)
+  [R] 140625025  CMP EAX,0x80   (CMP)
+
+=== ID_99805 @ 1418aff80 ===
+  [W] 1418b05c9  MOV qword ptr [RBP + 0x80],RDI   (MOV)
+  [R] 1418b05e9  VMOVUPS XMM0,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+  [R] 1418b08fd  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_57950 @ 1409766a0 ===
+  [W] 1409766e0  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_102690 @ 141a39b90 ===
+  [W] 141a39d67  MOV dword ptr [RBP + 0x80],R15D   (MOV)
+
+=== ID_51921 @ 14079da50 ===
+  [W] 14079daa0  CMP dword ptr [RAX + 0x80],R14D   (CMP)
+  [W] 14079db85  MOV qword ptr [RSP + 0x80],RAX   (MOV)
+  [R] 14079dbb6  LEA R9,[RSP + 0x80]   (LEA)
+
+=== ID_90506 @ 141599f70 ===
+  [W] 14159a5c7  VMOVUPD xmmword ptr [RBP + 0x80],XMM0   (VMOVUPD)
+  [R] 14159a5d5  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 14159a6a7  LEA RBX,[RCX + 0x80]   (LEA)
+
+=== ID_51597 @ 14077e250 ===
+  [R] 14077e297  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_121571 @ 1421d5440 ===
+  [R] 1421d54cb  MOV EDX,dword ptr [RDX + 0x80]   (MOV)
+  [R] 1421d560b  LEA RCX,[RBP + 0x80]   (LEA)
+  [R] 1421d5627  VMOVUPS XMM1,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+  [R] 1421d5c60  LEA RDI,[RBX + 0x80]   (LEA)
+  [R] 1421d5c86  LEA RDI,[RBX + 0x80]   (LEA)
+
+=== ID_58285 @ 1409a26c0 ===
+  [W] 1409a285b  CALL qword ptr [RAX + 0x80]   (CALL)
+
+=== ID_69278 @ 140d68a80 ===
+  [R] 140d68d2e  MOV EAX,dword ptr [RBP + 0x80]   (MOV)
+
+=== ID_69330 @ 140d74280 ===
+  [W] 140d748d0  VMOVUPS xmmword ptr [RBP + 0x80],XMM0   (VMOVUPS)
+  [W] 140d748e6  MOV qword ptr [RBP + 0x80],R12   (MOV)
+  [R] 140d74938  MOV ECX,dword ptr [RBP + RAX*0x4 + 0x80]   (MOV)
+
+=== ID_51971 @ 1407a7a30 ===
+  [W] 1407a7ebd  VMOVUPS xmmword ptr [RSP + 0x80],XMM0   (VMOVUPS)
+  [W] 1407a7ec9  MOV qword ptr [RSP + 0x80],R12   (MOV)
+  [R] 1407a7ed9  LEA R8,[RSP + 0x80]   (LEA)
+  [W] 1407a7ef6  CMP dword ptr [RSP + 0x80],0x0   (CMP)
+  [R] 1407a7f0c  LEA RDX,[RSP + 0x80]   (LEA)
+
+=== ID_51938 @ 1407a0230 ===
+  [R] 1407a08a3  MOV R9D,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1407a0cd9  SUB EAX,dword ptr [RBP + 0x80]   (SUB)
+
+=== ID_84783 @ 141403300 ===
+  [R] 14140352e  LEA RCX,[RBP + 0x80]   (LEA)
+  [R] 14140353a  MOV RAX,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_62349 @ 140ad3ed0 ===
+  [R] 140ad3f84  MOV RSI,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_52188 @ 1407bd600 ===
+  [R] 1407bd6d2  CMP EAX,dword ptr [RCX + 0x80]   (CMP)
+
+=== ID_102645 @ 141a2a7d0 ===
+  [R] 141a2ac8d  VMOVSD XMM0,qword ptr [R13 + 0x80]   (VMOVSD)
+  [W] 141a2b57c  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 141a2b58a  LEA RAX,[RBP + 0x80]   (LEA)
+
+=== ID_97095 @ 14178b310 ===
+  [W] 14178b5c6  CMP dword ptr [R8 + 0x80],EDI   (CMP)
+
+=== ID_58123 @ 140990ef0 ===
+  [R] 14099116a  LEA EAX,[R15 + 0x80]   (LEA)
+  [W] 140991171  MOV dword ptr [RSP + 0x80],EAX   (MOV)
+  [R] 140991178  LEA EAX,[RSI + 0x80]   (LEA)
+  [R] 140991319  MOV EAX,dword ptr [RSP + 0x80]   (MOV)
+  [R] 140991464  MOV EAX,dword ptr [RSP + 0x80]   (MOV)
+
+=== ID_121251 @ 1421b3880 ===
+  [R] 1421b38ac  MOV ESI,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1421b3b23  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_72100 @ 140e8fe70 ===
+  [R] 140e8fe7a  SUB RSP,0x80   (SUB)
+  [R] 140e8ffc3  ADD RSP,0x80   (ADD)
+
+=== ID_52025 @ 1407acec0 ===
+  [W] 1407acf03  CMP byte ptr [RBP + 0x80],0x0   (CMP)
+
+=== ID_58119 @ 14098fa20 ===
+  [R] 14098fb1d  MOV R10D,0x80   (MOV)
+  [R] 14098fbf7  MOV R10D,0x80   (MOV)
+
+=== ID_66712 @ 140c5ce70 ===
+  [W] 140c5cf33  CMP dword ptr [RCX + 0x80],EAX   (CMP)
+
+=== ID_73737 @ 140f38e40 ===
+  [R] 140f38f0a  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [W] 140f38f79  MOV qword ptr [RSP + 0x80],RSI   (MOV)
+
+=== ID_51918 @ 14079d2d0 ===
+  [W] 14079d35d  MOV dword ptr [RBP + 0x80],EAX   (MOV)
+  [R] 14079d4f1  MOV EAX,dword ptr [RBP + 0x80]   (MOV)
+  [R] 14079d53b  MOV EAX,dword ptr [RBP + 0x80]   (MOV)
+  [W] 14079d5b9  MOV qword ptr [RBP + 0x80],RCX   (MOV)
+  [R] 14079d602  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_105687 @ 141b9af10 ===
+  [W] 141b9b057  VMOVSD qword ptr [RBP + 0x80],XMM0   (VMOVSD)
+  [W] 141b9b07b  VMOVSD qword ptr [RBP + 0x80],XMM0   (VMOVSD)
+
+=== ID_69338 @ 140d76a70 ===
+  [R] 140d76bab  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 140d76bda  MOV RCX,qword ptr [RAX + 0x80]   (MOV)
+
+=== ID_68555 @ 140d15670 ===
+  [R] 140d1591b  MOV ECX,dword ptr [RSI + 0x80]   (MOV)
+  [W] 140d159be  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_97898 @ 1417e1ba0 ===
+  [W] 1417e1cea  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+  [R] 1417e1f73  CMP EDI,dword ptr [R9 + 0x80]   (CMP)
+  [W] 1417e2009  VMOVUPS ymmword ptr [RBP + 0x80],YMM0   (VMOVUPS)
+  [R] 1417e2037  LEA R8,[RBP + 0x80]   (LEA)
+  [R] 1417e237e  VMOVSD XMM0,qword ptr [RDI + 0x80]   (VMOVSD)
+
+=== ID_109821 @ 141d43710 ===
+  [R] 141d43f20  VSUBSS XMM0,XMM13,dword ptr [RAX + 0x80]   (VSUBSS)
+  [W] 141d43fe3  VMOVSS dword ptr [RBP + 0x80],XMM2   (VMOVSS)
+  [R] 141d43ffb  LEA RAX,[RBP + 0x80]   (LEA)
+
+=== ID_65564 @ 140c03e00 ===
+  [W] 140c03e1c  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_78470 @ 141105fd0 ===
+  [R] 141106208  MOV RBX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_90523 @ 14159f7a0 ===
+  [R] 14159f7ec  MOV R9,qword ptr [RAX + 0x80]   (MOV)
+  [R] 14159f81c  VMOVSS XMM0,dword ptr [R9 + 0x80]   (VMOVSS)
+
+=== ID_111503 @ 141e01b10 ===
+  [W] 141e01c7b  VMOVUPS ymmword ptr [RDI + 0x80],YMM0   (VMOVUPS)
+
+=== ID_106703 @ 141beaf50 ===
+  [R] 141beb06d  MOV RAX,qword ptr [RCX + 0x80]   (MOV)
+  [W] 141beb16e  VMOVSS dword ptr [RBP + 0x80],XMM4   (VMOVSS)
+
+=== ID_97768 @ 1417ccf90 ===
+  [W] 1417cd183  VMOVSD qword ptr [RSP + 0x80],XMM1   (VMOVSD)
+
+=== ID_83026 @ 1413097d0 ===
+  [R] 141309897  MOV EDX,dword ptr [RCX + 0x80]   (MOV)
+
+=== ID_99804 @ 1418afa90 ===
+  [R] 1418afb32  MOV EBX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1418afba6  MOV EBX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1418afc18  MOV EBX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1418afc86  MOV EBX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1418afcdc  MOV R8D,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418afd63  MOV EDI,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1418afea2  MOV R15,qword ptr [RBP + 0x80]   (MOV)
+
+=== ID_105684 @ 141b9a6b0 ===
+  [W] 141b9a76f  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 141b9a7a9  LEA RAX,[RBP + 0x80]   (LEA)
+  [W] 141b9a98e  VMOVUPS xmmword ptr [RSI + 0x80],XMM0   (VMOVUPS)
+
+=== ID_99122 @ 141875e80 ===
+  [W] 141875ebd  MOV byte ptr [RSP + 0x80],0x1   (MOV)
+  [W] 141875ec7  MOV byte ptr [RSP + 0x80],0x0   (MOV)
+  [R] 141875f90  MOV RAX,qword ptr [RAX + 0x80]   (MOV)
+  [W] 14187605f  CMP byte ptr [RSP + 0x80],0x0   (CMP)
+  [W] 141876076  VMOVSS dword ptr [RSP + 0x80],XMM6   (VMOVSS)
+  [R] 14187609f  LEA R8,[RSP + 0x80]   (LEA)
+  [R] 1418760b6  VMOVSS XMM0,dword ptr [RSP + 0x80]   (VMOVSS)
+
+=== ID_70779 @ 140dfafe0 ===
+  [W] 140dfb040  MOV qword ptr [RSP + 0x80],RDI   (MOV)
+  [R] 140dfb05e  MOV RDI,qword ptr [RSP + 0x80]   (MOV)
+  [R] 140dfb0c7  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_58290 @ 1409a2fa0 ===
+  [R] 1409a3069  LEA RDX,[RSP + 0x80]   (LEA)
+  [R] 1409a3074  MOV EBX,dword ptr [RSP + 0x80]   (MOV)
+
+=== ID_99828 @ 1418b46b0 ===
+  [W] 1418b487d  MOV qword ptr [RSP + 0x80],R14   (MOV)
+  [W] 1418b4894  MOV qword ptr [RSP + 0x80],RSI   (MOV)
+
+=== ID_51884 @ 140797740 ===
+  [R] 1407977b6  MOV R8D,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_99468 @ 141898ab0 ===
+  [W] 141899734  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [W] 141899c25  VMOVUPS xmmword ptr [RBX + 0x80],XMM0   (VMOVUPS)
+  [W] 141899efa  MOV qword ptr [R8 + 0x80],RCX   (MOV)
+
+=== ID_114327 @ 141ee06c0 ===
+  [R] 141ee06fd  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 141ee0845  LEA RCX,[RBX + 0x80]   (LEA)
+  [R] 141ee08e0  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_62737 @ 140afb780 ===
+  [R] 140afb81a  MOV EDX,dword ptr [RSI + 0x80]   (MOV)
+  [R] 140afb82f  MOV EAX,dword ptr [RSI + 0x80]   (MOV)
+  [W] 140afbb87  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+
+=== ID_91878 @ 1415f7a70 ===
+  [W] 1415f7b19  MOV qword ptr [RSP + 0x80],RDI   (MOV)
+  [R] 1415f7b2a  LEA RDX,[RSP + 0x80]   (LEA)
+
+=== ID_51947 @ 1407a1f50 ===
+  [W] 1407a1f89  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+  [W] 1407a2034  MOV dword ptr [RBX + 0x80],EAX   (MOV)
+  [W] 1407a215b  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_52131 @ 1407b5b50 ===
+  [W] 1407b5b83  MOV qword ptr [RSP + 0x80],RAX   (MOV)
+  [W] 1407b5bb0  MOV qword ptr [RBX + 0x80],RAX   (MOV)
+  [W] 1407b5c6e  MOV qword ptr [RSP + 0x80],RSI   (MOV)
+  [R] 1407b5d1b  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_51294 @ 140768b50 ===
+  [R] 140768bf0  MOV R14,qword ptr [RDI + 0x80]   (MOV)
+  [R] 140768ca2  MOV R15,qword ptr [RDI + 0x80]   (MOV)
+
+=== ID_60737 @ 140a5a780 ===
+  [R] 140a5a903  VMOVUPS XMM0,xmmword ptr [RDI + 0x80]   (VMOVUPS)
+
+=== ID_85106 @ 141422a60 ===
+  [W] 141422e32  MOV dword ptr [RBX + 0x80],EAX   (MOV)
+  [W] 141422fe4  MOV dword ptr [RBX + 0x80],EAX   (MOV)
+
+=== ID_78471 @ 141106230 ===
+  [R] 141106469  MOV RBX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_62312 @ 140acebf0 ===
+  [R] 140acece3  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [W] 140acee3a  MOV qword ptr [RBP + 0x80],R12   (MOV)
+  [R] 140acf1f0  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+  [R] 140acf36b  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+  [R] 140acf6b4  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+
+=== ID_51919 @ 14079d720 ===
+  [W] 14079d79a  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_81567 @ 141274670 ===
+  [W] 14127562d  MOV qword ptr [RCX + 0x80],RAX   (MOV)
+  [W] 1412757a0  MOV qword ptr [RBP + 0x80],R15   (MOV)
+  [R] 1412757b2  LEA R8,[RBP + 0x80]   (LEA)
+
+=== ID_104983 @ 141b44ee0 ===
+  [R] 141b44f5e  MOV R9D,0x80   (MOV)
+  [R] 141b45736  MOV RCX,qword ptr [RAX + 0x80]   (MOV)
+
+=== ID_99830 @ 1418b4ac0 ===
+  [R] 1418b4fb7  MOV R15,qword ptr [RBP + 0x80]   (MOV)
+  [W] 1418b5030  MOV dword ptr [RBP + 0x80],R12D   (MOV)
+  [R] 1418b503a  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 1418b5049  MOV EBX,dword ptr [RBP + 0x80]   (MOV)
+  [R] 1418b50a0  MOV EBX,dword ptr [RBP + 0x80]   (MOV)
+
+=== ID_93931 @ 14167f620 ===
+  [W] 14167fa80  VMOVUPD xmmword ptr [RBP + 0x80],XMM0   (VMOVUPD)
+  [R] 14167fa88  LEA RAX,[RBP + 0x80]   (LEA)
+
+=== ID_97897 @ 1417e1600 ===
+  [W] 1417e162b  MOV dword ptr [RBP + 0x80],ESI   (MOV)
+  [R] 1417e1803  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 1417e1824  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 1417e182b  MOV qword ptr [RBP + 0x80],0x0   (MOV)
+
+=== ID_70777 @ 140df97a0 ===
+  [R] 140dfa27c  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_105771 @ 141baa6c0 ===
+  [R] 141baa6ce  SUB RSP,0x80   (SUB)
+  [R] 141baa85c  LEA R11,[RSP + 0x80]   (LEA)
+
+=== ID_76014 @ 141036a70 ===
+  [W] 141036bd7  MOV qword ptr [RBP + 0x80],R12   (MOV)
+  [W] 1410384b4  CMP qword ptr [RBP + 0x80],0x0   (CMP)
+  [W] 141038515  VMOVSS dword ptr [RBP + 0x80],XMM0   (VMOVSS)
+  [W] 1410385bd  VMOVSS dword ptr [RBP + 0x80],XMM2   (VMOVSS)
+  [R] 1410385db  VMULPS XMM4,XMM7,xmmword ptr [RBP + 0x80]   (VMULPS)
+
+=== ID_52192 @ 1407beb10 ===
+  [R] 1407bec7e  CMP EBX,dword ptr [RCX + 0x80]   (CMP)
+  [R] 1407bed6b  CMP EBX,dword ptr [RCX + 0x80]   (CMP)
+
+=== ID_98652 @ 1418472e0 ===
+  [R] 14184746f  LEA RCX,[RDI + 0x80]   (LEA)
+  [R] 141847584  LEA RCX,[RDI + 0x80]   (LEA)
+  [W] 14184773d  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [R] 141847770  MOV RAX,qword ptr [RAX + 0x80]   (MOV)
+  [R] 141848aab  LEA RDI,[RSI + 0x80]   (LEA)
+
+=== ID_51959 @ 1407a57e0 ===
+  [R] 1407a57fb  MOV EDI,dword ptr [RSP + 0x80]   (MOV)
+
+=== ID_99823 @ 1418b3e10 ===
+  [W] 1418b3e37  CMP dword ptr [RCX + 0x80],EDX   (CMP)
+
+=== ID_98475 @ 141828210 ===
+  [R] 1418283a1  MOV RCX,qword ptr [RAX + 0x80]   (MOV)
+  [R] 1418283e4  LEA RDX,[RAX + 0x80]   (LEA)
+
+=== ID_98493 @ 14182c610 ===
+  [R] 14182d2c8  VMOVSD XMM0,qword ptr [RCX + 0x80]   (VMOVSD)
+  [W] 14182d483  VMOVSS dword ptr [RBP + 0x80],XMM0   (VMOVSS)
+  [R] 14182d4f6  LEA RDX,[RBP + 0x80]   (LEA)
+  [R] 14182d7b2  LEA R8,[RCX + 0x80]   (LEA)
+  [R] 14182d8f7  VMOVSD XMM0,qword ptr [RAX + 0x80]   (VMOVSD)
+  [R] 14182dccc  LEA R8,[RCX + 0x80]   (LEA)
+
+=== ID_52189 @ 1407bd7f0 ===
+  [R] 1407bd8ca  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_49975 @ 1406bcfe0 ===
+  [R] 1406bd080  MOV RAX,qword ptr [RCX + 0x80]   (MOV)
+  [R] 1406bd838  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [W] 1406be476  MOV qword ptr [RBP + 0x80],RBX   (MOV)
+  [W] 1406be494  MOV qword ptr [RBP + 0x80],R14   (MOV)
+  [R] 1406be49e  LEA R8,[RBP + 0x80]   (LEA)
+
+=== ID_51953 @ 1407a37c0 ===
+  [W] 1407a38e0  MOV qword ptr [RBP + 0x80],RBX   (MOV)
+  [W] 1407a3901  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+  [W] 1407a3912  MOV qword ptr [RBP + 0x80],R8   (MOV)
+  [R] 1407a3b63  MOV R8D,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1407a40d5  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 1407a41b9  MOV RCX,qword ptr [RBP + 0x80]   (MOV)
+  [W] 1407a41d1  MOV qword ptr [RBP + 0x80],RBX   (MOV)
+
+=== ID_58037 @ 140983f20 ===
+  [W] 1409840e6  CALL qword ptr [RAX + 0x80]   (CALL)
+  [R] 14098444e  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+  [R] 14098466d  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+  [W] 140984771  CALL qword ptr [RAX + 0x80]   (CALL)
+  [R] 1409847ba  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+  [W] 140984942  MOV dword ptr [RBP + 0x80],ECX   (MOV)
+  [R] 14098494f  LEA RAX,[RBP + 0x80]   (LEA)
+  [R] 140985170  MOV R8,qword ptr [RDX + 0x80]   (MOV)
+
+=== ID_56990 @ 140910f20 ===
+  [R] 14091121a  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_70489 @ 140ddab70 ===
+  [W] 140ddaf8a  CALL qword ptr [RAX + 0x80]   (CALL)
+  [W] 140ddb01b  MOV qword ptr [RBP + 0x80],RAX   (MOV)
+
+=== ID_51920 @ 14079d7d0 ===
+  [W] 14079d909  MOV dword ptr [RSI + 0x80],EBX   (MOV)
+
+=== ID_51608 @ 14077ffd0 ===
+  [R] 14078011d  MOV EDX,dword ptr [RCX + 0x80]   (MOV)
+  [R] 1407801d7  MOV RBX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_57946 @ 140975b30 ===
+  [W] 140975b53  CMP dword ptr [RAX + 0x80],0x0   (CMP)
+
+=== ID_85045 @ 14141cee0 ===
+  [R] 14141d2ef  VMOVUPS XMM1,xmmword ptr [RBP + 0x80]   (VMOVUPS)
+  [W] 14141d306  VMOVUPS xmmword ptr [RBP + 0x80],XMM1   (VMOVUPS)
+
+=== ID_99914 @ 1418bda50 ===
+  [R] 1418bdabc  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_94655 @ 1416b92b0 ===
+  [R] 1416b92b9  SUB RSP,0x80   (SUB)
+  [W] 1416b92ca  CMP dword ptr [RAX + 0x80],ECX   (CMP)
+  [R] 1416b940e  ADD RSP,0x80   (ADD)
+  [R] 1416b9429  ADD RSP,0x80   (ADD)
+
+=== ID_58171 @ 140995340 ===
+  [W] 1409955dc  MOV qword ptr [R14 + 0x80],RAX   (MOV)
+
+=== ID_85135 @ 141428290 ===
+  [R] 1414283ae  MOV RBX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_102642 @ 141a27e70 ===
+  [W] 141a287b0  MOV qword ptr [RSP + 0x80],RDX   (MOV)
+  [W] 141a287e3  MOV qword ptr [RSP + 0x80],RAX   (MOV)
+  [W] 141a287ef  MOV qword ptr [RSP + 0x80],RDX   (MOV)
+  [R] 141a28bcc  LEA RDX,[R14 + 0x80]   (LEA)
+  [R] 141a28be9  LEA R8,[R14 + 0x80]   (LEA)
+  [R] 141a28efe  MOV RAX,qword ptr [RSP + 0x80]   (MOV)
+  [R] 141a29390  MOV R8,qword ptr [RSP + 0x80]   (MOV)
+  [R] 141a296fe  MOV ECX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 141a29bb7  MOV R9,qword ptr [RAX + 0x80]   (MOV)
+  [R] 141a29bf9  MOV R9,qword ptr [RAX + 0x80]   (MOV)
+  [R] 141a29d3f  MOV RAX,qword ptr [RSP + 0x80]   (MOV)
+
+=== ID_107178 @ 141c1e610 ===
+  [R] 141c1ef64  LEA RDX,[RBP + 0x80]   (LEA)
+
+=== ID_114332 @ 141ee0e20 ===
+  [R] 141ee0e71  MOV EBX,dword ptr [RCX + 0x80]   (MOV)
+
+=== ID_98483 @ 14182ae40 ===
+  [R] 14182af53  MOV EBX,dword ptr [RAX + 0x80]   (MOV)
+  [R] 14182b3d1  LEA RCX,[RDI + 0x80]   (LEA)
+
+=== ID_70540 @ 140de3f20 ===
+  [W] 140de527d  VMOVSS dword ptr [RBP + 0x80],XMM1   (VMOVSS)
+
+=== ID_97749 @ 1417cb680 ===
+  [R] 1417cbad1  MOV R9,qword ptr [R9 + 0x80]   (MOV)
+  [R] 1417cbb86  LEA RAX,[RCX + 0x80]   (LEA)
+  [R] 1417cbbb5  LEA RAX,[RCX + 0x80]   (LEA)
+  [R] 1417cbc3f  LEA RAX,[R14 + 0x80]   (LEA)
+  [R] 1417cbdbe  LEA RCX,[RSI + 0x80]   (LEA)
+  [R] 1417cc090  MOV R15,qword ptr [RSI + 0x80]   (MOV)
+  [R] 1417cc370  MOV R14,qword ptr [RBX + 0x80]   (MOV)
+
+=== ID_121599 @ 1421da5e0 ===
+  [R] 1421dad55  VMOVSS XMM0,dword ptr [RAX + 0x80]   (VMOVSS)
+  [R] 1421daf1a  VUCOMISS XMM6,dword ptr [RSI + 0x80]   (VUCOMISS)
+  [W] 1421daf2c  VMOVSS dword ptr [RSI + 0x80],XMM6   (VMOVSS)
+  [R] 1421db065  MOV EDX,dword ptr [RBP + 0x80]   (MOV)
+  [W] 1421db08b  CMP byte ptr [R14 + 0x80],0x0   (CMP)
+
+=== ID_99842 @ 1418b6a70 ===
+  [W] 1418b71f8  VMOVUPS xmmword ptr [RSP + 0x80],XMM0   (VMOVUPS)
+  [W] 1418b7204  MOV qword ptr [RSP + 0x80],R15   (MOV)
+  [R] 1418b725b  LEA RAX,[RSP + 0x80]   (LEA)
+  [W] 1418b727e  MOV dword ptr [RSP + 0x80],R8D   (MOV)
+  [W] 1418b72b7  MOV dword ptr [RSP + 0x80],EDI   (MOV)
+  [R] 1418b72e4  MOV R8D,dword ptr [RSP + 0x80]   (MOV)
+  [W] 1418b72ef  MOV dword ptr [RSP + 0x80],R8D   (MOV)
+  [R] 1418b72fd  MOV R8D,dword ptr [RSP + 0x80]   (MOV)
+  [R] 1418b7320  MOV R8D,dword ptr [RSP + 0x80]   (MOV)
+  [R] 1418b7485  LEA RCX,[RSP + 0x80]   (LEA)
+
+=== ID_51323 @ 14076a780 ===
+  [R] 14076a7c5  MOV R14,qword ptr [RSP + 0x80]   (MOV)
+  [R] 14076a916  CMP EBX,dword ptr [RCX + 0x80]   (CMP)
+
+=== ID_98380 @ 141817e70 ===
+  [R] 141818f2e  OR.LOCK dword ptr [R15 + 0x3a8],0x80   (OR.LOCK)
+  [W] 141819509  MOV qword ptr [RBP + 0x80],R12   (MOV)
+
+=== ID_62306 @ 140acdb40 ===
+  [W] 140acdc88  MOV byte ptr [RBP + 0x80],AL   (MOV)
+  [R] 140acdc9a  LEA RAX,[RBP + 0x80]   (LEA)
+
+=== ID_51683 @ 140784f90 ===
+  [R] 140784fb9  MOV EDX,dword ptr [RAX + 0x80]   (MOV)
+
+=== ID_46037 @ 14057b7b0 ===
+  [W] 14057c14b  CMP dword ptr [R13 + 0x80],EAX   (CMP)
+  [W] 14057c15c  CMP dword ptr [R13 + 0x80],0x0   (CMP)
+
+=== ID_71335 @ 140e3e300 ===
+  [R] 140e3e3a0  CMP EAX,dword ptr [RCX + 0x80]   (CMP)
+
