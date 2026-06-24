@@ -7,6 +7,11 @@ flora/fauna, traits) from the console. Game 1.16.236≡1.16.244, SFSE 0.2.21.
 
 - `build.bat` — builds the SFSE DLL (xmake/MSVC). Fails loud on compile error (older versions
   could ship a STALE DLL silently).
+- **Build modes** — `build.bat` and CI build `releasedbg` (optimized **with** symbols — the ship
+  config, the one Address Library + crash triage want). For a verbose dev build: `xmake f -m debug`
+  then `xmake`. The DLL gates its spdlog level on `NDEBUG`: **release = INFO** (per-planet/per-species
+  green & resource lines are DEBUG, so a galaxy completion doesn't dump ~20k lines), **debug = DEBUG**
+  (full per-body trace). Player-facing Papyrus popups are NOT debug — they always show.
 - `deploy.bat` — compiles Papyrus + copies DLL/ESM/.pex into the game. **Refuses while Starfield
   is running** (DLL/ESM are locked — close the game first).
 - Compile one script only: `PapyrusCompiler.exe "<Script>" -i=<game>\Data\Scripts\Source;Data\Scripts\Source\User -f=<flags> -o=Data\Scripts`.
