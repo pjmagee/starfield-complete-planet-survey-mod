@@ -24,7 +24,7 @@ Function TestDirectGreen() global
         Debug.MessageBox("TestDirectGreen DID NOTHING — GetCurrentPlanet() is None. You're at a settlement / landing pad / ship / interior. Walk OUT into open wilderness (where the scanner shows biome flora & fauna), then run it again. The blue you see now is just 'nothing was written'.")
         Return
     EndIf
-    int n = CompletePlanetSurveyNative.TestDirectGreen(currentPlanet as Form)
+    int n = CompletePlanetSurveyNative.TestDirectGreen(currentPlanet as Form, 0)
     CompletePlanetSurveyNative.DebugLog("TestDirectGreen: wrote " + n + " species (canonical/esm key) on current planet")
     If n == 0
         Debug.MessageBox("TestDirectGreen wrote 0 species — this body has no authored flora/fauna, or its knowledge entry didn't resolve. Move to a different LIVING planet and retry.")
@@ -137,7 +137,7 @@ Function TestBuildArray() global
         Debug.MessageBox("TestBuildArray: GetCurrentPlanet None — walk into open wilderness on a living planet.")
         Return
     EndIf
-    int n = CompletePlanetSurveyNative.TestBuildArray(currentPlanet as Form)
+    int n = CompletePlanetSurveyNative.TestBuildArray(currentPlanet as Form, 0)
     If n == 0
         Debug.MessageBox("TestBuildArray built 0 arrays — run TestDirectGreen first (it creates the empty slots), on a living planet.")
     Else
@@ -151,13 +151,27 @@ EndFunction
 ; reproduction / temperament / abilities, all derived from Starfield.esm). Works on the current
 ; planet AND on a remote planet by form id, as long as the planet's knowledge entry is materialized
 ; (the caller marks resources/traits first, which resolves it). Returns species scan-flagged.
-int Function _GreenPlanet(Form planetForm) global
-    int flags = CompletePlanetSurveyNative.TestDirectGreen(planetForm)   ; +0x21 survey flags + create slots
-    CompletePlanetSurveyNative.TestBuildArray(planetForm)                ; slot+0x08 attribute catalogue
+; aiKind: 0 = both, 1 = flora only (FLOR), 2 = fauna only (NPC_) — so "fauna"/"flora" green only that kind.
+int Function _GreenPlanet(Form planetForm, int aiKind) global
+    int flags = CompletePlanetSurveyNative.TestDirectGreen(planetForm, aiKind)   ; +0x21 survey flags + create slots
+    CompletePlanetSurveyNative.TestBuildArray(planetForm, aiKind)                ; slot+0x08 attribute catalogue
     If flags < 0
         flags = 0
     EndIf
     Return flags
+EndFunction
+
+; Map a category string to the green "kind": 1 = flora only, 2 = fauna only, 0 = both. "species"/
+; "creatures"/"all" (or both flora+fauna) => both. This is what fixes "fauna" greening flora too.
+int Function _SpeciesKind(string asCategories) global
+    bool doFlora = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "flora") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "species") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "creatures")
+    bool doFauna = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "fauna") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "species") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "creatures")
+    If doFlora && !doFauna
+        Return 1
+    ElseIf doFauna && !doFlora
+        Return 2
+    EndIf
+    Return 0
 EndFunction
 
 ; TEST — directly SetScanned the STATIC placed trait scan-target REFRs for trait-20 (Sentient Microbial
@@ -362,8 +376,9 @@ Function CompletePlanet(string asCategories) global
     EndIf
     If doSpecies
         ; Ref-free green (the incorporated GreenPlanetProper method): +0x21 scan flag + the +0x08
-        ; ESM-derived marker catalogue. No spawning, no scanner churn.
-        speciesCount = _GreenPlanet(planetForm)
+        ; ESM-derived marker catalogue. No spawning, no scanner churn. _SpeciesKind keeps "fauna" =
+        ; creatures only and "flora" = plants only (was greening both).
+        speciesCount = _GreenPlanet(planetForm, _SpeciesKind(asCategories))
     EndIf
     CompletePlanetSurveyNative.ScanNearbyRefs()
 
@@ -644,7 +659,7 @@ Function CompleteLifePlanets(string asCategories) global
                 MarkTraits(p, p.GetKeywordTypeList(44))
             EndIf
             If doSpecies
-                If _GreenPlanet(pf) > 0
+                If _GreenPlanet(pf, _SpeciesKind(asCategories)) > 0
                     greened += 1
                 EndIf
             EndIf
