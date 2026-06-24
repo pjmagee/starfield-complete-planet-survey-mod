@@ -145,20 +145,19 @@ Function TestBuildArray() global
     EndIf
 EndFunction
 
-; PROPER GREEN — the incorporated solution, ref-free + no spawning. Marks species scanned (+0x21,
-; survey %) AND builds the slot+0x08 attribute-marker catalogue (the green outline + info panel).
-; One command for the planet you're on:  cgf "CompletePlanetSurveyQuest.GreenPlanetProper"
-Function GreenPlanetProper() global
-    Actor playerRef = Game.GetPlayer()
-    Planet p = playerRef.GetCurrentPlanet()
-    If p == None
-        Debug.MessageBox("GreenPlanetProper: not on a planet — stand in open wilderness on a living planet.")
-        Return
+; Green a planet's flora/fauna REF-FREE (no spawning) — the incorporated GreenPlanetProper method,
+; now the standard species-completion path for every command. Writes the scan-flag (+0x21 / survey
+; %) for every authored species, then builds the slot+0x08 attribute-marker catalogue (genetics /
+; reproduction / temperament / abilities, all derived from Starfield.esm). Works on the current
+; planet AND on a remote planet by form id, as long as the planet's knowledge entry is materialized
+; (the caller marks resources/traits first, which resolves it). Returns species scan-flagged.
+int Function _GreenPlanet(Form planetForm) global
+    int flags = CompletePlanetSurveyNative.TestDirectGreen(planetForm)   ; +0x21 survey flags + create slots
+    CompletePlanetSurveyNative.TestBuildArray(planetForm)                ; slot+0x08 attribute catalogue
+    If flags < 0
+        flags = 0
     EndIf
-    Form pf = p as Form
-    int flags = CompletePlanetSurveyNative.TestDirectGreen(pf)   ; +0x21 survey flags + create slots
-    int cat   = CompletePlanetSurveyNative.TestBuildArray(pf)    ; slot+0x08 attribute catalogue
-    Debug.MessageBox("GreenPlanetProper: " + flags + " species scanned, " + cat + " catalogues built. Flora AND fauna should now render GREEN with the full correct 4-marker info (genetics/reproduction/temperament now derived per-species from the ESM). If anything stays blue or shows a wrong/missing marker, tell me the species and which field.")
+    Return flags
 EndFunction
 
 ; TEST — directly SetScanned the STATIC placed trait scan-target REFRs for trait-20 (Sentient Microbial
@@ -325,6 +324,9 @@ EndFunction
 ;   cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits,fauna,flora"
 ;   cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits"
 Function CompletePlanet(string asCategories) global
+    ; A manual command wins over a queued auto-complete-on-scan: cancel any pending
+    ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") so an explicit category isn't overridden.
+    CompletePlanetSurveyNative.CancelPendingAutoComplete()
     bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
     bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     bool doSpecies   = _WantsSpecies(asCategories)
@@ -341,9 +343,8 @@ Function CompletePlanet(string asCategories) global
     EndIf
 
     Form planetForm = currentPlanet as Form
-    ObjectReference playerRef_OR = playerRef as ObjectReference
 
-    ; Resources before species (so a following green wins — matches the proven CompleteSurvey order).
+    ; Resources before species (so a following green wins — matches the proven completion order).
     int resourceCount = 0
     int traitCount    = 0
     int speciesCount  = 0
@@ -351,11 +352,18 @@ Function CompletePlanet(string asCategories) global
         resourceCount = CompletePlanetSurveyNative.MarkResourcesForPlanet(planetForm, 100)
     EndIf
     If doTraits
+        ; 1) Trait-known DATA (survey %, TRAITS panel, galaxy map) for the planet's traits.
         traitCount = MarkTraits(currentPlanet, currentPlanet.GetKeywordTypeList(44))
-        CompleteTraitScanTargets(currentPlanet, playerRef_OR)
+        ; 2) The in-world "Unknown Feature / 0-of-N SCANNED" objects — drive the GAME'S OWN survey-quest
+        ; completion path (SQ_Parent.DiscoverMatchingPlanetTraits) on each loaded scan-target, exactly what
+        ; a real hand-scan does: set the location PlanetTraitLocationScanCount AV to the required count,
+        ; SetExplored, discover the trait. On-planet only (the objects must be loaded). No engine pokes.
+        _CompleteTraitScanObjects(playerRef as ObjectReference)
     EndIf
     If doSpecies
-        speciesCount = SpawnAndScanAllPlanetSpecies(planetForm, playerRef_OR)
+        ; Ref-free green (the incorporated GreenPlanetProper method): +0x21 scan flag + the +0x08
+        ; ESM-derived marker catalogue. No spawning, no scanner churn.
+        speciesCount = _GreenPlanet(planetForm)
     EndIf
     CompletePlanetSurveyNative.ScanNearbyRefs()
 
@@ -371,6 +379,7 @@ EndFunction
 ; Barren = worlds with no flora/fauna. Resources are written by the sweep as it discovers each
 ; world (always applied); "traits" additionally marks each world's traits known.
 Function CompleteBarrenPlanets(string asCategories) global
+    CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
     bool doTraits = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     ; Immersive framing as a MODAL popup — the CK-authored MESG record CPSRecallMessage (0x807),
     ; NOT a toast. A toast would be buried under the cascade of native "<Planet> Survey Data"
@@ -437,55 +446,6 @@ Function CompleteBarrenPlanets(string asCategories) global
     Debug.MessageBox("Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — land on one and run CompleteSurvey to catalogue its life.  Done in " + (secTotal as int) + "s.")
 EndFunction
 
-; Green every planet's flora/fauna from one spot — no visiting. The GREEN is per-(planet,species) and
-; bound to "the planet the scanned ref is on" (ID_52188) — proven in-game (a real scan greens only the
-; planet you're physically on). So for each UNIQUE species we spawn ONE instance, then
-; GreenSpeciesEverywhere loops its host planets and, per planet, SPOOFS the current-planet global to
-; that planet and runs the genuine real scan (SetScanned/ID_83008 + ID_52157), writing the persistent
-; green for that target planet. Then delete the instance. Only ONE ref live at a time. Throttled.
-; INTERNAL helper — used by CompleteLifePlanets for the fauna/flora category.
-Function _GreenAllLifeWorlds() global
-    Actor player = Game.GetPlayer()
-    If player.IsInInterior() || player.GetCurrentPlanet() == None
-        Debug.Notification("Green all: stand on any planet surface first")
-        Return
-    EndIf
-    ObjectReference playerRef = player as ObjectReference
-
-    float tGreenStart = Utility.GetCurrentRealTime()
-    int speciesCount = CompletePlanetSurveyNative.EnumerateAllSpecies()
-    int spawned = 0
-    int i = 0
-    While i < speciesCount
-        int  fid = CompletePlanetSurveyNative.GetAllSpeciesFormIdAt(i)
-        Form sf  = Game.GetForm(fid)
-        If sf != None
-            ObjectReference r = playerRef.PlaceAtMe(sf, 1, false, true, true, None, None, true)
-            If r != None
-                ; Per HOST PLANET of this species, GreenSpeciesEverywhere spoofs the "current planet"
-                ; global to that planet then runs the genuine real scan (SetScanned/ID_83008 + ID_52157),
-                ; writing the PERSISTENT per-(planet,species) green for the target — the same write
-                ; CompleteSurvey does for the current planet, redirected to each host planet.
-                CompletePlanetSurveyNative.GreenSpeciesEverywhere(r, fid)
-                r.Disable(false)
-                r.Delete()
-                spawned += 1
-                ; yield periodically so the engine flushes the spawn/delete churn
-                If spawned % 16 == 0
-                    Utility.Wait(0.05)
-                EndIf
-            EndIf
-        EndIf
-        i += 1
-    EndWhile
-
-    ; No toast here — it would queue behind the Survey Data slate cascade and surface minutes
-    ; later, buried. The galaxy command shows a modal Debug.MessageBox when everything is done;
-    ; a standalone GreenAllPlanets run reports via the log line below (with its duration).
-    float secGreen = Utility.GetCurrentRealTime() - tGreenStart
-    CompletePlanetSurveyNative.DebugLog("GreenAllPlanets: " + spawned + " unique species real-scanned (per-species green) in " + secGreen + "s")
-EndFunction
-
 ; Called by the C++ scan hook on every species/resource scan. Reads the
 ; Settings > Gameplay toggle, short-circuits if disabled or planet already
 ; complete, then QUEUES CompleteSurvey. C++ poller dispatches it once the
@@ -512,69 +472,6 @@ Function CompleteSurveyIfEnabled() global
     CompletePlanetSurveyNative.QueueCompleteSurvey()
 EndFunction
 
-; Spawn one disabled ref of every flora + fauna species the engine tracks for
-; this planet (across all biomes, via the aggregator), scan each to register
-; biome progress, then delete. Refs stay disabled so there's no visual flicker.
-;
-; Capped at 128 species to bound runtime on dense planets.
-int Function SpawnAndScanAllPlanetSpecies(Form planetForm, ObjectReference playerRef_OR) global
-    int total = CompletePlanetSurveyNative.EnumeratePlanetSpecies(planetForm)
-    If total == 0
-        Return 0
-    EndIf
-
-    ObjectReference[] spawned = new ObjectReference[128]
-    int spawnCount = 0
-    int noFormCount = 0
-    int placeFailCount = 0
-    int i = 0
-    While i < total && spawnCount < 128
-        int  speciesFid  = CompletePlanetSurveyNative.GetPlanetSpeciesFormIdAt(i)
-        Form speciesForm = Game.GetForm(speciesFid)
-        If speciesForm == None
-            noFormCount += 1
-        Else
-            ObjectReference ref = playerRef_OR.PlaceAtMe(speciesForm, 1, false, true, true, None, None, true)
-            If ref != None
-                spawned[spawnCount] = ref
-                spawnCount += 1
-            Else
-                placeFailCount += 1
-            EndIf
-        EndIf
-        i += 1
-    EndWhile
-
-    ; Diagnostic: spawned < total means some species could not be placed (PlaceAtMe
-    ; returned None) or resolved (Game.GetForm None) — those biomes won't complete.
-    CompletePlanetSurveyNative.DebugLog("SpawnAndScan: total=" + total + " spawned=" + spawnCount + " noForm=" + noFormCount + " placeFail=" + placeFailCount)
-
-    ; SetScanned drives ID_83008 (fauna works). UpdatePlanetProgressForSpecies hits
-    ; ID_52157 directly — required for flora whose ID_83038 no-ops on PlaceAtMe'd refs.
-    i = 0
-    While i < spawnCount
-        If spawned[i] != None
-            spawned[i].SetScanned(true)
-            Form baseForm = spawned[i].GetBaseObject()
-            If baseForm != None
-                CompletePlanetSurveyNative.UpdatePlanetProgressForSpecies(spawned[i], baseForm)
-            EndIf
-        EndIf
-        i += 1
-    EndWhile
-
-    i = 0
-    While i < spawnCount
-        If spawned[i] != None
-            spawned[i].Disable(false)
-            spawned[i].Delete()
-        EndIf
-        i += 1
-    EndWhile
-
-    Return spawnCount
-EndFunction
-
 int Function MarkTraits(Planet akPlanet, Keyword[] traitKeywords) global
     Form planetForm = akPlanet as Form
     int marked = 0
@@ -590,15 +487,76 @@ int Function MarkTraits(Planet akPlanet, Keyword[] traitKeywords) global
     Return marked
 EndFunction
 
+; Complete the in-world TRAIT scan-target OBJECTS ("Unknown Feature / 0-of-N SCANNED") by driving the
+; GAME'S OWN survey-quest path — exactly what a real hand-scan does, in plain Papyrus, no engine pokes.
+;
+; The mechanism (from the shipped game scripts PlanetTraitScanTargetScript.psc + SQ_ParentScript.psc):
+;   - PlanetTraitScanTargetScript.OnScanned() -> SQ_Parent.DiscoverMatchingPlanetTraits(self)
+;   - that sets the LOCATION actor value PlanetTraitLocationScanCount; when it reaches the alive
+;     scan-target count GetRefTypeAliveCount(PlanetTraitScanTargetLocRef) (= the "N" of "0/N"), it
+;     SetExplored()s the location and discovers the trait (SetTraitKnown + name + event).
+; So the "0/N SCANNED" is just a Location actor value. We set it to the required count and let the
+; game's own DiscoverMatchingPlanetTraits do the explore + discover + name. This produces the correct
+; durable state a scan does (the location AV + explored + trait-known, all saved) -> the object reloads
+; complete + named. ON-PLANET only: the scan-target objects (and their location) must be loaded.
+; Returns the number of loaded scan-target objects completed.
+int Function _CompleteTraitScanObjects(ObjectReference akPlayer) global
+    SQ_ParentScript sqp = Game.GetForm(0x0007092C) as SQ_ParentScript   ; SQ_Parent (Starfield.esm)
+    If sqp == None
+        CompletePlanetSurveyNative.DebugLog("_CompleteTraitScanObjects: SQ_Parent (0x0007092C) not found")
+        Return 0
+    EndIf
+    ; All 31 PlanetTraitScanTarget ACTIs carry Handscanner_AllowScanAtHighlightRange (0x001CBEA3); find
+    ; the loaded instances near the player. (The location AV is keyed by LOCATION, not the specific ref,
+    ; so the exact instance does not matter — any loaded scan-target in the location drives its count.)
+    Form scanTargetKw = Game.GetForm(0x001CBEA3)
+    ObjectReference[] refs = akPlayer.FindAllReferencesWithKeyword(scanTargetKw, 100000.0)
+    int done = 0
+    If refs
+        int i = 0
+        While i < refs.Length
+            ObjectReference r = refs[i]
+            If r
+                Location loc = r.GetCurrentLocation()
+                If loc
+                    ; 1) Mark the REF itself scanned — this reveals the detail text (the "Tendrils..."
+                    ; trait description) and blocks the player from re-scanning it (the re-scan is what
+                    ; produced the 3/2 over-count). This is the scanned-state a real scan sets; together
+                    ; with the location completion below the object is correctly DONE — NOT the old
+                    ; "byte set but location still incomplete" jam (here the location IS complete).
+                    r.SetScanned(true)
+                    ; 2) Force N = required (the alive scan-target count for this location). SetValue is
+                    ; ABSOLUTE, so it also CAPS any extra +1 that SetScanned's OnScanned may have added
+                    ; (no 3/2). Then let the game explore + discover + name (incrementScanCount=false).
+                    int needed = loc.GetRefTypeAliveCount(sqp.PlanetTraitScanTargetLocRef)
+                    If needed < 1
+                        needed = 1
+                    EndIf
+                    loc.SetValue(sqp.PlanetTraitLocationScanCount, needed as float)
+                    sqp.DiscoverMatchingPlanetTraits(r, false)
+                    done += 1
+                EndIf
+            EndIf
+            i += 1
+        EndWhile
+    EndIf
+    CompletePlanetSurveyNative.DebugLog("_CompleteTraitScanObjects: drove SQ_Parent completion on " + done + " loaded scan-target refs")
+    Return done
+EndFunction
+
 ; ============================================================================
-;  COMPLETION MENU — cohesive command set. See docs/COMPLETION-COMMANDS.md.
-;  Two families:  CompletePlanet*  (the planet you are standing on)  and
-;                 CompleteGalaxy*  (every planet, in one pass).
-;  Filter suffixes: (none) = everything, NoCreatures, ResourcesOnly, CreaturesOnly.
-;  Building blocks (proven): native sweep CompleteAllPlanetsSurveyData (resources +
-;  attribute bits), MarkTraits (938333 PlayerKnowledge trait-known, the engine's own
-;  off-planet path), and CompleteGalaxyCreaturesOnly (flora/fauna green — the only
-;  part that needs you stood on a surface). Legacy aliases are at the bottom.
+;  COMPLETION MENU — parameterized command set. See docs/COMPLETION-COMMANDS.md.
+;  Each command takes a category string: comma-separated resources, traits, fauna,
+;  flora — or "all". Three commands:
+;    CompletePlanet        — the planet you are standing on
+;    CompleteBarrenPlanets — every lifeless world (galaxy sweep, ref-free)
+;    CompleteLifePlanets   — every life-bearing world (ref-free, works anywhere)
+;  Building blocks (proven, all ref-free): MarkResourcesForPlanet (resources +
+;  attribute bits, species EXCLUDED), MarkTraits (938333 PlayerKnowledge trait-known,
+;  the engine's own off-planet path), and _GreenPlanet (the +0x21 scan flag + the
+;  ESM-derived +0x08 marker catalogue — the incorporated GreenPlanetProper method).
+;  Traits write DATA only; the in-world "Unknown Feature" objects are NOT byte-poked
+;  (that jams the hand-scanner) — they stay normally scannable in play.
 ; ============================================================================
 
 ; Shared galaxy core (NO UI): discover every planet, write its survey state
@@ -630,52 +588,64 @@ int Function _GalaxySweepCompleteData(bool doTraits) global
     Return fullyComplete
 EndFunction
 
-; Every world with LIFE (flora/fauna) — pick categories. resources/traits are ref-free; the
-; flora/fauna green needs you stood on a surface. Note: on a life world, marking "resources"
-; without greening leaves its creatures shown as scanned-but-blue, so "resources" auto-includes
-; the green here.
+; Every world with LIFE (flora/fauna) — pick categories. ALL ref-free (no spawning, works from
+; ANYWHERE — orbit, another system, on foot). Per world: discover the knowledge entry (so the
+; ref-free writes land on never-visited worlds), then mark the requested categories. "resources"
+; is pure (no species); "fauna,flora" greens via the +0x21 scan-flag + the ESM-derived +0x08
+; marker catalogue (the incorporated GreenPlanetProper method). "traits" marks the trait known AND
+; writes the durable scan-target object completion (no jam byte) so the in-world "0/N" is gone on
+; reload. Note: completing anything on a never-visited world discovers it (drops its Survey Data slate).
 ;   cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "resources,traits,fauna,flora"
 ;   cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "traits"
 Function CompleteLifePlanets(string asCategories) global
+    CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
     bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
     bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     bool doSpecies   = _WantsSpecies(asCategories)
-    If doResources
-        doSpecies = true   ; resources writes species flags; the green must follow or they show blue
+    If !doResources && !doTraits && !doSpecies
+        Debug.Notification("CompleteLifePlanets: nothing selected (resources,traits,fauna,flora,all)")
+        Return
     EndIf
 
     float t0 = Utility.GetCurrentRealTime()
-    ; 1) resources + traits per life-bearing world (ref-free), BEFORE the green so the green wins.
-    int worlds = 0
-    If doResources || doTraits
-        int n = CompletePlanetSurveyNative.EnumerateLifePlanets()
-        int i = 0
-        While i < n
-            int pid = CompletePlanetSurveyNative.GetLifePlanetFormIdAt(i)
-            Planet p = Game.GetForm(pid) as Planet
-            If p != None
-                If doResources
-                    CompletePlanetSurveyNative.MarkResourcesForPlanet(p as Form, 100)
-                EndIf
-                If doTraits
-                    MarkTraits(p, p.GetKeywordTypeList(44))
-                EndIf
-                worlds += 1
+    int worlds  = 0
+    int greened = 0
+    int n = CompletePlanetSurveyNative.EnumerateLifePlanets()
+    int i = 0
+    While i < n
+        int pid = CompletePlanetSurveyNative.GetLifePlanetFormIdAt(i)
+        Planet p = Game.GetForm(pid) as Planet
+        If p != None
+            Form pf = p as Form
+            ; Resources + species need the knowledge entry to exist (ResolvePlanetSubobj is a pure
+            ; lookup) — discover it ref-free first so those writes land on never-visited worlds.
+            ; (Trait-KNOWN via MarkTraits is self-sufficient.) Resources before the green so the green
+            ; wins the final state.
+            If doResources || doSpecies
+                CompletePlanetSurveyNative.DiscoverPlanetEntry(pf)
             EndIf
-            i += 1
-        EndWhile
-    EndIf
-    ; 2) flora/fauna green LAST (galaxy-wide) — needs you stood on a surface.
-    If doSpecies
-        Actor player = Game.GetPlayer()
-        If player.IsInInterior() || player.GetCurrentPlanet() == None
-            Debug.Notification("CompleteLifePlanets: stand on a planet surface to green flora/fauna")
-        Else
-            _GreenAllLifeWorlds()
+            If doResources
+                CompletePlanetSurveyNative.MarkResourcesForPlanet(pf, 100)
+            EndIf
+            If doTraits
+                ; DATA only here (survey/panel/map). The in-world scan-target OBJECTS can't be completed
+                ; remotely — they (and their Location) aren't loaded off-planet; the SQ_Parent path needs
+                ; loaded refs. Those finish on-foot via CompletePlanet "traits" when you're on the world.
+                MarkTraits(p, p.GetKeywordTypeList(44))
+            EndIf
+            If doSpecies
+                If _GreenPlanet(pf) > 0
+                    greened += 1
+                EndIf
+            EndIf
+            worlds += 1
         EndIf
-    EndIf
+        i += 1
+    EndWhile
+
     float secs = Utility.GetCurrentRealTime() - t0
-    Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + "). Done in " + (secs as int) + "s.")
+    CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets[" + asCategories + "]: " + worlds + " life worlds, " + greened + " greened in " + secs + "s")
+    Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + ").  " + greened + " greened.  Done in " + (secs as int) + "s.")
 EndFunction
 
 ; True if the category list asks for creatures (any of fauna/flora/species/creatures, or "all").
