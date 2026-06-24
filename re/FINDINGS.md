@@ -86,10 +86,17 @@ on-surface visual is engine/scan-bound.
 > only, no DLL change): for each loaded scan-target ref — `r.SetScanned(true)` (reveals the detail text +
 > blocks re-scan) + `loc.SetValue(PlanetTraitLocationScanCount, needed)` (absolute, caps any over-count) +
 > `SQ_Parent.DiscoverMatchingPlanetTraits(r, false)`. Object now reads named + 100% + detail, persists on
-> reload. **ON-PLANET ONLY** (`CompletePlanet "traits"`): the objects are overlay-cell refs that exist
-> only when the surface is loaded — there is NO all-planets store for them (unlike species). Key forms:
-> `SQ_Parent` QUST `0x0007092C`, `PlanetTraitScanTargetLocRef` `0x0027A567`, scan kw `0x001CBEA3`. The
-> user's insight cracked it: the objects are SEPARATE entities LINKED to a trait, not the trait itself.
+> reload. The objects have no all-planets durable WRITE store, BUT they **auto-resolve on arrival** —
+> `PlanetTraitScanTargetScript.OnLoad → CheckForScanTargetUpdate → UpdateScanTarget → SetScanned()` fires
+> whenever the planet's trait is KNOWN (SQ_ParentScript:607-630). That is the **Astrophysics-skill flow**
+> (orbital-discover a trait → land → the object is already done). The off-planet trait-known path is
+> `MarkTraitKnown`/`ID_52155`→`938333` = **ref-free, all-planets** (§2.2; `astro-trait-known-synthesis-
+> 2026-06-24.md`), which `MarkTraits` drives galaxy-wide. So `CompleteLifePlanets`/`CompleteBarrenPlanets
+> "traits"` (mark known everywhere) make every planet's objects complete on the next visit; the explicit
+> `_CompleteTraitScanObjects` is only for objects ALREADY LOADED when you mark the trait (their OnLoad
+> already fired). Key forms: `SQ_Parent` QUST `0x0007092C`, `PlanetTraitScanTargetLocRef` `0x0027A567`,
+> scan kw `0x001CBEA3`. The user's insight cracked it: the objects are SEPARATE entities LINKED to a
+> trait, not the trait itself — and Astrophysics already proves off-planet trait completion exists.
 
 | # | Finding (one line) | Confidence | Evidence |
 |---|---|---|---|

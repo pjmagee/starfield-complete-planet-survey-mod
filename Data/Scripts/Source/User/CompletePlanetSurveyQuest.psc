@@ -427,6 +427,16 @@ Function CompleteBarrenPlanets(string asCategories) global
 
     CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
 
+    ; If you ran this while standing on a (barren) planet, complete its loaded in-world trait objects
+    ; explicitly — they won't auto-resolve on-load since they're already loaded. Remote worlds' objects
+    ; auto-resolve on arrival (the game's CheckForScanTargetUpdate, since their traits are now known).
+    If doTraits
+        Actor bp = Game.GetPlayer()
+        If !bp.IsInInterior() && bp.GetCurrentPlanet() != None
+            _CompleteTraitScanObjects(bp as ObjectReference)
+        EndIf
+    EndIf
+
     ; NO galaxy-wide green pass. Greening a world's flora/fauna requires the per-(planet,species)
     ; CANONICAL id the engine only produces when the biome materializes the creature on-planet — it
     ; cannot be written ref-free without leaving the outline blue (an invalid state). So living
@@ -642,6 +652,17 @@ Function CompleteLifePlanets(string asCategories) global
         EndIf
         i += 1
     EndWhile
+
+    ; The galaxy loop marks every life world's traits KNOWN (data); remote worlds' in-world objects then
+    ; auto-resolve on arrival (the game's OnLoad CheckForScanTargetUpdate -> SetScanned, since the trait is
+    ; known). But if you ran this while STANDING on a planet, that world's objects are already loaded and
+    ; won't re-fire on-load — so complete the CURRENT planet's loaded scan-target objects explicitly here.
+    If doTraits
+        Actor lp = Game.GetPlayer()
+        If !lp.IsInInterior() && lp.GetCurrentPlanet() != None
+            _CompleteTraitScanObjects(lp as ObjectReference)
+        EndIf
+    EndIf
 
     float secs = Utility.GetCurrentRealTime() - t0
     CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets[" + asCategories + "]: " + worlds + " life worlds, " + greened + " greened in " + secs + "s")
