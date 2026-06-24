@@ -7,6 +7,33 @@ Function DebugLog(string asMsg) global native
 ; Mark a trait keyword as known for the planet. Fires the trait progress event.
 bool Function MarkTraitKnownForPlanet(Form akPlanet, Keyword akKeyword) global native
 
+; Map a PlanetTrait keyword -> its PlanetTraitScanTarget ACTI base form id (slot 0 or 1; 0 = none).
+; The surface "scan target" objects whose loaded instances we FindAllReferencesOfType + SetScanned to
+; green a planet's trait scan-targets on the surface.
+int Function GetTraitScanTargetActi(Keyword akTraitKeyword, int aiSlot) global native
+
+; TEST: write the species-style 938333 knowledge-DB entry (+0x21 scanned) for a trait scan-target's
+; base ACTI, keyed (planet, ACTI). Tests whether the durable-KB write greens traits like species.
+int Function MarkScanTargetScannedForPlanet(Form akPlanet, int aiActiFormId) global native
+
+; ON-PLANET trait scan-target completion — the decompile-verified real-scan recipe (ID_90506):
+;   ID_83008(ref,1,8,0) (green outline + N/M count + durable %/event) + ID_83025 identity reveal
+;   (Unknown -> named). Mandatory guard ID_83007(ref)!=0 (a live 939118 component must exist).
+; Pass a LOADED scan-target ref (found near the player). Returns pre-write state: -1 null, 0 skipped
+; (no live component), 1 was-unscanned (now scanned), 2 already-scanned. Logs per-ref FormID/state/canon.
+; Visual still needs a monocle repaint (look away/back) after the batch.
+int Function CompleteTraitScanTargetRef(ObjectReference akRef) global native
+
+; READ-ONLY diagnostic: probe ALL loaded trait scan-targets in range by walking the engine's GLOBAL
+; 939118 ScannableComponent registry directly (the EXACT store the outline reader ID_83007 and the
+; count walker ID_90522 both read) — so there is ZERO "wrong instance" risk (FindAllReferencesWithKeyword
+; can miss the rendered overlay instances; the registry cannot). For each registry REFR it guards
+; ID_83007(ref)!=0, filters to trait scan-target ACTIs (keyword 0x001CBEA3), distance-gates against
+; akPlayer when non-None, then logs known-set member state only (no ID_83008 / identity reveal writes).
+; Pass Game.GetPlayer() as ObjectReference and a radius in world units (0 / None player = probe all loaded).
+; Returns the number of trait scan-targets probed. Check CompletePlanetSurvey.log for [trait-walk] lines.
+int Function CompleteTraitScanTargetsInRange(ObjectReference akPlayer, float afRadiusUnits) global native
+
 ; PROBE: write +0x21/+0x20 directly (esm species key, no spawn/scan) for the planet.
 ; Run on the planet you're standing on to test if a direct write greens an existing entry.
 ; Returns species written (0 = no entry resolved).
@@ -96,3 +123,14 @@ int Function GetAllSpeciesFormIdAt(int aiIndex) global native
 ; that species) as the handle. Per planet it writes the tree (ID_52161) + drives the count
 ; completion (ID_52158), both with the planet explicit. Returns the number of planets greened.
 int Function GreenSpeciesEverywhere(ObjectReference akRef, int aiSpeciesFormId) global native
+
+; --- Parameterized completion menu (read-only helpers) ---
+; Enumerate the UNIQUE life-bearing planets (those with flora/fauna). Call once, then iterate
+; 0..count-1 via GetLifePlanetFormIdAt + Game.GetForm(...) as Planet. The galaxy sweep skips living
+; worlds, so CompleteLifePlanets uses this list to reach their traits.
+int Function EnumerateLifePlanets() global native
+int Function GetLifePlanetFormIdAt(int aiIndex) global native
+
+; Parse a "resources,traits,fauna,flora" category string (base Papyrus can't split a string):
+; returns true if the list contains asToken (case-insensitive) or the wildcard "all".
+bool Function CategoryEnabled(string asCategoryList, string asToken) global native

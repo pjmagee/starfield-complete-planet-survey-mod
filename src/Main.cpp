@@ -3,6 +3,7 @@
 #include "EsmReader.h"
 
 #include <chrono>
+#include <cmath>
 #include <exception>
 #include <type_traits>
 #include <unordered_map>
@@ -54,6 +55,45 @@ namespace Engine
     inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
     inline REL::Relocation<fn_set_percent_t>     SetPercentByte {REL::ID(124899)};
     inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
+
+    // ---- GLOBAL 939118 ScannableComponent registry walk -----------------------------------------
+    // The count walker ID_90522 (re/ghidra/output/onp-resolver-2026-06-23.txt:2030) and the outline
+    // reader (ID_83007 via ID_90548) both read the SAME global 939118 ScannableComponent registry —
+    // the BSTHashMap at managerBase+0x268, where managerBase = *(GetKnowledgeManager()+0x8b0) =
+    // GetKnowledgeDB(). Walking that registry yields EXACTLY the loaded scannable refs the count and
+    // outline see, with no "wrong instance" risk (FindAllReferencesWithKeyword can miss the rendered
+    // overlay copies; the registry cannot — every loaded 939118 component is one entry).
+    //
+    // ID_939118: NOT a function — a uint16 domain discriminator (used as `(u64)ID_939118 << 0x30`
+    //   and `CONCAT24(ID_939118, x)`, i.e. concatenated as a 2-byte value: onp-resolver:2070,
+    //   discriminators.txt:3665). Read it as a uint16* global, exactly like TraitDiscriminator(938333).
+    inline REL::Relocation<std::uint16_t*> ScannableDiscriminator {REL::ID(939118)};
+
+    // ID_126805: the registry BEGIN/lower-bound iterator over the same BSTHashMap ID_126806 point-looks
+    //   up. Signature mirrors ID_126806 (q4-126806-confirm.txt): (container=db+0x268, out[4]u64 scratch,
+    //   &keyLow) -> returns the out buffer (ptr to 4 u64s {b8,b0,a8,a0}). The caller passes an 80-byte
+    //   scratch (`undefined1 local_90[80]`), so we give it >= 80 bytes. a8 (out[2]) = entry-bucket base,
+    //   a0 (out[3]) = index; sentinel a0==0xfe0 && a8==0 means end. (onp-resolver:2073.)
+    using fn_registry_begin_t = std::uint64_t* (*)(std::uintptr_t* container, void* out80, const std::uint64_t* keyLow);
+    inline REL::Relocation<fn_registry_begin_t> ScannableRegistryBegin {REL::ID(126805)};
+
+    // ID_39372: the iterator ADVANCE. Takes &iterState (the 4 u64s {b8,b0,a8,a0} laid out contiguously,
+    //   as `&local_b8`) and updates them in place to the next entry. (onp-resolver:2163.)
+    using fn_registry_advance_t = void (*)(void* iterState4);
+    inline REL::Relocation<fn_registry_advance_t> ScannableRegistryAdvance {REL::ID(39372)};
+
+    // Registry-entry / sentinel constants, read straight from the ID_90522 decompile (onp-resolver:2078-2121):
+    //   entryOff = *(u16*)(a8 + 0x12 + a0*4);  formID = *(u32*)(entryOff + 0x20 + a8);
+    //   byte     = *(u8*) (entryOff + 0x28 + a8);  keyHigh = (u64)disc<<0x30 | 0xffffffffffff.
+    constexpr std::size_t  kRegOffsetTableBase = 0x12;   // a8 + 0x12 + a0*4 -> u16 entry offset
+    constexpr std::size_t  kRegEntryKeyOffset  = 0x10;   // entryOff + 0x10 + a8 -> u64 key (vs keyHigh)
+    constexpr std::size_t  kRegEntryFormId     = 0x20;   // entryOff + 0x20 + a8 -> u32 FormID
+    constexpr std::size_t  kRegEntryStateByte  = 0x28;   // entryOff + 0x28 + a8 -> u8 scanned state
+    constexpr std::uintptr_t kRegEndIndex      = 0xfe0;  // a0 sentinel for "end"
+    constexpr std::uint64_t  kRegKeyLowMask    = 0xffffffffffffULL;  // OR'd into keyHigh
+    constexpr std::size_t  kRegScratchBytes    = 96;     // >= the caller's 80-byte scratch, rounded up
+    constexpr std::uint32_t kRegMaxIterations  = 4096;   // infinite-loop backstop (registry is small)
+    constexpr std::uint32_t kHandscannerHighlightRangeKw = 0x001CBEA3;  // Handscanner_AllowScanAtHighlightRange
     // ID_52161: the engine's per-TYPE completion writer (resolves the species' canonical key
     //   from a LIVE instance, then writes the planet's "scanned species" tree — the green state).
     //   Normally fed the current planet by the scan path; we drive it directly with an EXPLICIT
@@ -215,6 +255,17 @@ namespace Engine
     using fn_bstarray_grow_t = std::uint32_t* (*)(std::int64_t* header, std::uint32_t* pos, const std::uint32_t* value);
     inline REL::Relocation<fn_bstarray_grow_t> BSTArrayU32Grow {REL::ID(35755)};
 
+    // ID_35770: the engine's BSTArray heap allocator — void* alloc(size_bytes, alignment). Same allocator
+    // ID_35755 uses to grow slot+0x08, and the same the StoredComponent serializer (ID_45726) walks +
+    // teardown (ID_35771) frees. Used to build the 16-byte pooled BSTArray at subobj+0x08 (below).
+    using fn_engine_alloc_t = void* (*)(std::uint64_t sizeBytes, std::uint64_t alignment);
+    inline REL::Relocation<fn_engine_alloc_t> EngineScalarAlloc {REL::ID(35770)};
+
+    // ID_35771: the matching BSTArray deallocator — void free(void* ptr, size_t byteCount). Frees a buffer
+    // allocated by ID_35770/ID_35755 (the engine calls it on slot teardown / rehash with 4-byte stride).
+    using fn_engine_free_t = void (*)(void* ptr, std::uint64_t byteCount);
+    inline REL::Relocation<fn_engine_free_t> EngineScalarFree {REL::ID(35771)};
+
     // push_back one u32 onto a species slot's +0x08 BSTArray, matching the engine's inline push_back
     // (grow via ID_35755 when full, else in-place). slotAddr = the slot base (subobj+0x40 + idx*0x30);
     // header {begin@+0x08, end@+0x10, cap@+0x18}. Engine-owned alloc -> safe teardown.
@@ -324,6 +375,259 @@ namespace Engine
         return GetCanonicalSpeciesNative(ref, nullptr, nullptr, nullptr);
     }
 
+    // ID_83025: the identity-reveal known-set writer (Unknown -> named). Marks the ref's canonical id
+    // "discovered/known" in the live biome's known-set (biome+0x20) so the scanner panel's ID_64337
+    // gate shows the real name instead of "Unknown Feature". SAFE by construction: it does an ID_56887
+    // member-find over biome+0x20 keyed by canonId and ONLY writes if the id is a member (no-ops
+    // otherwise); the inner ID_83024 (which faults ref-free) is reached only after a valid slot lookup.
+    // param_1 = *(937609+0x160) = the live biome (the SAME deref as ReadLiveMemberMarkers); param_2 =
+    // ref; param_3 = canonId (ID_83009). (trait-onplanet-completion-2026-06-23.md §2 step D / §5.)
+    using fn_reveal_known_t = void (*)(std::uintptr_t panelDB, void* ref, std::uint32_t canonId);
+    inline REL::Relocation<fn_reveal_known_t> RevealKnownNative {REL::ID(83025)};
+
+    // DIAGNOSTIC: probe the known-set member's marker array (the inferred source of the serialized rec+0x06
+    // "known" byte). Logs whether the canonId member is found and how many marker ids it holds, so we can see
+    // — before vs after ID_83025 — whether the mark actually FILLS the marker array (member+0x08..+0x10) or
+    // no-ops. (Save21 reloaded 0/2 even though ID_83025 already ran, so we must learn why empirically.)
+    void ProbeKnownMember(std::uintptr_t biome, std::uint32_t canon, const char* tag)
+    {
+        try
+        {
+            std::int64_t res[2] = {0, 0};
+            auto         c      = canon;
+            FindBiomeMember(static_cast<std::int64_t>(biome) + 0x20, res, reinterpret_cast<unsigned char*>(&c));
+            const auto table       = static_cast<std::uintptr_t>(res[0]);
+            const auto bucketBase  = *reinterpret_cast<std::uintptr_t*>(table + 0x20);
+            const auto bucketCount = *reinterpret_cast<std::uint64_t*>(table + 0x28);
+            const auto idx         = static_cast<std::uint64_t>(res[1]);
+            const bool found       = (bucketCount != 0 && idx != bucketCount && bucketBase != 0);
+            long long  count       = -1;
+            if (found)
+            {
+                const auto  member = bucketBase + idx * 0x28;
+                auto* const begin  = *reinterpret_cast<std::uint32_t**>(member + 0x08);
+                auto* const end    = *reinterpret_cast<std::uint32_t**>(member + 0x10);
+                count = (begin && end >= begin) ? static_cast<long long>(end - begin) : -2;
+            }
+            spdlog::info("[known-probe] {} canon=0x{:08X} found={} markerCount={} (bucketCount={} idx={})",
+                         tag, canon, found, count, bucketCount, idx);
+        }
+        catch (...)
+        {
+            spdlog::info("[known-probe] {} canon=0x{:08X} FAULT", tag, canon);
+        }
+    }
+
+    void RevealScanTargetIdentity(RE::TESObjectREFR* ref)
+    {
+        if (!ref)
+            return;
+        auto* const s = Singleton937609.get();
+        if (!s || !*s)
+            return;
+        const auto biome = *reinterpret_cast<std::uintptr_t*>(*s + 0x160);
+        if (!biome)  // off-planet / no live biome materialized -> nothing to reveal into
+            return;
+        std::uint32_t canon = GetCanonicalSpeciesId(ref);
+        if (!canon)
+            return;
+        // ID_83025 finds the canonId member and (via ID_83024) appends runtime scan-markers into its marker
+        // array (member+0x08..+0x10); the serializer projects "marker array non-empty" -> the durable rec+0x06
+        // "known" byte the panel reveal reads. The members PRE-EXIST (save-verified: 31 in every save), so no
+        // create is needed.
+        RevealKnownNative(biome, ref, canon);  // ID_83025: fill the member's marker array (Unknown -> named)
+    }
+
+    // READ-ONLY: resolve a loaded trait scan-target's known-set member and log its state — NO writes.
+    // Mirrors RevealScanTargetIdentity's resolution but only probes, so the diagnostic registry walk can
+    // run without setting the on-planet "scanned" byte (which jams manual re-scanning until the planet
+    // re-materializes) or the durable 938333 record. Used by TestTraitRegistryWalk (now non-destructive).
+    void ProbeScanTargetKnownSet(RE::TESObjectREFR* ref)
+    {
+        if (!ref)
+            return;
+        auto* const s = Singleton937609.get();
+        if (!s || !*s)
+            return;
+        const auto biome = *reinterpret_cast<std::uintptr_t*>(*s + 0x160);
+        if (!biome)
+            return;
+        const std::uint32_t canon = GetCanonicalSpeciesId(ref);
+        if (!canon)
+            return;
+        ProbeKnownMember(biome, canon, "walk");
+    }
+
+    // ★ COMPLETE one LOADED trait scan-target REFR, robust to the byte-already-set case.
+    //
+    // ID_83008(ref,1,8,0) sets 939118+0x28 (green outline + count store), but its durable/identity
+    // fan-out (-> ID_52157) only fires INSIDE ID_83038's `if (byte changed 0->1)` block. If an earlier
+    // pass already set the byte, ID_83008 no-ops the credit -> count stays 0/M, name stays "Unknown".
+    // So we ALSO call PlanetProgressNative (ID_52157) DIRECTLY, which is UNCONDITIONAL:
+    //   ID_52157(ref, canonId, mode=8, 0, fireEvent=1)  (decompile ID_52157 @1407b7fa0)
+    //     -> resolves planetId from the ref via ID_52188 (must be on-surface)
+    //     -> ID_52158: writes durable 938333 +0x21 (scanned) / +0x20 (pct) keyed by the ID_83009
+    //        canonical id (ID_124898/ID_124899), fires ID_101322 "fully surveyed" on threshold, and
+    //        writes the ID_83025 known-set (Unknown->named) — all with NO byte-transition requirement.
+    //     -> ID_83019 survey-event sink (because param_5==1) + ID_97853 survey recompute.
+    // Then RevealScanTargetIdentity belt-and-braces (the same ID_83025 write ID_52158 already does).
+    //
+    // `canon` is ID_83009(ref); when 0 (no resolvable canonical) we skip the direct credit (ID_52157's
+    // 938333 key would be degenerate) but still set the green/count byte via ID_83008. Caller MUST have
+    // checked ID_83007(ref) != 0 (live component) before calling — see CompleteTraitScanTargetRef §7.
+    // Trait scan-target table: trait keyword <-> its scan-target base ACTI(s). Shared by
+    // GetTraitScanTargetActi (kw->ACTI) and TraitKeywordForCanonical (ACTI->kw = the +0x08 member id a
+    // real scan appends to the durable 938333 slot; decoded byte-exact, scan-count-store-2026-06-23.md).
+    struct TraitScanTargetEntry { std::uint32_t traitKw; std::uint32_t acti[2]; };
+    inline constexpr TraitScanTargetEntry kTraitScanTargets[] = {
+        {0x00225597, {0x001AC573, 0x0021B297}}, {0x00225596, {0x0021B288, 0}},
+        {0x0029081C, {0x00245AC2, 0}},          {0x00225595, {0x0021B286, 0}},
+        {0x00225594, {0x0021B282, 0}},          {0x00225593, {0x0021B27C, 0}},
+        {0x00225592, {0x0021B278, 0}},          {0x00246C66, {0x00239D8C, 0x0023CAD0}},
+        {0x00225591, {0x0021B274, 0}},          {0x00225590, {0x0021B272, 0}},
+        {0x0022558F, {0x0021B26C, 0}},          {0x00290819, {0x0023875B, 0}},
+        {0x0022558E, {0x0021B268, 0}},          {0x0029081B, {0x00238751, 0}},
+        {0x0022558D, {0x0021B264, 0}},          {0x0022558C, {0x0021B260, 0}},
+        {0x0022558B, {0x0021B25C, 0}},          {0x0029081A, {0x00239D8B, 0x0023CAD1}},
+        {0x0022558A, {0x0021B258, 0}},          {0x00225589, {0x0021B254, 0}},
+        {0x00225588, {0x0021B250, 0}},          {0x00225587, {0x0021B24C, 0}},
+        {0x00225586, {0x001677C3, 0x0021B248}}, {0x00225585, {0x0021B244, 0}},
+        {0x00225584, {0x0021B240, 0}},          {0x00221980, {0x0021B23C, 0}},
+        {0x0028515F, {0x00111F5A, 0}},
+    };
+    std::uint32_t TraitKeywordForCanonical(std::uint32_t canonicalActi);  // fwd (ACTI -> trait kwd; below)
+    bool CompleteTraitSlot(std::uint32_t planetId, std::uint32_t canonicalActi, std::uint32_t traitKeyword);  // fwd (below)
+    void CompleteScanTargetCredit(RE::TESObjectREFR* ref, std::uint32_t canon)
+    {
+        if (!ref)
+            return;
+        const auto before = IsBiomeRef(ref);
+        // A: green outline + N/M count store (939118+0x28). Drives the durable fan-out too, but ONLY
+        // if the byte transitions 0->1 (so this alone is insufficient when an earlier pass set it).
+        ScanRefNative(ref, 1, 8, 0);
+        const auto afterByte = IsBiomeRef(ref);  // DIAGNOSTIC: did ID_83008 actually persist +0x28?
+        // B/C/D: the DURABLE "100% SCANNED" + named completion = the planet-keyed 938333 PlayerKnowledge
+        // record, decoded byte-exact vs a real scan (re/save/scan-count-store-2026-06-23.md): per-canonical
+        // slot = +0x21 flag(==2), +0x20 pct(==100), AND +0x08 member BSTArray holding the TRAIT KEYWORD.
+        // Routing through ID_52158 set flag/pct but left +0x08 EMPTY (its biome-cluster pass maps SPECIES,
+        // not the trait keyword) — verified absent in the user's Save17. CompleteTraitSlot hand-appends the
+        // keyword to +0x08 directly (engine BSTArray grow-path ID_35755) so the saved record is byte-equal
+        // to a real scan -> renders "100% SCANNED" + named on reload, ref-free + all-planets. (The transient
+        // outline / live N-M digits are a SEPARATE 939118 store; the ScanRefNative above covers the on-planet
+        // live outline.) planetId = RENDER domain (ID_52188) the durable is keyed by, resolved via the player.
+        if (canon)
+        {
+            auto* const player   = RE::PlayerCharacter::GetSingleton();
+            const auto  planetId = GetRenderPlanetId(player ? static_cast<RE::TESObjectREFR*>(player) : ref);
+            const auto  keyword  = TraitKeywordForCanonical(canon);
+            if (planetId && keyword)
+                CompleteTraitSlot(planetId, canon, keyword);
+        }
+        const auto afterCredit = IsBiomeRef(ref);
+        // Belt-and-braces identity reveal (no-ops if the canonical isn't a live biome member).
+        RevealScanTargetIdentity(ref);
+        spdlog::info("[trait-credit] byte-state before={} afterScanRef={} afterCredit={} canon=0x{:08X} "
+                     "(1=unscanned,2=scanned; if afterScanRef stays 1 the +0x28 write was gated)",
+                     static_cast<int>(before), static_cast<int>(afterByte), static_cast<int>(afterCredit), canon);
+    }
+
+    // Walk the GLOBAL 939118 ScannableComponent registry exactly as the count walker ID_90522 does
+    // (re/ghidra/output/onp-resolver-2026-06-23.txt:2070-2167), invoking `fn(formID, stateByte, REFR*)`
+    // for each loaded scannable. This is the EXACT store the outline reader (ID_83007/ID_90548) and the
+    // N/M count (ID_90522) both read, so it cannot miss the rendered overlay instances the way
+    // FindAllReferencesWithKeyword can. Returns the number of entries visited (capped).
+    //
+    // SAFETY: the whole walk is wrapped in try/catch — src/ is built /EHa, so a wrong offset deref
+    // (access violation) is caught as a C++ exception rather than hard-crashing the process. Every
+    // pointer is null-checked before deref and the loop is hard-capped at kRegMaxIterations as an
+    // infinite-loop backstop. fn itself is invoked inside the try, so a fault inside a callback also
+    // unwinds cleanly. Caller must still hold a stable game state (on-surface, menus quiescent).
+    template <typename Fn>
+    std::uint32_t ForEachScannableInRegistry(Fn&& fn)
+    {
+        std::uint32_t visited = 0;
+        try
+        {
+            const auto db = GetKnowledgeDB();  // == *(GetKnowledgeManager()+0x8b0) == ID_90521's managerBase
+            if (!db)
+                return 0;
+
+            const std::uint16_t disc    = *ScannableDiscriminator.get();  // ID_939118 (uint16 domain prefix)
+            const std::uint64_t keyLow  = static_cast<std::uint64_t>(disc) << 0x30;
+            const std::uint64_t keyHigh = keyLow | kRegKeyLowMask;
+
+            // Scratch for the iterator (caller uses an 80-byte local; give it 96 to be safe), plus the
+            // 4-u64 iterator state {b8,b0,a8,a0} laid out contiguously (ID_39372 takes &b8).
+            alignas(16) std::uint8_t scratch[kRegScratchBytes] {};
+            auto container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);  // db+0x268
+
+            std::uint64_t* it = ScannableRegistryBegin(container, scratch, &keyLow);
+            if (!it)
+                return 0;
+
+            // iterState = {b8, b0, a8(entry-bucket base), a0(index)} — ID_39372 advances in place.
+            std::uint64_t iterState[4] = {it[0], it[1], it[2], it[3]};
+
+            for (std::uint32_t guard = 0; guard < kRegMaxIterations; ++guard)
+            {
+                const std::uintptr_t a8 = static_cast<std::uintptr_t>(iterState[2]);
+                const std::uintptr_t a0 = static_cast<std::uintptr_t>(iterState[3]);
+
+                // End sentinel: (a0 == 0xfe0 && a8 == 0). Match the decompile's exact condition.
+                if (a0 == kRegEndIndex && a8 == 0)
+                    break;
+                if (!a8)
+                    break;
+
+                // entryOff = *(u16*)(a8 + 0x12 + a0*4). Bounds the read within the bucket.
+                const auto* offTablePtr =
+                    reinterpret_cast<const std::uint16_t*>(a8 + kRegOffsetTableBase + a0 * 4);
+                const std::uintptr_t entryOff = *offTablePtr;
+                const std::uintptr_t entry    = a8 + entryOff;
+
+                // keyHigh guard: stop once the entry key exceeds the 939118 domain ceiling (the
+                // walker's `*(u64*)(entryOff+0x10+a8) <= keyHigh` loop condition).
+                const std::uint64_t entryKey = *reinterpret_cast<const std::uint64_t*>(entry + kRegEntryKeyOffset);
+                if (entryKey > keyHigh)
+                    break;
+
+                ++visited;
+
+                const std::uint32_t formID    = *reinterpret_cast<const std::uint32_t*>(entry + kRegEntryFormId);
+                const std::uint8_t  stateByte = *reinterpret_cast<const std::uint8_t*>(entry + kRegEntryStateByte);
+
+                RE::TESObjectREFR* refr = nullptr;
+                if (formID)
+                {
+                    auto* form = RE::TESForm::LookupByID(formID);  // == ID_47401
+                    if (form)
+                    {
+                        // The walker resolves the live REFR via the form's vtable slot +0x228. In
+                        // CommonLibSF the loaded scannable entries ARE references, so a direct cast is
+                        // sufficient and avoids a hand-rolled vtable call. Guard the form type so a
+                        // stray non-REFR form can't be reinterpreted.
+                        if (form->Is(RE::FormType::kREFR) || form->GetFormType() == RE::FormType::kACHR)
+                            refr = static_cast<RE::TESObjectREFR*>(form);
+                    }
+                }
+
+                fn(formID, stateByte, refr);
+
+                // Advance the iterator in place (ID_39372 updates iterState[0..3]).
+                ScannableRegistryAdvance(iterState);
+            }
+
+            if (visited >= kRegMaxIterations)
+                spdlog::warn("[trait-walk] hit iteration cap {} — registry larger than expected or loop stuck",
+                             kRegMaxIterations);
+        }
+        catch (...)
+        {
+            spdlog::error("[trait-walk] caught fault during registry walk after {} entries — aborting walk", visited);
+        }
+        return visited;
+    }
+
     // ID_83006: resolve a species base FORM to its CANONICAL form. This is the missing piece.
     // The outline reader ID_52159 hashes the canonical id stamped into a scanned instance's
     // ScannableComponent +0x24, which the engine computes as *(uint32*)(ID_83006(base)+0x28)
@@ -424,6 +728,94 @@ namespace Engine
         IncrementScanFlag(subobj, speciesFormId, delta, 0);
         SetPercentByte(subobj, speciesFormId, Engine::kScanPercentComplete, 0);
         return 1;
+    }
+
+    // ACTI scan-target canonical -> its trait keyword (the +0x08 member a real scan appends). Inverse of
+    // kTraitScanTargets (kw->ACTI). The canon arg comes from ID_83009(ref) and == the scan-target base ACTI.
+    std::uint32_t TraitKeywordForCanonical(std::uint32_t canonicalActi)
+    {
+        for (const auto& e : kTraitScanTargets)
+            if (e.acti[0] == canonicalActi || e.acti[1] == canonicalActi)
+                return e.traitKw;
+        return 0;
+    }
+
+    // Reproduce a real trait-scan's DURABLE 938333 PlayerKnowledge record for one scan-target, so it
+    // renders "100% SCANNED" + the named feature on reload (ref-free, all-planets, persists). Decoded
+    // BYTE-EXACT from a real scan vs the mod's own write (re/save/scan-count-store-2026-06-23.md, the
+    // Save12/13/14 vs Save18 three-state diff). The per-planet 938333 subobject serializes as:
+    //   ver(u32=3) | u16(0)
+    //   POOLED member BSTArray<u32>  (in memory at subobj+0x08, a 16-byte BSTArray {data, size, cap})
+    //   SLOT hashmap { count(u32), pad(u32), [ slot{ id(u32), pct(u8 @slot+0x20), flag(u8 @slot+0x21),
+    //                                               inline 24-byte BSTArray @slot+0x08 } ] }
+    //
+    // A REAL trait scan (Save14) puts the trait KEYWORD in the POOLED array (subobj+0x08) and leaves the
+    // canonical SLOT's inline +0x08 EMPTY, with slot flag == 2, pct == 100. The mod's PRIOR write put the
+    // keyword in the SLOT's inline +0x08 (wrong array — serializes AFTER the slot, not before) and let the
+    // flag accumulate to 10 (8 stamped by the earlier ScanRefNative engine path + 2 from two IncrementScanFlag
+    // calls). Both errors made the saved record NON-byte-identical -> the panel reveal rejected it on reload.
+    //
+    // FIX (produces a record byte-identical to Save14):
+    //   1. flag = EXACTLY 2 and pct = 100 written DIRECTLY to slot+0x21 / slot+0x20 (idempotent absolute
+    //      writes — NOT the saturating IncrementScanFlag accumulate, which inherits the ScanRefNative-8).
+    //   2. the canonical slot's inline +0x08 24-byte array is CLEARED (a real scan leaves it empty here).
+    //   3. the trait keyword is appended to the POOLED 16-byte BSTArray at subobj+0x08 via the engine
+    //      allocator (ID_35770) — round-trips through save (ID_45726/ID_52193) + load (ID_51523).
+    // Returns false if the planet's knowledge entry / canonical slot is missing (discover / scan first).
+    bool CompleteTraitSlot(std::uint32_t planetId, std::uint32_t canonicalActi, std::uint32_t traitKeyword)
+    {
+        if (!planetId || !canonicalActi || !traitKeyword)
+            return false;
+        const auto db = GetKnowledgeDB();
+        if (!db)
+            return false;
+        const auto subobj = ResolvePlanetSubobj(db, planetId);
+        if (!subobj)
+            return false;
+        const auto base = reinterpret_cast<std::uintptr_t>(subobj);
+
+        // Ensure the per-canonical slot EXISTS (idempotent): ID_124899 creates it if absent. We then write
+        // the bytes directly so the value is exact regardless of any prior accumulation.
+        SetPercentByte(subobj, canonicalActi, static_cast<std::uint8_t>(100), 0);  // ID_124899: create+pct
+
+        const auto hashmap = base + 0x18;
+        const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
+        const auto slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+        const auto idx     = SpeciesSlotHash(hashmap, &canonicalActi);
+        if (idx == hashEnd || !slots)
+            return false;
+        const auto slotAddr = slots + idx * 0x30;
+
+        // 1. flag = EXACTLY 2, pct = 100 — direct absolute writes (Save14 parity; not accumulate).
+        *reinterpret_cast<std::uint8_t*>(slotAddr + 0x20) = 100;  // slot+0x20 percent
+        *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21) = 2;    // slot+0x21 scan-flag
+
+        // 2. Clear the canonical slot's inline 24-byte +0x08 array (a real trait scan leaves it EMPTY here).
+        //    Just ZERO begin/end/cap — LEAK any old engine buffer (safe: no double-free / no wrong-free
+        //    corruption; same pattern as TestBuildArray). The mod's PRIOR (wrong) write pushed the keyword here.
+        *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08) = 0;  // begin
+        *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10) = 0;  // end
+        *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x18) = 0;  // cap
+
+        // 3. Append the trait keyword to the POOLED BSTArray<u32> at subobj+0x08 (the array a real scan
+        //    populates and the panel reveal reads). Use CommonLibSF's RE::BSTArray so the capacityAndFlags +
+        //    engine-allocator grow are handled CORRECTLY — the prior MANUAL alloc/encode wrote cap without the
+        //    allocator flag, corrupting the array so the NEXT engine access faulted (log: first slot OK, second
+        //    ref crashed). Idempotent: skip if the keyword is already a member.
+        auto& pool = *reinterpret_cast<RE::BSTArray<std::uint32_t>*>(base + 0x08);
+        for (const auto existing : pool)
+            if (existing == traitKeyword)
+            {
+                spdlog::info("[trait-slot] planet=0x{:08X} canon=0x{:08X} pooled already has kwd 0x{:08X}",
+                             planetId, canonicalActi, traitKeyword);
+                return true;
+            }
+        pool.push_back(traitKeyword);  // raw keyword; the serializer applies the ^0x400000 DB tag on save
+
+        spdlog::info("[trait-slot] planet=0x{:08X} canon=0x{:08X} pooled(subobj+0x08) += kwd 0x{:08X}  "
+                     "(slot flag=2 pct=100, slot+0x08 cleared)",
+                     planetId, canonicalActi, traitKeyword);
+        return true;
     }
 
     // Green a single species TYPE on an EXPLICIT target planet by driving the engine's own
@@ -937,6 +1329,215 @@ namespace Papyrus
         if (!planetId || !keyword)
             return false;
         return Engine::MarkTraitKnown(planetId, keyword);
+    }
+
+    // Map a PlanetTrait keyword -> its PlanetTraitScanTarget ACTI base form id(s). The surface
+    // "scan target" objects (the "Unknown Feature" / e.g. "Microbial Community") whose LOADED instances
+    // Papyrus FindAllReferencesOfType + SetScanned to green a planet's trait scan-targets (per-ref
+    // 939118 +0x28; on-planet). Static catalog table (27 traits; 4 carry a 2nd target). slot 0|1; 0=none.
+    // Built from the ESM (re/tools/trait_scan_target_map.json): trait KYWD -> PlanetTraitScanTarget ACTI.
+    std::int32_t GetTraitScanTargetActi(std::monostate, RE::BGSKeyword* traitKw, std::int32_t slot)
+    {
+        if (!traitKw || slot < 0 || slot > 1)
+            return 0;
+        struct Entry
+        {
+            std::uint32_t traitKw;
+            std::uint32_t acti[2];
+        };
+        static constexpr Entry kTable[] = {
+            {0x00225597, {0x001AC573, 0x0021B297}},  // 00 AeriformLife
+            {0x00225596, {0x0021B288, 0}},           // 01 AmphibiousFoothold
+            {0x0029081C, {0x00245AC2, 0}},           // 02 BoiledSeas
+            {0x00225595, {0x0021B286, 0}},           // 03 BolideBombardment
+            {0x00225594, {0x0021B282, 0}},           // 04 CharredEcosystem
+            {0x00225593, {0x0021B27C, 0}},           // 05 ContinualConductor
+            {0x00225592, {0x0021B278, 0}},           // 06 CorallineLandmass
+            {0x00246C66, {0x00239D8C, 0x0023CAD0}},  // 07 CrystallineCrust
+            {0x00225591, {0x0021B274, 0}},           // 08 DiseasedBiosphere
+            {0x00225590, {0x0021B272, 0}},           // 09 EcologicalConsortium
+            {0x0022558F, {0x0021B26C, 0}},           // 10 EmergingTectonics
+            {0x00290819, {0x0023875B, 0}},           // 11 EnergeticRifting
+            {0x0022558E, {0x0021B268, 0}},           // 12 FrozenEcosystem
+            {0x0029081B, {0x00238751, 0}},           // 13 GaseousFont
+            {0x0022558D, {0x0021B264, 0}},           // 14 GlobalGlacialRecession
+            {0x0022558C, {0x0021B260, 0}},           // 15 PeltedFields
+            {0x0022558B, {0x0021B25C, 0}},           // 16 PrimedForLife
+            {0x0029081A, {0x00239D8B, 0x0023CAD1}},  // 17 PrimordialNetwork
+            {0x0022558A, {0x0021B258, 0}},           // 18 PrismaticPlumes
+            {0x00225589, {0x0021B254, 0}},           // 19 PsychotropicBiota
+            {0x00225588, {0x0021B250, 0}},           // 20 SentientMicrobialColonies
+            {0x00225587, {0x0021B24C, 0}},           // 21 SlushySubsurfaceSeas
+            {0x00225586, {0x001677C3, 0x0021B248}},  // 22 SolarStormSeasons
+            {0x00225585, {0x0021B244, 0}},           // 23 SonorousLithosphere
+            {0x00225584, {0x0021B240, 0}},           // 24 TurbulentLithosphere
+            {0x00221980, {0x0021B23C, 0}},           // 25 ExtinctionEvent
+            {0x0028515F, {0x00111F5A, 0}},           // 26 GravitationalAnomaly
+        };
+        const auto kwId = traitKw->GetFormID();
+        for (const auto& e : kTable)
+            if (e.traitKw == kwId)
+                return static_cast<std::int32_t>(e.acti[slot]);
+        return 0;
+    }
+
+    // TEST the user's hypothesis: write the SPECIES-STYLE 938333 PlayerKnowledge entry (+0x21 scanned /
+    // +0x20 pct) for a trait scan-target's base ACTI, keyed by (planet, ACTI) — identical to the species
+    // write, and the ACTI is the scan-target's canonical key (ID_64338 falls to base for ACTIs). If this
+    // greens/completes the surface scan-targets like it greens species, the durable-KB path works for
+    // traits; if not, it confirms the visual reads the transient 939118, not 938333.
+    std::int32_t MarkScanTargetScannedForPlanet(std::monostate, RE::TESForm* planetForm, std::int32_t actiFormId)
+    {
+        const auto planetId = Engine::ReadPlanetId(planetForm);
+        if (!planetId || !actiFormId)
+            return -1;
+        return Engine::MarkSpeciesScannedForPlanet(planetId, static_cast<std::uint32_t>(actiFormId), 100);
+    }
+
+    // ON-PLANET trait scan-target completion — the decompile-verified ID_90506 recipe
+    // (re/ghidra/output/trait-onplanet-completion-2026-06-23.md + trait-true-completion-2026-06-23.md).
+    // For a LOADED scan-target REFR:
+    //   green outline + N/M count  : ID_83008(ref,1,8,0) on the FormID-correct loaded ref. Both the
+    //                                outline (ID_90548[0xf2c]=ID_83007) and the count walker (ID_90522)
+    //                                read 939118+0x28, keyed by REFR FormID, so this is the load-bearing call.
+    //   durable %/"fully surveyed" : the ID_52157->ID_52158 fan-out (938333 +0x21/+0x20 via ID_124898/9,
+    //                                ID_101322 "fully surveyed" event, and the ID_83025 identity write).
+    //   Unknown -> named identity  : ID_83025(*(937609+0x160), ref, ID_83009(ref)) — fired INSIDE ID_52158
+    //                                (onp-helpers:201) AND, belt-and-braces, directly via RevealScanTargetIdentity.
+    //
+    // ★ THE BYTE-ALREADY-SET BUG (HARD EMPIRICAL FACT 2026-06-23). When an EARLIER pass already set
+    // 939118+0x28 (the player can no longer hand-scan; IsScanned()==TRUE), a bare ScanRefNative(ref,1,8,0)
+    // does NOT credit the count or reveal the name: ID_83008->ID_83038 copies the canonical id out and
+    // forwards to ID_52157 ONLY inside `if (*newByte != *oldByte)` (onp-resolver/scanned-state:2658-2670,
+    // the `if (*pcVar6 != *(...0x28...))` block). An idempotent re-set is no change -> ID_52157 is SKIPPED
+    // -> no durable 938333 write, no ID_83025 identity, no ID_101322 event -> "0/2 SCANNED" + "UNKNOWN
+    // FEATURE" persist exactly as observed. FIX: call PlanetProgressNative (ID_52157) DIRECTLY after
+    // ScanRefNative so the credit fan-out runs REGARDLESS of a byte transition. ID_52157 unconditionally
+    // builds the ID_52158 context and calls it (decompile ID_52157 @1407b7fa0:2789-2811) + always runs the
+    // survey recompute ID_97853 (:2837); ID_52158 writes 938333+0x21/+0x20 keyed by the ID_83009 canonical
+    // (:123/:150), fires ID_101322 on threshold (:185-187), and writes the ID_83025 known-set (:190-201).
+    // param_2 = canonical id (ID_83009); param_3 = mode 8 (matches the real scan); param_5 = 1 so the
+    // survey-event sink ID_83019 also runs. The leading guard (ID_52157:2775) passes for a normal ACTI id.
+    //
+    // MANDATORY crash guard (§7): only write if ID_83007(ref) != 0 (a live 939118 component exists) —
+    // otherwise there is no +0x28 to write and no canonical id, and the durable fan-out faults. This is
+    // exactly why the prior ref-free ID_83024 path crashed. Logs per-ref FormID/state/canon so we can
+    // confirm WHICH refs the find returns (the prior SetScanned hit wrong-FormID template handles).
+    // Returns pre-write state: -1 null, 0 skipped (no live component), 1 was-unscanned (now scanned),
+    // 2 already-scanned (the byte-already-set case the direct ID_52157 credit now fixes). Visual refresh
+    // still needs a monocle repaint (look away/back) after the batch.
+    std::int32_t CompleteTraitScanTargetRef(std::monostate, RE::TESObjectREFR* ref)
+    {
+        if (!ref)
+            return -1;
+        const auto refId = ref->GetFormID();
+        const auto state = Engine::IsBiomeRef(ref);            // ID_83007: 0/1/2
+        const auto canon = Engine::GetCanonicalSpeciesId(ref); // ID_83009 (ACTI canonical -> base)
+        spdlog::info("[trait-scan] ref=0x{:08X} state={} canon=0x{:08X}", refId, static_cast<int>(state), canon);
+        if (state == 0)  // no live 939118 component — do NOT proceed (crash guard)
+            return 0;
+        Engine::CompleteScanTargetCredit(ref, canon);          // 83008 + DIRECT 52157 credit + 83025 identity
+        return static_cast<std::int32_t>(state);
+    }
+
+    // True if a loaded REFR is a TRAIT scan-target (vs flora/fauna/resource). The 31 PlanetTraitScanTarget
+    // base forms are ACTIs carrying Handscanner_AllowScanAtHighlightRange (0x001CBEA3), and NOTHING else
+    // does (ESM-verified 31/31 — see CompleteTraitScanTargets in the Quest script). Flora are FLOR, fauna
+    // are NPC_, so the base-form-type screen alone separates them; the keyword check then confirms it is a
+    // scan-target ACTI specifically and not some other ACTI. All offset-clean (CommonLibSF typed access).
+    bool RefIsTraitScanTarget(RE::TESObjectREFR* ref)
+    {
+        if (!ref)
+            return false;
+        auto base = ref->GetBaseObject();  // NiPointer<TESBoundObject>
+        if (!base)
+            return false;
+        if (base->GetFormType() != RE::FormType::kACTI)
+            return false;  // flora (kFLOR) / fauna (kNPC_) / resources are excluded here
+        // ACTI derives from BGSKeywordForm — confirm the scan-target keyword. Fail closed if the keyword
+        // form cannot be resolved (do not treat arbitrary ACTIs as trait scan-targets).
+        auto* acti = static_cast<RE::TESObjectACTI*>(base.get());  // ACTI -> BGSKeywordForm sub-object
+        auto* kw   = RE::TESForm::LookupByID<RE::BGSKeyword>(Engine::kHandscannerHighlightRangeKw);
+        if (!kw)
+            return false;
+        return static_cast<RE::BGSKeywordForm*>(acti)->HasKeyword(kw);
+    }
+
+    // READ-ONLY diagnostic: walk the engine's GLOBAL 939118 ScannableComponent registry (the EXACT store
+    // the outline reader ID_83007 and the count walker ID_90522 both read) and PROBE every loaded trait
+    // scan-target in range. Because we enumerate the registry itself — not a keyword ref-find — there is
+    // ZERO "wrong instance" risk: FindAllReferencesWithKeyword can miss the rendered overlay instances,
+    // but the registry holds exactly one entry per loaded 939118 component, which is what both the count
+    // and the outline key on.
+    //
+    // For each resolved REFR: guard IsBiomeRef(ref)!=0 (a live 939118 component must exist — mandatory
+    // crash guard, §7 of trait-onplanet-completion-2026-06-23.md), filter to TRAIT scan-targets only
+    // (RefIsTraitScanTarget: base is a PlanetTraitScanTarget ACTI carrying kw 0x001CBEA3), distance-gate
+    // against `player` when non-null, then ProbeScanTargetKnownSet(ref) only (known-set member state log;
+    // NO ScanRefNative / ID_83008 / RevealScanTargetIdentity writes). The whole walk is fault-guarded
+    // (/EHa try/catch in ForEachScannableInRegistry, plus the per-native CPS_GUARDED wrapper). Returns
+    // the number of trait scan-targets probed.
+    std::int32_t CompleteTraitScanTargetsInRange(std::monostate, RE::TESObjectREFR* player, float radiusUnits)
+    {
+        const bool  haveRadius = (player != nullptr) && (radiusUnits > 0.0f);
+        const auto  playerPos  = player ? player->GetPosition() : RE::NiPoint3 {};
+        const float radiusSq   = radiusUnits * radiusUnits;
+
+        std::int32_t probed  = 0;
+        std::int32_t scanned = 0;  // registry entries that were still unscanned (state was 1)
+
+        const auto visited = Engine::ForEachScannableInRegistry(
+            [&](std::uint32_t formID, std::uint8_t stateByte, RE::TESObjectREFR* ref)
+            {
+                if (!ref)
+                    return;
+
+                // Mandatory crash guard: a live 939118 component must exist (ID_83007 != 0). This is the
+                // SAME gate that prevents the ref-free ID_83024 fault; without it the durable fan-out and
+                // canonical read dereference a missing component.
+                const auto biomeState = Engine::IsBiomeRef(ref);  // 0 = none, 1 = unscanned, 2 = scanned
+                if (biomeState == 0)
+                    return;
+
+                // TRAIT filter: skip flora/fauna/resources — only probe trait scan-targets.
+                if (!RefIsTraitScanTarget(ref))
+                    return;
+
+                // Distance gate (only when a player + positive radius were supplied).
+                float distSq = 0.0f;
+                if (haveRadius)
+                {
+                    const auto p  = ref->GetPosition();
+                    const float dx = p.x - playerPos.x;
+                    const float dy = p.y - playerPos.y;
+                    const float dz = p.z - playerPos.z;
+                    distSq = dx * dx + dy * dy + dz * dz;
+                    if (distSq > radiusSq)
+                    {
+                        spdlog::info("[trait-walk] formID=0x{:08X} state={} dist={} (out of range, skipped)",
+                                     formID, static_cast<int>(biomeState), static_cast<int>(std::sqrt(distSq)));
+                        return;
+                    }
+                }
+
+                const auto canon = Engine::GetCanonicalSpeciesId(ref);  // ID_83009
+                spdlog::info("[trait-walk] formID=0x{:08X} state={} rawByte={} canon=0x{:08X} dist={}",
+                             formID, static_cast<int>(biomeState), static_cast<int>(stateByte), canon,
+                             haveRadius ? static_cast<int>(std::sqrt(distSq)) : -1);
+
+                // READ-ONLY DIAGNOSTIC: probe the known-set member state only — NO writes. The destructive
+                // completion (CompleteScanTargetCredit: the ScanRefNative byte + durable 938333) is disabled
+                // here because it left half-scanned state that jammed manual re-scanning until the planet
+                // re-materialized. Re-enable only once the trait render-gate (the real known-set store) is found.
+                Engine::ProbeScanTargetKnownSet(ref);
+                ++probed;
+                if (biomeState == 1)
+                    ++scanned;
+            });
+
+        spdlog::info("[trait-walk] registry walk visited {} entries, probed {} trait scan-targets ({} were unscanned)",
+                     visited, probed, scanned);
+        return probed;
     }
 
     void DebugLog(std::monostate, RE::BSFixedString msg)
@@ -1459,6 +2060,77 @@ namespace Papyrus
         return static_cast<std::int32_t>(g_allSpeciesCache[index]);
     }
 
+    // --- Parameterized completion-menu support (read-only; no writes) ---------------------------
+    // Unique life-bearing planet ids. planetId == PNDT FormID (the +0x54 identity), so Papyrus can
+    // resolve each back with Game.GetForm(planetId) as Planet. Built from the species->planets
+    // inversion. The galaxy sweep (CompleteAllPlanetsSurveyData) deliberately skips living worlds,
+    // so the parameterized CompleteLifePlanets command uses THIS list to reach their traits.
+    static std::vector<std::uint32_t> g_lifePlanetCache;
+    static std::mutex                 g_lifePlanetMtx;
+
+    std::int32_t EnumerateLifePlanets(std::monostate)
+    {
+        std::lock_guard lock(g_lifePlanetMtx);
+        g_lifePlanetCache.clear();
+        for (const auto& [species, planets] : Engine::GetSpeciesToPlanets())
+            g_lifePlanetCache.insert(g_lifePlanetCache.end(), planets.begin(), planets.end());
+        std::sort(g_lifePlanetCache.begin(), g_lifePlanetCache.end());
+        g_lifePlanetCache.erase(std::unique(g_lifePlanetCache.begin(), g_lifePlanetCache.end()),
+                                g_lifePlanetCache.end());
+        spdlog::info("EnumerateLifePlanets: {} unique life-bearing planets", g_lifePlanetCache.size());
+        return static_cast<std::int32_t>(g_lifePlanetCache.size());
+    }
+
+    std::int32_t GetLifePlanetAt(std::monostate, std::int32_t index)
+    {
+        std::lock_guard lock(g_lifePlanetMtx);
+        if (index < 0 || static_cast<std::size_t>(index) >= g_lifePlanetCache.size())
+            return 0;
+        return static_cast<std::int32_t>(g_lifePlanetCache[index]);
+    }
+
+    // Case-insensitive: does the comma-list `csv` contain whole token `token` (or the dedicated token "all")?
+    // Lets Papyrus parse a "resources,traits,fauna,flora" category string — base Papyrus has no split.
+    bool CategoryEnabled(std::monostate, RE::BSFixedString csv, RE::BSFixedString token)
+    {
+        const auto lower = [](std::string s) {
+            for (auto& c : s)
+                if (c >= 'A' && c <= 'Z')
+                    c = static_cast<char>(c + 32);
+            return s;
+        };
+        const auto trim = [](std::string& s) {
+            while (!s.empty() && (s.front() == ' ' || s.front() == '\t'))
+                s.erase(s.begin());
+            while (!s.empty() && (s.back() == ' ' || s.back() == '\t'))
+                s.pop_back();
+        };
+
+        const std::string list = lower((csv.c_str() != nullptr) ? csv.c_str() : "");
+        const std::string want = lower((token.c_str() != nullptr) ? token.c_str() : "");
+
+        std::string piece;
+        for (std::size_t i = 0; i <= list.size(); ++i)
+        {
+            const char ch = (i < list.size()) ? list[i] : ',';
+            if (ch == ',')
+            {
+                trim(piece);
+                if (!piece.empty())
+                {
+                    if (piece == "all")
+                        return true;
+                    if (!want.empty() && piece == want)
+                        return true;
+                }
+                piece.clear();
+            }
+            else
+                piece += ch;
+        }
+        return false;
+    }
+
     // Green ONE species type on EVERY planet that hosts it, using `ref` (a live spawned instance
     // of that species) as the canonical-id source. The persistent green is the +0x21 scan-flag in
     // BSGalaxy::PlayerKnowledge, keyed by (planet, CANONICAL species id) — and the outline renderer
@@ -1521,6 +2193,22 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetTraitScanTargetActi"sv, CPS_GUARDED(GetTraitScanTargetActi),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "MarkScanTargetScannedForPlanet"sv,
+            CPS_GUARDED(MarkScanTargetScannedForPlanet), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CompleteTraitScanTargetRef"sv,
+            CPS_GUARDED(CompleteTraitScanTargetRef), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CompleteTraitScanTargetsInRange"sv,
+            CPS_GUARDED(CompleteTraitScanTargetsInRange), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "TestDirectGreen"sv, CPS_GUARDED(TestDirectGreen),
             std::optional<bool> {true}, false);
 
@@ -1566,6 +2254,18 @@ namespace Papyrus
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "GetAllSpeciesFormIdAt"sv, CPS_GUARDED(GetAllSpeciesFormIdAt),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "EnumerateLifePlanets"sv, CPS_GUARDED(EnumerateLifePlanets),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetLifePlanetFormIdAt"sv, CPS_GUARDED(GetLifePlanetAt),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "CategoryEnabled"sv, CPS_GUARDED(CategoryEnabled),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
@@ -1743,8 +2443,8 @@ namespace Hook
             if (Engine::g_pendingCompleteSurvey.load(std::memory_order_acquire)) {
                 if (readyToFire(Engine::g_completeSurveyCountdown)) {
                     if (Engine::g_pendingCompleteSurvey.exchange(false, std::memory_order_acq_rel)) {
-                        DispatchPapyrusStatic("CompleteSurvey");
-                        spdlog::info("Poller: dispatched CompleteSurvey (scanner closed)");
+                        DispatchPapyrusStatic("_AutoCompleteCurrentPlanet");
+                        spdlog::info("Poller: dispatched _AutoCompleteCurrentPlanet (scanner closed)");
                     }
                 }
             }
