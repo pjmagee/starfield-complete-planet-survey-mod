@@ -1626,14 +1626,14 @@ namespace Papyrus
                     ++nocanon;
                 else if (canon != sf)
                     ++remapped;
-                spdlog::info("TestDirectGreen species: esm=0x{:08X} canonical=0x{:08X}{}", sf, canon, tag);
+                spdlog::debug("TestDirectGreen species: esm=0x{:08X} canonical=0x{:08X}{}", sf, canon, tag);
             }
-            spdlog::info("TestDirectGreen: {} remapped, {} no-canon of {} species on planet 0x{:08X}",
+            spdlog::debug("TestDirectGreen: {} remapped, {} no-canon of {} species on planet 0x{:08X}",
                          remapped, nocanon, it->second.size(), planetId);
         }
 
         const auto n = Engine::MarkEsmSpeciesForPlanet(planetId, kind);
-        spdlog::info("TestDirectGreen: planetId=0x{:08X} kind={} -> +0x21 written (canonical key) for {} species", planetId, kind, n);
+        spdlog::debug("TestDirectGreen: planetId=0x{:08X} kind={} -> +0x21 written (canonical key) for {} species", planetId, kind, n);
         return n;
     }
 
@@ -1835,7 +1835,7 @@ namespace Papyrus
         const auto subobj = Engine::ResolvePlanetSubobj(db, planetId);
         if (!subobj)
         {
-            spdlog::info("TestBuildArray: no knowledge entry for planet 0x{:08X} (run TestDirectGreen first)", planetId);
+            spdlog::debug("TestBuildArray: no knowledge entry for planet 0x{:08X} (run TestDirectGreen first)", planetId);
             return 0;
         }
         const auto base    = reinterpret_cast<std::uintptr_t>(subobj);
@@ -1880,7 +1880,7 @@ namespace Papyrus
             std::vector<std::uint32_t> markers = Esm::GetSpeciesMarkers(sf, planetId);
             if (markers.empty())
             {
-                spdlog::info("TestBuildArray: 0x{:08X} no esm-derived markers -> skip (left blue)", sf);
+                spdlog::debug("TestBuildArray: 0x{:08X} no esm-derived markers -> skip (left blue)", sf);
                 continue;
             }
             // Append the func-699 actor-scan markers (Abilities/Resistances/Weaknesses) so a creature
@@ -1890,11 +1890,11 @@ namespace Papyrus
             markers.insert(markers.end(), actorMarkers.begin(), actorMarkers.end());
             for (const auto id : markers)
                 Engine::PushSpeciesAttr(slotAddr, id);
-            spdlog::info("TestBuildArray: 0x{:08X} esm-derived {} markers ({} actor) (first=0x{:08X})",
+            spdlog::debug("TestBuildArray: 0x{:08X} esm-derived {} markers ({} actor) (first=0x{:08X})",
                          sf, markers.size(), actorMarkers.size(), markers[0]);
             ++built;
         }
-        spdlog::info("TestBuildArray: wrote direct +0x08 marker set for {} species on planet 0x{:08X}",
+        spdlog::debug("TestBuildArray: wrote direct +0x08 marker set for {} species on planet 0x{:08X}",
                      built, planetId);
         return built;
     }
@@ -2027,7 +2027,7 @@ namespace Papyrus
         if (!planetId)
             return 0;
         Engine::ScanCompletePlanet(0, planetId, 1);
-        spdlog::info("DiscoverPlanetEntry: planet=0x{:08X} planetId=0x{:08X} -> ID_102650 discover",
+        spdlog::debug("DiscoverPlanetEntry: planet=0x{:08X} planetId=0x{:08X} -> ID_102650 discover",
                      planetForm->GetFormID(), planetId);
         return 1;
     }
@@ -2067,7 +2067,7 @@ namespace Papyrus
         // includeSpecies=false keeps flora/fauna out of the resources category (QA: "resources
         // touched species when it should not").
         const auto n = Engine::CompletePlanetSurveyState(planetId, d, /*includeSpecies=*/false);
-        spdlog::info("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
+        spdlog::debug("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
                      planetForm->GetFormID(), planetId, d, n);
         return n;
     }
@@ -2615,11 +2615,21 @@ SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
     // e.g. "[2026-06-21 14:31:50.598] [tid] [I] …". CommonLibSF already timestamps by default;
     // this makes the format explicit and adds the date for cross-session clarity.
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%t] [%L] %v");
-    // Flush every info+ line straight to disk. Starfield terminates the process abruptly on exit
-    // (no clean spdlog shutdown), so buffered lines written shortly before quit are LOST — which
-    // silently ate the TestDirectGreen / ProbeScanKeys diagnostic output (they logged at info just
-    // before the player quit, never flushed). Flushing on info guarantees probe results survive.
+    // Flush every logged line straight to disk. Starfield terminates the process abruptly on exit
+    // (no clean spdlog shutdown), so buffered lines written shortly before quit are LOST. Flushing
+    // at the active level guarantees the last diagnostics survive.
+    //
+    // Log level by build mode: a release / releasedbg build (NDEBUG) ships at INFO — the per-planet
+    // and per-species green/resource lines log at DEBUG, so a whole-galaxy completion does NOT spew
+    // ~20k lines into a player's log; only the per-stage summaries (sweep totals, timings, faults)
+    // remain. A debug build (xmake f -m debug) drops to DEBUG for the full per-body trace.
+#ifdef NDEBUG
+    spdlog::set_level(spdlog::level::info);
     spdlog::flush_on(spdlog::level::info);
+#else
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::flush_on(spdlog::level::debug);
+#endif
     spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
 
     const auto* messaging = SFSE::GetMessagingInterface();
