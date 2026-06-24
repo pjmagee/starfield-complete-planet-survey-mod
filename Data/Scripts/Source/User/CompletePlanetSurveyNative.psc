@@ -38,7 +38,8 @@ int Function CompleteTraitScanTargetsInRange(ObjectReference akPlayer, float afR
 ; PROBE: write +0x21/+0x20 directly (esm species key, no spawn/scan) for the planet.
 ; Run on the planet you're standing on to test if a direct write greens an existing entry.
 ; Returns species written (0 = no entry resolved).
-int Function TestDirectGreen(Form akPlanet) global native
+; aiKind: 0 = both, 1 = flora (FLOR only), 2 = fauna (NPC_ only).
+int Function TestDirectGreen(Form akPlanet, int aiKind) global native
 
 ; DECISIVE PROBE: call AFTER PlaceAtMe + SetScanned(true) + a short Wait on a live species
 ; instance. Logs authored vs base-form vs canonical(+0x24) id off the SAME ref, so we learn
@@ -65,7 +66,8 @@ int Function DumpSpeciesSlots(Form akPlanet) global native
 ; THE FIX (validation): engine-build the slot+0x08 attribute array for species whose +0x08 is empty
 ; (after a TestDirectGreen poke), pushing the 2 universal attribute ids. If they then render PROPERLY
 ; green after a reload, slot+0x08 is the gate and the build is sound. Returns slots built.
-int Function TestBuildArray(Form akPlanet) global native
+; aiKind: 0 = both, 1 = flora (FLOR only), 2 = fauna (NPC_ only).
+int Function TestBuildArray(Form akPlanet, int aiKind) global native
 
 ; RESOURCES category (pure): mark the planet's attribute bits + resource scan flags via the
 ; ID_1016657 aggregator, EXCLUDING flora/fauna (species are greened only by the green path) and

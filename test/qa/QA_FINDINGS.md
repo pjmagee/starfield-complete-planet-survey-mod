@@ -41,6 +41,8 @@ This command itself should not exist. Users should be using CompletePlanet cmd, 
 
 ## resources,traits
 
+cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "traits"
+
 Seems to work correctly, though I believe suffers from the same corrupt traits issue where i would not be able to complete/correctly scan trait objects on the planet to fix the 0/N scan.
 
 Observation: some traits dont require scans, while some others might spawn objects, e.g microbe colonies - so depends on the kind of trait?

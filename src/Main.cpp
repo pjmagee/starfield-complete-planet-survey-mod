@@ -1066,7 +1066,24 @@ namespace Engine
     // so we read them from the ESM and pre-write their scan flags. When the player later
     // lands, those species spawn already-scanned (green) and the survey reads a true 100%.
     // planetId == the planet's FormID == the key in the ESM map. Returns species marked.
-    int MarkEsmSpeciesForPlanet(std::uint32_t planetId)
+    // Species "kind" filter for the green path. 0 = both, 1 = FLORA (FLOR forms), 2 = FAUNA (NPC_ forms).
+    // So "fauna" greens only creatures and "flora" only plants, instead of both (the documented bug).
+    inline bool SpeciesMatchesKind(std::uint32_t speciesFormId, int kind)
+    {
+        if (kind == 0)
+            return true;
+        auto* const form = RE::TESForm::LookupByID(speciesFormId);
+        if (!form)
+            return false;
+        const auto ft = form->GetFormType();
+        if (kind == 1)
+            return ft == RE::FormType::kFLOR;  // flora
+        if (kind == 2)
+            return ft == RE::FormType::kNPC_;  // fauna
+        return true;
+    }
+
+    int MarkEsmSpeciesForPlanet(std::uint32_t planetId, int kind = 0)
     {
         const auto& m  = Esm::GetPlanetSpecies();
         const auto  it = m.find(planetId);
@@ -1075,6 +1092,8 @@ namespace Engine
         int marked = 0;
         for (const auto speciesFormId : it->second)
         {
+            if (!SpeciesMatchesKind(speciesFormId, kind))
+                continue;  // kind filter: flora-only / fauna-only
             // The GREEN outline reads +0x21 keyed by the species' CANONICAL id (ID_83006-derived),
             // NOT the raw ESM form id. Writing the raw id completes the survey % (authored-array
             // walk) but leaves the outline blue. Write under the canonical so the outline lights
@@ -1583,7 +1602,7 @@ namespace Papyrus
     // pure direct +0x21 write under esmFid green a planet whose entry exists? Returns species
     // written: n>0 => the writes landed (entry resolved); n==0 => ResolvePlanetSubobj found no
     // entry (silent no-op — meaning the remote-planet blue is an entry-lifecycle problem).
-    std::int32_t TestDirectGreen(std::monostate, RE::TESForm* planetForm)
+    std::int32_t TestDirectGreen(std::monostate, RE::TESForm* planetForm, std::int32_t kind)
     {
         if (!planetForm)
             return -1;
@@ -1613,8 +1632,8 @@ namespace Papyrus
                          remapped, nocanon, it->second.size(), planetId);
         }
 
-        const auto n = Engine::MarkEsmSpeciesForPlanet(planetId);
-        spdlog::info("TestDirectGreen: planetId=0x{:08X} -> +0x21 written (canonical key) for {} species", planetId, n);
+        const auto n = Engine::MarkEsmSpeciesForPlanet(planetId, kind);
+        spdlog::info("TestDirectGreen: planetId=0x{:08X} kind={} -> +0x21 written (canonical key) for {} species", planetId, kind, n);
         return n;
     }
 
@@ -1805,7 +1824,7 @@ namespace Papyrus
     // enough to make the array non-empty. If the species then render PROPERLY green (outline + info)
     // after this + a reload, the gate IS slot+0x08 and the engine-allocated build is sound — then we
     // derive the full per-species attribute ids from the ESM and write them. Returns slots built.
-    std::int32_t TestBuildArray(std::monostate, RE::TESForm* planetForm)
+    std::int32_t TestBuildArray(std::monostate, RE::TESForm* planetForm, std::int32_t kind)
     {
         if (!planetForm)
             return -1;
@@ -1837,6 +1856,8 @@ namespace Papyrus
         int built = 0;
         for (const auto sf : it->second)
         {
+            if (!Engine::SpeciesMatchesKind(sf, kind))
+                continue;  // kind filter: flora-only / fauna-only
             auto* const form = RE::TESForm::LookupByID(sf);
             if (!form)
                 continue;
