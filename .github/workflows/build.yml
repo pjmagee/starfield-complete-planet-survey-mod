@@ -64,11 +64,11 @@ jobs:
           files: Complete-Planet-Survey-*.zip
           generate_release_notes: true
 
-      # Nexus upload on the Nexus Mods v3 API (action beta.8). beta.4 used the
-      # createUpdateGroupVersion endpoint, removed 2026-09-09; beta.8 switches to
-      # createModFileVersion (POST /mod-files/{id}/versions) and renames inputs.
-      # Requires repo variable NEXUS_FILE_ID = the Nexus *file* ID to push new
-      # versions to (mod page → Files tab), NOT the old file-group ID.
+      # Nexus upload on the Nexus Mods v3 API (action beta.8): createModFileVersion
+      # (POST /mod-files/{id}/versions). Requires repo variable NEXUS_FILE_ID = the mod-file
+      # GROUP id (7302980), found via the v2 GraphQL modFiles{groupId}. A per-upload file id
+      # (e.g. 68174) returns 404 "Mod file not found" — that 404 sank the v1.1.0 release before
+      # the id was corrected to the group id (untested until the next tagged release).
       # Still a beta pin; move to v1 or a commit SHA once it stabilises.
       - name: Upload to Nexus Mods
         if: startsWith(github.ref, 'refs/tags/v')
