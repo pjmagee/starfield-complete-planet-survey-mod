@@ -78,7 +78,6 @@ namespace Engine
     constexpr std::size_t  kBucketOffsetTableOff = 0x12;   // uint16[] offset table start within a bucket base
     constexpr std::size_t  kEntrySubobjOffset    = 0x20;   // species subobj relative to the resolved entry ptr
     constexpr std::size_t  kFormPtrFormIdOffset  = 0x28;   // formID field in a TESForm* (aggregator ptr-arrays)
-    constexpr std::uint8_t kBiomeScanCategory    = 0x0d;   // category byte for PlanetProgressNative (ID_52157)
 
     // BSTHashMap lookup sentinel: out[3] value when the key is not found.
     constexpr std::uintptr_t kDbLookupNotFound     = 0xfe0;   // db+0x268 survey-container miss sentinel (ID_126806)
