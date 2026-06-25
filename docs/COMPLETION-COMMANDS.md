@@ -1,66 +1,53 @@
-# Complete Planet Survey — completion commands
+# Complete Planet Survey: completion commands
 
-Run from the console: `` cgf "CompletePlanetSurveyQuest.<Command>" "<categories>" ``
+Run from the console:
 
-Three commands, each taking a **category string** — a comma list of any of
-`resources`, `traits`, `fauna`, `flora` (or the wildcard `all`):
+```
+cgf "CompletePlanetSurveyQuest.<Command>" "<categories>"
+```
+
+`<categories>` is a comma-separated list of any of `resources`, `traits`, `fauna`, `flora`, or the wildcard `all`.
 
 | Command | Which worlds | Example |
 |---|---|---|
 | `CompletePlanet` | the one you're standing on | `cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits,fauna,flora"` |
-| `CompleteBarrenPlanets` | every world with **no** life | `cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "resources,traits"` |
-| `CompleteLifePlanets` | every world **with** life | `cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "resources,traits,fauna,flora"` |
-| `CompleteAllPlanets` | the **whole galaxy** (barren + life) | `cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"` |
+| `CompleteBarrenPlanets` | every lifeless world (no flora or fauna) | `cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "resources,traits"` |
+| `CompleteLifePlanets` | every world with life | `cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "resources,traits,fauna,flora"` |
+| `CompleteAllPlanets` | the whole galaxy (barren + life) | `cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"` |
 
-`CompleteAllPlanets` runs both galaxy sweeps as one cohesive operation: it shows the immersive intro (the `CPSRecallMessage` modal) once, suppresses the two sweeps' individual result popups, and shows a **single** combined result. The two underlying commands (`CompleteBarrenPlanets`/`CompleteLifePlanets`) gained an optional `abShowResult` arg (default `true`) and now return their world count — the console `cgf` calls are unaffected.
+`CompleteAllPlanets` runs the barren and life sweeps as one operation. It shows the immersive intro message once and presents a single combined result. The galaxy commands accept an internal flag to suppress per-sweep popups.
 
-Pick exactly what gets marked: `"traits"` alone, `"resources,traits"`, `"all"`, etc.
+Pick exactly what to survey: `"traits"` alone, `"resources,traits"`, `"fauna,flora"`, `"all"`, etc.
 
 ## What each category does
 
-- **resources** → the planet's resource + attribute survey data. **Pure** — never touches species.
-- **traits** → two parts: (1) marks the planet's traits *known* (`938333`, the engine's off-planet
-  path) — the durable DATA (survey %, TRAITS panel, galaxy map); (2) completes the in-world "Unknown
-  Feature / 0-of-N SCANNED" objects by driving the game's OWN survey quest
-  (`SQ_Parent.DiscoverMatchingPlanetTraits`), exactly like a real hand-scan — no engine pokes. The
-  objects reload complete + named (no `0/N` corruption, hand scanner stays usable). On-planet the
-  loaded objects finish immediately; on worlds completed remotely they auto-resolve on arrival
-  (the game's own `CheckForScanTargetUpdate`, since the trait is now known).
-- **fauna / flora** → greens the planet's creatures/plants ref-free: writes the `+0x21` scan flag
-  and builds the ESM-derived `+0x08` marker catalogue (genetics / reproduction / temperament /
-  abilities). No spawning.
+- `resources`: surveys the planet's resources and writes its attribute bits plus resource scan flags. Pure: does not touch flora, fauna, or traits.
+- `traits`: marks the planet's traits known (the engine's off-planet data path). Updates the survey percentage, the survey panel, and the star map. Pure data only.
+- `fauna`: surveys the creatures. Completes only fauna scan state.
+- `flora`: surveys the plants. Completes only flora scan state.
+- `all`: all of the above.
 
-## Behaviour notes (read these)
+Each category is strict. "resources" never touches species. "fauna" completes creatures only. "flora" completes plants only. "traits" only marks trait-known data.
 
-- **Everything is ref-free now.** `CompletePlanet` works on the world you're on; `CompleteBarrenPlanets`
-  and `CompleteLifePlanets` work **from anywhere** (orbit, another system, on foot) — no spawning,
-  no surface requirement.
-- **`resources` is pure** — it marks resources + attribute bits only. On a life world, `"resources"`
-  alone leaves the creatures untouched (blue), which is correct; add `fauna,flora` (or `all`) to green
-  them.
-- **`CompleteLifePlanets` discovers each world** before writing, so resources/green land even on
-  never-visited worlds (it creates the knowledge entry via `ID_102650`). That discovery drops the
-  world's "Survey Data" slate. `"traits"` alone skips the discover (and its slate) — the trait path
-  is self-sufficient.
-- **On `CompleteBarrenPlanets`, resources are always written** — the galaxy sweep writes them as it
-  discovers each barren world, so they can't be separated from discovery. `"traits"` is the real
-  toggle there.
-- **`fauna` and `flora` are split** — `"fauna"` greens only creatures (NPC_), `"flora"` only plants
-  (FLOR). Use `"fauna,flora"` (or `all`) for both.
+## Behaviour notes
 
-## Natives backing this (read-only)
+- Survey data (percentage, star map, survey panel, and `<Planet> Survey Data` rewards) is written instantly and durably on any selected world, including never-visited ones. It persists across reload.
+- Visuals update on the next load only. Creatures and plants read as scanned and the in-world "0 of N SCANNED" trait pillars refresh when you re-enter a world or arrive at one completed remotely. There is no in-place or on-foot repaint.
+- Galaxy commands are ref-free. `CompleteBarrenPlanets`, `CompleteLifePlanets`, and `CompleteAllPlanets` work from orbit, another system, or on foot. `CompletePlanet` requires you on the surface of the target world (exit your ship; not in an interior).
+- Strict category purity is enforced. Each command checks the category string. An unknown or empty category is a clean no-op with a notification. `"resources"` on a life world leaves fauna and flora untouched. Pure `"fauna"` or `"flora"` does only that kind.
+- `CompleteLifePlanets` discovers never-visited worlds as needed so that resources, fauna, and flora writes land. Discovery also drops the Survey Data slate for that world. `"traits"` alone is self-sufficient and does not trigger discovery.
+- Barren worlds (no flora or fauna) are handled by `CompleteBarrenPlanets`. A lifeless rock earns its full survey from the environmental survey and still produces Survey Data even with no resources on it. Pure species categories (`fauna`/`flora`) on barren return early with nothing to do.
+- `fauna` and `flora` are separate. `"fauna"` surveys creatures only. `"flora"` surveys plants only. Use `"fauna,flora"` or `"all"` for both.
+- `CompletePlanet` applies the requested categories to the current world only. It cancels any pending auto-complete from the scan hook.
 
-- `CategoryEnabled(csv, token)` — case-insensitive "does the list contain this token (or `all`)",
-  because base Papyrus can't split a string.
-- `EnumerateLifePlanets()` / `GetLifePlanetFormIdAt(i)` — the unique life-bearing worlds (the galaxy
-  sweep skips them, so `CompleteLifePlanets` enumerates them to reach their traits/resources/green).
-- `DiscoverPlanetEntry(planet)` — ref-free `ID_102650` discover; creates the knowledge entry so the
-  ref-free resource/green writes land on a never-visited world.
+## Natives backing this
+
+- `CategoryEnabled(csv, token)`: case-insensitive check whether the list contains the token (or `all`).
+- `CategoriesValid(csv)`: returns true only for recognized tokens with at least one present. Used to reject typos cleanly.
+- `EnumerateLifePlanets()` / `GetLifePlanetFormIdAt(i)`: list of unique life-bearing worlds for the life sweep.
+- `DiscoverPlanetEntry(planet)`: ref-free discover (ID_102650) so resources and species state can be written on never-visited worlds.
+- `MarkResourcesForPlanet`, `MarkTraitKnownForPlanet`, `TestDirectGreen` / `TestBuildArray` (the production species path), `CompleteAllPlanetsSurveyData`, and the sweep accessors.
 
 ## Status
 
-Shipped in **v1.2.0**, in-game verified: galaxy-wide ref-free resources, persistent flora/fauna green
-(outline + info), the flora/fauna split, in-world trait-object completion, and the full ~1,700-world
-run. The RE-scaffolding console commands have been removed from the shipped scripts; `_GreenPlanet`
-still drives the `TestDirectGreen` + `TestBuildArray` natives (the names are historical — they were the
-RE probes that became the production green path; a rename is the only remaining internal cleanup).
+Shipped in **v1.2.0**. Commands write survey data instantly and durably for the chosen categories and worlds. On-surface scanned outlines and trait pillars update on the next area load. The four commands plus category strings are the public surface. Internal RE probe names remain on the native surface for the species path; the old scaffolding commands were removed from the scripts.
