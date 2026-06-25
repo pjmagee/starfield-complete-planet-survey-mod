@@ -21,11 +21,6 @@ namespace Engine
 {
     using fn_get_manager_t     = std::uintptr_t (*)();
     using fn_set_trait_known_t = void (*)(std::uint32_t planetId, std::uintptr_t keyword, bool known);
-    // ID_83008: SetScanned inner, dispatches to flora (ID_83038+52157) or actor (ID_52160).
-    //   (ObjectReference* ref, bool scannedFlag, byte=0xd, byte=0)
-    //   The ref must be a real in-world reference placed in the current biome so its
-    //   (ID_939118, ref->formID) component exists.
-    using fn_scan_ref_t = void (*)(void* ref, char scannedFlag, std::uint8_t a, std::uint8_t b);
     // ID_52157: per-planet progress updater. Called by ID_83008 only when ID_83038 found
     //   the ref-component. Signature: (ref, int count, byte=0xd, byte, byte).
     //   We call this DIRECTLY after SetScanned on spawn-and-scan'd flora refs so the
@@ -49,7 +44,6 @@ namespace Engine
 
     inline REL::Relocation<fn_get_manager_t>     GetKnowledgeManager {REL::ID(126578)};
     inline REL::Relocation<fn_set_trait_known_t> SetTraitKnownNative {REL::ID(52155)};
-    inline REL::Relocation<fn_scan_ref_t>        ScanRefNative {REL::ID(83008)};
     inline REL::Relocation<fn_planet_progress_t> PlanetProgressNative {REL::ID(52157)};
     inline REL::Relocation<fn_db_lookup_t>       DbLookup {REL::ID(126806)};
     inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
@@ -131,11 +125,6 @@ namespace Engine
     inline REL::Relocation<fn_aggregator_t>  SurveyAggregator {REL::ID(1016657)};
     inline REL::Relocation<fn_buffer_free_t> SurveyBufferFree {REL::ID(65318)};
 
-    // ID_83007: returns 0 = not a biome species, 1 = biome species unscanned, 2 = already scanned.
-    // Reads (939118, ref_formID) component — used as our "is this ref safe to pass to ID_83008" gate.
-    using fn_is_biome_ref_t = char (*)(void* ref);
-    inline REL::Relocation<fn_is_biome_ref_t> IsBiomeRef {REL::ID(83007)};
-
     // ID_97853: survey check-and-dispatch. Called by SetTraitKnown/SetScanned flows after a write.
     //   Signature: (struct*) where the struct starts with { uint32 planet_id, float prev_pct, u8 flag, u8 skip }.
     //   Fires PlayerPlanetSurveyProgressEvent (conditional) and PlayerPlanetSurveyCompleteEvent
@@ -160,7 +149,7 @@ namespace Engine
     constexpr std::size_t  kBucketOffsetTableOff = 0x12;   // uint16[] offset table start within a bucket base
     constexpr std::size_t  kEntrySubobjOffset    = 0x20;   // species subobj relative to the resolved entry ptr
     constexpr std::size_t  kFormPtrFormIdOffset  = 0x28;   // formID field in a TESForm* (aggregator ptr-arrays)
-    constexpr std::uint8_t kBiomeScanCategory    = 0x0d;   // category byte for ScanRefNative / PlanetProgressNative
+    constexpr std::uint8_t kBiomeScanCategory    = 0x0d;   // category byte for PlanetProgressNative (ID_52157)
 
     // BSTHashMap lookup sentinel: out[3] value when the key is not found.
     constexpr std::uintptr_t kDbLookupNotFound     = 0xfe0;   // db+0x268 survey-container miss sentinel (ID_126806)
@@ -829,6 +818,15 @@ namespace Engine
                 if (!includeSpecies && (ft == RE::FormType::kFLOR || ft == RE::FormType::kNPC_))
                     return;
             }
+            else if (!includeSpecies)
+            {
+                // Resources-purity null-form guard: an aggregator fid that does NOT resolve can be a
+                // species the live lookup can't see — the leak that let "resources" scan SOME flora/fauna
+                // ("and not all of them" = only the unresolved ones; resolved species are skipped above).
+                // In the resources path, mark ONLY resolved non-species forms. (The full sweep includes
+                // species, so it still marks unresolved fids — that path wants them.)
+                return;
+            }
             if (MarkSpeciesScannedForPlanet(planetId, fid, delta) == 1)
                 ++marked;
         });
@@ -996,7 +994,7 @@ namespace Engine
 
     // Returns the number of planets scan-completed (and records them for the
     // Papyrus trait pass).
-    int CompleteAllPlanetsSurveyData_Phase1(std::uint8_t /*delta*/)
+    int CompleteAllPlanetsSurveyData_Phase1(std::uint8_t /*delta*/, bool writeState)
     {
         const auto                 t0 = std::chrono::steady_clock::now();
         std::vector<std::uint32_t> sweptForms;
@@ -1036,12 +1034,18 @@ namespace Engine
                 ++skippedLiving;
                 return;
             }
-            // Engine discover (ID_102650): create the per-planet knowledge entry if missing + mark
-            // it discovered (async create; the Papyrus finalize pass mops up stragglers + fires the
-            // slate). Then write the ref-free survey state (attribute bits + resources). With no
-            // flora/fauna on these bodies, this reaches a genuine 100%.
-            ScanCompletePlanet(0, planetId, 1);
-            markedTotal += WritePlanetSurveyState(planetId, kDefaultScanDelta);
+            // writeState=false (the traits-only path): just RECORD the barren world — do NOT discover or
+            // write resources. The Papyrus traits pass marks trait-known (self-sufficient; needs no entry),
+            // so "traits" never writes a single resource flag.
+            if (writeState)
+            {
+                // Engine discover (ID_102650): create the per-planet knowledge entry if missing + mark
+                // it discovered (async create; the Papyrus finalize pass mops up stragglers + fires the
+                // slate). Then write the ref-free survey state (attribute bits + resources). With no
+                // flora/fauna on these bodies, this reaches a genuine 100%.
+                ScanCompletePlanet(0, planetId, 1);
+                markedTotal += WritePlanetSurveyState(planetId, kDefaultScanDelta);
+            }
             sweptForms.push_back(form->GetFormID());
             ++completed;
         });
@@ -1059,56 +1063,6 @@ namespace Engine
         return completed;
     }
 
-    // Walk a cell's references directly (bypassing CommonLibSF's ForEachReference
-    // which uses a lock at cell+0x120 that isn't a BSReadWriteLock on 1.16.236.0–1.16.244.0
-    // — memory-probe confirmed that offset holds a 64-bit pointer, not lock state).
-    // The BSTArray header at cell+0x080 IS correct, so iterate raw.
-    //
-    // Unlocked iteration is safe because the poller only fires when menusVisible
-    // == false AND after a 30-frame grace period — cell is quiescent.
-    //
-    // Calls ScanRefNative (ID_83008) on each flora/fauna ref whose biome component
-    // exists (IsBiomeRef != 0). Flips the per-ref scanned outline blue → green.
-    // Guard generously: procgen cells can have stale/large ref arrays.
-    constexpr std::uint32_t kMaxCellRefsToScan = 8192;
-
-    int ScanAllRefsInCell(RE::TESObjectCELL* cell)
-    {
-        if (!cell || !cell->IsAttached())
-            return 0;
-
-        const auto* cellBytes = reinterpret_cast<const std::uint8_t*>(cell);
-        const auto  size      = *reinterpret_cast<const std::uint32_t*>(cellBytes + kCellRefArraySize);
-        const auto  capacity  = *reinterpret_cast<const std::uint32_t*>(cellBytes + kCellRefArrayCapacity);
-        auto* const data      = *reinterpret_cast<RE::TESObjectREFR** const*>(cellBytes + kCellRefArrayData);
-        if (!data || size == 0 || size > capacity || size > kMaxCellRefsToScan)
-            return 0;
-
-        int scanned = 0;
-        for (std::uint32_t i = 0; i < size; ++i)
-        {
-            auto* ref = data[i];
-            if (!ref)
-                continue;
-            auto* base = ref->GetBaseObject().get();
-            if (!base)
-                continue;
-            const auto ft = base->GetFormType();
-            if (ft != RE::FormType::kFLOR && ft != RE::FormType::kNPC_)
-                continue;
-            if (IsBiomeRef(ref) == 0)
-                continue;
-            ScanRefNative(ref, 1, kBiomeScanCategory, 0);
-            ++scanned;
-        }
-        return scanned;
-    }
-
-    // Pending-sweep flag: set by Papyrus's ScanNearbyRefs, consumed by
-    // Hook::InstallScanSweepPoller's per-frame task. Atomic so Papyrus dispatch
-    // (worker thread) can set it without a lock; the poller runs on main thread.
-    inline std::atomic<bool> g_pendingOutlineSweep {false};
-
     // Pending CompleteSurvey dispatch. Set by the scan hook via Papyrus's
     // CompleteSurveyIfEnabled; consumed by the poller when scanner UI is closed.
     // Deferring CompleteSurvey out of the active-scanner state avoids a race
@@ -1118,7 +1072,6 @@ namespace Engine
     // Countdowns owned by the poller (main-thread-only writes). Grace periods
     // from flag-set to actually running the dispatch, so the scanner UI has time
     // to dismiss and its rendering pipeline to quiesce.
-    inline int g_scanSweepCountdown {0};
     inline int g_completeSurveyCountdown {0};
 
     // Latched true when a bound native catches a fault (a C++ exception, or — because src/ is
@@ -1274,8 +1227,8 @@ namespace Papyrus
         }
         const auto base    = reinterpret_cast<std::uintptr_t>(subobj);
         const auto hashmap = base + 0x18;
-        const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
-        const auto slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+        auto       hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);   // re-read after a slot recreate
+        auto       slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);  // (a recreate can grow/rehash the map)
         const auto& m  = Esm::GetPlanetSpecies();
         const auto  it = m.find(planetId);
         if (it == m.end())
@@ -1287,7 +1240,12 @@ namespace Papyrus
         // the 4-marker skeleton with correct per-species reproduction (PRPS) + the >=3-biome 5th marker.
         // This replaces the materialization-bound live-member read (kept below as an optional validator),
         // so fauna now greens REMOTELY too. Unknown forms come back empty -> left blue.
-        int built = 0;
+        // ROBUSTNESS + DIAGNOSTIC pass (2026-06-25). "Some creatures green, others not" is NOT a command-
+        // ordering symptom — it is per-species HERE: a species was left BLUE when either (a) its slot did
+        // not resolve in the map (the old silent `continue`), or (b) the ESM derivation returned no markers
+        // (empty +0x08). Both are now recovered, and EACH per-species outcome logs at INFO so a single
+        // in-game run shows exactly which species hit which path (the release build otherwise hides this).
+        int built = 0, slotMiss = 0, fallbackUsed = 0, alreadyComplete = 0;
         for (const auto sf : it->second)
         {
             if (!Engine::SpeciesMatchesKind(sf, kind))
@@ -1296,40 +1254,80 @@ namespace Papyrus
             if (!form)
                 continue;
             // Slot keyed by the SAME key TestDirectGreen wrote +0x21 under (green needs +0x21 AND +0x08
-            // on ONE slot). CanonicalFormId is 0/NO-CANON for bare forms, so both fall back to the raw
-            // ESM id identically — the slots line up.
+            // on ONE slot). CanonicalFormId is 0/NO-CANON for bare forms, so both fall back to the raw id.
             std::uint32_t key = Engine::CanonicalFormId(form);
             if (key == 0)
                 key = sf;
-            const auto idx = Engine::SpeciesSlotHash(hashmap, &key);
+            auto idx = Engine::SpeciesSlotHash(hashmap, &key);
             if (idx == hashEnd || !slots)
-                continue;
+            {
+                // (a) Slot missing — TestDirectGreen's create for this key did not land, or the map moved.
+                // Re-create it via the SAME engine path (no hand allocator poke), then re-read the possibly
+                // grown/rehashed slots/hashEnd and re-resolve. Earlier slots' data survives a rehash (the
+                // engine moves entries), and each species re-resolves its own slot, so no stale write.
+                Engine::MarkSpeciesScannedForPlanet(planetId, key, Engine::kDefaultScanDelta);
+                hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
+                slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+                idx     = Engine::SpeciesSlotHash(hashmap, &key);
+                if (idx == hashEnd || !slots)
+                {
+                    ++slotMiss;
+                    spdlog::info("TestBuildArray: species 0x{:08X} key 0x{:08X} SLOT-MISS (unresolved after recreate) -> left blue", sf, key);
+                    continue;
+                }
+            }
             const auto slotAddr = slots + idx * 0x30;
-            // Clear any existing +0x08 array (leak the old engine buffer — safe, no double-free) so we
-            // rebuild cleanly (no duplicate markers on re-run).
+
+            // Compute the FULL expected marker set for this species FIRST (before touching the slot).
+            std::vector<std::uint32_t> markers    = Esm::GetSpeciesMarkers(sf, planetId);
+            const auto                 actorMark  = Esm::GetSpeciesActorMarkers(sf);
+            markers.insert(markers.end(), actorMark.begin(), actorMark.end());
+            if (markers.empty())
+            {
+                // ESM derivation produced nothing for this species. Rather than leave it BLUE, write the
+                // two universal attribute ids present in every dumped species, so the outline still greens
+                // with a non-empty +0x08. Logged so we can see which species the derivation misses.
+                markers = {0x0023E90Du, 0x002634BEu};
+                ++fallbackUsed;
+                spdlog::info("TestBuildArray: species 0x{:08X} had NO esm-derived markers -> FALLBACK universal set (would have been blue)", sf);
+            }
+
+            // IDEMPOTENT GREEN: if this slot is ALREADY complete — scan-flag set (+0x21 != 0) AND its
+            // +0x08 already holds the full expected marker count — leave it untouched. Re-writing a
+            // complete species is the clobber source: the clear below momentarily EMPTIES +0x08, and on a
+            // loaded creature the engine can reconcile a marker away (e.g. Abilities) in that window ->
+            // green flips to blue. So only (re)build species that are MISSING or INCOMPLETE; never re-touch
+            // one that is already correct. (Pairs with skipping DiscoverPlanetEntry on the current planet.)
+            const auto flagByte = *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21);
+            const auto arrBegin = *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08);
+            const auto arrEnd   = *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10);
+            const std::size_t curCount =
+                (arrBegin != 0 && arrEnd > arrBegin && (arrEnd - arrBegin) <= 0x400) ? (arrEnd - arrBegin) / 4 : 0;
+            if (flagByte != 0 && curCount == markers.size())
+            {
+                ++alreadyComplete;
+                continue;  // already green with the full set — do NOT re-write it
+            }
+
+            // Missing/incomplete -> clear the (stale/partial) +0x08 and write the full set cleanly.
             *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08) = 0;
             *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10) = 0;
             *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x18) = 0;
-
-            std::vector<std::uint32_t> markers = Esm::GetSpeciesMarkers(sf, planetId);
-            if (markers.empty())
-            {
-                spdlog::debug("TestBuildArray: 0x{:08X} no esm-derived markers -> skip (left blue)", sf);
-                continue;
-            }
-            // Append the func-699 actor-scan markers (Abilities/Resistances/Weaknesses) so a creature
-            // with an ability greens with its FULL set, matching a real in-game scan (the slot+0x08
-            // species set alone leaves ability-creatures one marker short -> blue).
-            const auto actorMarkers = Esm::GetSpeciesActorMarkers(sf);
-            markers.insert(markers.end(), actorMarkers.begin(), actorMarkers.end());
             for (const auto id : markers)
                 Engine::PushSpeciesAttr(slotAddr, id);
-            spdlog::debug("TestBuildArray: 0x{:08X} esm-derived {} markers ({} actor) (first=0x{:08X})",
-                         sf, markers.size(), actorMarkers.size(), markers[0]);
+            spdlog::debug("TestBuildArray: 0x{:08X} {} markers ({} actor) (first=0x{:08X})",
+                         sf, markers.size(), actorMark.size(), markers[0]);
             ++built;
         }
-        spdlog::debug("TestBuildArray: wrote direct +0x08 marker set for {} species on planet 0x{:08X}",
-                     built, planetId);
+        spdlog::info("TestBuildArray: planet 0x{:08X} kind={} -> {} (re)built, {} already-complete (skipped), {} slot-miss, {} marker-fallback",
+                     planetId, kind, built, alreadyComplete, slotMiss, fallbackUsed);
+        // The green STATE (+0x21/+0x08) is written, but the scanner OUTLINE only repaints when a survey
+        // recompute fires (ID_97853). The resources path fires it; a species-only completion ("fauna"/
+        // "flora") otherwise leaves creatures green-in-state but BLUE on screen until something else
+        // recomputes (e.g. a later "all"). Log-confirmed 2026-06-25: "fauna" wrote 9/9 fauna (0 miss,
+        // 0 fallback) yet a creature stayed blue until "all" ran resources -> notify. Fire it here so
+        // EVERY green path repaints immediately. Idempotent — the same call resources/finalize make.
+        Engine::NotifySurveyProgress(planetId);
         return built;
     }
 
@@ -1352,16 +1350,6 @@ namespace Papyrus
     {
         Engine::g_pendingCompleteSurvey.store(false, std::memory_order_release);
         spdlog::info("CancelPendingAutoComplete: cleared pending auto-complete (manual command wins)");
-    }
-
-    // Set a flag for the per-frame poller to run an outline-refresh sweep on
-    // nearby refs once menus are closed. Running the sweep directly from Papyrus
-    // races with the scanner UI and crashes on procgen cells.
-    std::int32_t ScanNearbyRefs(std::monostate)
-    {
-        Engine::g_pendingOutlineSweep.store(true, std::memory_order_release);
-        spdlog::info("ScanNearbyRefs: queued pending sweep (fires on next menu close)");
-        return 0;
     }
 
     // Ensure a planet's knowledge entry exists (ref-free) so subsequent ref-free writes — resource
@@ -1410,9 +1398,9 @@ namespace Papyrus
     // the few async-create stragglers and fires each planet's completion event (slate).
     // Returns the number of planets processed. Console:
     //   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
-    std::int32_t CompleteAllPlanetsSurveyData(std::monostate)
+    std::int32_t CompleteAllPlanetsSurveyData(std::monostate, bool writeResources)
     {
-        return Engine::CompleteAllPlanetsSurveyData_Phase1(Engine::kDefaultScanDelta);
+        return Engine::CompleteAllPlanetsSurveyData_Phase1(Engine::kDefaultScanDelta, writeResources);
     }
 
     // Index-based accessor over the planets the last sweep scan-completed, so the
@@ -1532,6 +1520,48 @@ namespace Papyrus
         return false;
     }
 
+    // Validate a category CSV: true IFF every comma-separated token is a recognized option AND at least
+    // one token is present. A typo ("res", "creature", "resource") or an empty/blank string returns
+    // false, so a command can no-op cleanly instead of silently doing nothing-but-looking-like-it-ran.
+    bool CategoriesValid(std::monostate, RE::BSFixedString csv)
+    {
+        const auto lower = [](std::string s) {
+            for (auto& c : s)
+                if (c >= 'A' && c <= 'Z')
+                    c = static_cast<char>(c + 32);
+            return s;
+        };
+        const auto trim = [](std::string& s) {
+            while (!s.empty() && (s.front() == ' ' || s.front() == '\t'))
+                s.erase(s.begin());
+            while (!s.empty() && (s.back() == ' ' || s.back() == '\t'))
+                s.pop_back();
+        };
+
+        const std::string list = lower((csv.c_str() != nullptr) ? csv.c_str() : "");
+        bool              any  = false;
+        std::string       piece;
+        for (std::size_t i = 0; i <= list.size(); ++i)
+        {
+            const char ch = (i < list.size()) ? list[i] : ',';
+            if (ch == ',')
+            {
+                trim(piece);
+                if (!piece.empty())
+                {
+                    if (piece != "all" && piece != "resources" && piece != "traits" && piece != "fauna" &&
+                        piece != "flora" && piece != "species" && piece != "creatures")
+                        return false;  // an unrecognized token -> the whole CSV is invalid
+                    any = true;
+                }
+                piece.clear();
+            }
+            else
+                piece += ch;
+        }
+        return any;  // true only when >=1 token AND none unrecognized
+    }
+
     void Register()
     {
         auto* vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
@@ -1578,7 +1608,8 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "ScanNearbyRefs"sv, CPS_GUARDED(ScanNearbyRefs), std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "CategoriesValid"sv, CPS_GUARDED(CategoriesValid),
+            std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "QueueCompleteSurvey"sv, CPS_GUARDED(QueueCompleteSurvey), std::optional<bool> {true}, false);
@@ -1604,7 +1635,7 @@ namespace Papyrus
 
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
-                     "CategoryEnabled, ScanNearbyRefs, QueueCompleteSurvey, CancelPendingAutoComplete, "
+                     "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
                      "CompleteAllPlanetsSurveyData, GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet");
     }
 
@@ -1702,8 +1733,8 @@ namespace Hook
         spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)", call_site);
     }
 
-    // Per-frame poll: waits for the pending-sweep flag + scanner menu closed,
-    // then fires ScanAllRefsInCell on the player's current cell.
+    // Per-frame poll: waits for the pending CompleteSurvey flag + scanner menu closed,
+    // then dispatches the deferred Papyrus CompleteSurvey from a clean (non-scanner) state.
     //
     // History: tried event sink on UI's BSTEventSource<MenuOpenCloseEvent>.
     // CommonLibSF's shared REL::ID(123821) for BSTEventSource::RegisterSink
@@ -1758,28 +1789,6 @@ namespace Hook
             else {
                 Engine::g_completeSurveyCountdown = 0;
             }
-
-            // === Pending outline sweep ===
-            if (!Engine::g_pendingOutlineSweep.load(std::memory_order_acquire)) {
-                Engine::g_scanSweepCountdown = 0;
-                return;
-            }
-            if (!readyToFire(Engine::g_scanSweepCountdown)) {
-                return;
-            }
-
-            // Claim the sweep — clear flag first so a concurrent Papyrus set
-            // during the sweep requeues cleanly next iteration.
-            if (!Engine::g_pendingOutlineSweep.exchange(false, std::memory_order_acq_rel)) {
-                return;
-            }
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            if (!player || !player->parentCell) {
-                spdlog::warn("ScanSweep poller: no player or parent cell");
-                return;
-            }
-            const int total = Engine::ScanAllRefsInCell(player->parentCell);
-            spdlog::info("ScanSweep poller: fired after menus closed, scanned {} refs", total);
         });
         spdlog::info("InstallScanSweepPoller: per-frame poller registered");
     }

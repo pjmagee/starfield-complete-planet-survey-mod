@@ -1,0 +1,118 @@
+[size=6][b]Complete Planet Survey[/b][/size]
+
+Finish planet surveys from the console. One world, or the whole galaxy.
+
+Resources, traits, flora and fauna get marked surveyed. The survey hits 100%, the star map updates, and the [i]"<Planet> Survey Data"[/i] items land in your inventory. It works on worlds you've never even been to.
+
+You pick which worlds and which categories to complete, so it fits how you play.
+
+
+[size=4][b]Requirements[/b][/size]
+
+[list]
+[*]Starfield 1.16.244
+[*][url=https://www.nexusmods.com/starfield/mods/106]SFSE[/url] 0.2.21
+[*][url=https://www.nexusmods.com/starfield/mods/3256]Address Library for SFSE Plugins[/url]
+[/list]
+
+SFSE has to match your game build. If your game updates, wait for a matching SFSE and a new mod build before you update. The mod won't load on the wrong build.
+
+
+[size=4][b]Install[/b][/size]
+
+Install with Mod Organizer 2 or Vortex ("Install from file"). Make sure [b]CompletePlanetSurvey.esm[/b] is ticked.
+
+
+[size=4][b]How to use[/b][/size]
+
+Open the console with the tilde key ([b]~[/b]) and run:
+
+[code]cgf "CompletePlanetSurveyQuest.<Command>" "<categories>"[/code]
+
+[b]<categories>[/b] is any mix of [b]resources[/b], [b]traits[/b], [b]fauna[/b], [b]flora[/b], separated by commas. Or just [b]all[/b].
+
+[size=3][b]The four commands[/b][/size]
+
+[list]
+[*][b]CompletePlanet[/b] - the world you're standing on
+[*][b]CompleteBarrenPlanets[/b] - every lifeless world (no plants or creatures)
+[*][b]CompleteLifePlanets[/b] - every world with life
+[*][b]CompleteAllPlanets[/b] - the whole galaxy, both at once
+[/list]
+
+The galaxy commands run from anywhere. Orbit, another system, on foot, doesn't matter. CompletePlanet is the one that needs you actually on a world.
+
+[size=3][b]The categories[/b][/size]
+
+[list]
+[*][b]resources[/b] - surveys the world's resources
+[*][b]traits[/b] - surveys the planet's traits
+[*][b]flora[/b] - surveys the plants
+[*][b]fauna[/b] - surveys the creatures
+[*][b]all[/b] - all of the above
+[/list]
+
+Each one sticks to its own job. "fauna" won't touch plants. "resources" won't touch life. Combine them if you want. "resources,traits" does both. "fauna,flora" does the life.
+
+[size=3][b]What to expect[/b][/size]
+
+The survey finishes the moment the command runs. The survey panel and star map update straight away, the Survey Data drops into your inventory, and it stays done after you reload.
+
+The creatures and plants right next to you read as scanned once the area reloads. Land on a world you finished from orbit and they're already scanned. On the world you're standing on, fly up to orbit and back and they catch up. Either way the survey is already complete.
+
+
+[size=4][b]Play your way[/b][/size]
+
+Same commands, different stories. Pick whatever fits your character.
+
+[b]🧭 Explorer[/b] - "I survey each world myself as I land."
+[code]cgf "CompletePlanetSurveyQuest.CompletePlanet" "all"[/code]
+
+[b]🚀 Frontier[/b] - "Chart the whole galaxy. All of it."
+[code]cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"[/code]
+
+[b]🏔️ Adventurer[/b] - "Do the dead rocks for me. I'll walk the living worlds."
+[code]cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "all"[/code]
+
+[b]🌿 Botanist[/b] - "Every plant in the galaxy. Nothing else."
+[code]cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "flora"[/code]
+
+[b]⛏️ Miner[/b] - "Just what I can dig up. Resources everywhere."
+[code]cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "resources"[/code]
+
+[b]🐾 Beast Master[/b] - "Every creature catalogued."
+[code]cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "fauna"[/code]
+
+[b]🔭 Astrophysicist[/b] - "Every planetary trait, read from orbit."
+[code]cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "traits"[/code]
+
+Botanist and Beast Master use CompleteLifePlanets because plants and creatures only show up on living worlds, so it hits every one without bothering the dead rocks. Astrophysicist lines up with the Astrophysics skill, which reads traits from orbit.
+
+
+[size=4][b]Good to know[/b][/size]
+
+Survey Data takes a minute or two to all show up. Finish a lot of worlds at once and the rewards trickle in, so the count keeps climbing after the command's done.
+
+Stars don't have a survey, so a full all run lands around 1,700 items.
+
+"resources" on its own leaves a living world's creatures untouched. That's the point, for a miner. Add fauna,flora or use all when you want the life too.
+
+A dead world counts as done once its environment is surveyed, so it still gives you Survey Data even with no resources on it.
+
+
+[size=4][b]Watch the XP[/b][/size]
+
+Surveying gives XP, and finishing the whole galaxy in one go gives a pile of it. On a fresh character a single all run can shoot you up to around level 80, which makes the early game a walkover. Worth knowing before you pull the trigger.
+
+If you'd rather skip the levels:
+
+[list]
+[*]Do it on a character that's already established, or run a handful of worlds at a time instead of everything at once.
+[*]Pair this with a "no XP" or lower-XP-curve mod if you want the survey data without the levels at all.
+[*]Already racked them up? You can set your level in the console with player.setlevel <number> (for example player.setlevel 5). Heads up: any console command turns achievements off for that save unless you're running an Achievement Enabler mod.
+[/list]
+
+
+[size=4][b]Optional setting[/b][/size]
+
+There's an "auto-complete on scan" toggle under Settings > Gameplay. Turn it on and scanning any single plant or creature finishes that whole world for you. Leave it off to do everything by command.
