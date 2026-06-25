@@ -17,17 +17,9 @@ namespace Esm
     // planetFormID -> deduped list of flora + fauna species FormIDs for that planet.
     using PlanetSpeciesMap = std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>;
 
-    // (planetFormID<<32 | speciesFormID) -> number of biomes that species is authored in on the
-    // planet (one PPBD subrecord per biome). Multi-biome flora (>=3 biomes) carry an extra slot+0x08
-    // marker (0x00171869), so the green build needs this count to write the correct per-species set.
-    using SpeciesBiomeCount = std::unordered_map<std::uint64_t, std::uint8_t>;
-
     // Parse Starfield.esm once (cached, thread-safe). Returns an empty map if the
     // file can't be found/read. Cheap on subsequent calls.
     const PlanetSpeciesMap& GetPlanetSpecies();
-
-    // Biome count for one (planet, species); 0 if unknown. Triggers the same one-time ESM parse.
-    std::uint8_t GetSpeciesBiomeCount(std::uint32_t planetId, std::uint32_t speciesId);
 
     // The full slot+0x08 "green marker" set for one species (FLOR or NPC_), derived purely from
     // Starfield.esm — no game, no visiting, no live instance. This is the array the engine copies
