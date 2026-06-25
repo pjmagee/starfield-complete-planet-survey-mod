@@ -756,10 +756,9 @@ namespace
         return out;
     }
 
-    // Parse the PNDT top-level group's records into the species map (+ per-species biome counts +
-    // per-planet trait keyword sets from KWDA).
+    // Parse the PNDT top-level group's records into the species map + per-planet trait keyword
+    // sets from KWDA.
     void ParsePndtGroup(const std::vector<std::uint8_t>& group, Esm::PlanetSpeciesMap& map,
-                        Esm::SpeciesBiomeCount& counts,
                         std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& planetTraits)
     {
         std::vector<std::uint8_t> decomp;
@@ -825,15 +824,6 @@ namespace
                 planetTraits.emplace(formid, std::move(traitKwds));
             if (species.empty())
                 continue;  // barren / resource-only body — nothing to add to the species map
-            // Biome count per species: each PPBD subrecord is one biome, and a species authored in N
-            // biomes was appended N times above. Count occurrences BEFORE the dedup, keyed by
-            // (planetFormID<<32)|speciesFormID.
-            for (const auto s : species)
-            {
-                const std::uint64_t k = (static_cast<std::uint64_t>(formid) << 32) | s;
-                if (counts[k] < 0xFF)
-                    ++counts[k];
-            }
             std::sort(species.begin(), species.end());
             species.erase(std::unique(species.begin(), species.end()), species.end());
             map.emplace(formid, std::move(species));
@@ -916,7 +906,7 @@ namespace
                      faunaWithAbility, floraTotal);
     }
 
-    void BuildMap(Esm::PlanetSpeciesMap& map, Esm::SpeciesBiomeCount& counts, MarkerTables& tables)
+    void BuildMap(Esm::PlanetSpeciesMap& map, MarkerTables& tables)
     {
         const auto path = ResolveEsmPath();
         if (path.empty())
@@ -986,7 +976,7 @@ namespace
         }
 
         if (!pndtGroup.empty())
-            ParsePndtGroup(pndtGroup, map, counts, tables.planetTraits);
+            ParsePndtGroup(pndtGroup, map, tables.planetTraits);
 
         BuildMarkers(flstGroup, cndfGroup, omodGroup, npcGroup, florGroup, mgefGroup, spelGroup, perkGroup,
                      tables);
@@ -1004,7 +994,6 @@ namespace Esm
     namespace
     {
         PlanetSpeciesMap  g_map;
-        SpeciesBiomeCount g_biomeCounts;
         MarkerTables      g_markers;
         std::once_flag    g_once;
 
@@ -1016,7 +1005,7 @@ namespace Esm
             std::call_once(g_once, [] {
                 try
                 {
-                    BuildMap(g_map, g_biomeCounts, g_markers);
+                    BuildMap(g_map, g_markers);
                 }
                 catch (const std::exception& e)
                 {
@@ -1034,14 +1023,6 @@ namespace Esm
     {
         EnsureParsed();
         return g_map;
-    }
-
-    std::uint8_t GetSpeciesBiomeCount(std::uint32_t planetId, std::uint32_t speciesId)
-    {
-        EnsureParsed();
-        const std::uint64_t k  = (static_cast<std::uint64_t>(planetId) << 32) | speciesId;
-        const auto          it = g_biomeCounts.find(k);
-        return it == g_biomeCounts.end() ? 0 : it->second;
     }
 
     std::vector<std::uint32_t> GetSpeciesMarkers(std::uint32_t speciesFormId, std::uint32_t planetFormId)

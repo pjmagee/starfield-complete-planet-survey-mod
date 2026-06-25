@@ -21,12 +21,6 @@ namespace Engine
 {
     using fn_get_manager_t     = std::uintptr_t (*)();
     using fn_set_trait_known_t = void (*)(std::uint32_t planetId, std::uintptr_t keyword, bool known);
-    // ID_52157: per-planet progress updater. Called by ID_83008 only when ID_83038 found
-    //   the ref-component. Signature: (ref, int count, byte=0xd, byte, byte).
-    //   We call this DIRECTLY after SetScanned on spawn-and-scan'd flora refs so the
-    //   biome progress ticks even though ID_83038 no-ops on PlaceAtMe'd refs.
-    using fn_planet_progress_t =
-        void (*)(void* ref, std::int32_t count, std::uint8_t b3, std::uint8_t b4, std::uint8_t b5);
     // ID_126806: BSTHashMap lookup. Signature (container, out_buf[4 ulongs], &key_u64)
     //   out_buf layout on success: out[2] = entry base ptr, out[3] = entry index.
     //   Failure sentinel: out[3] == 0xfe0 and out[2] == 0.
@@ -44,75 +38,10 @@ namespace Engine
 
     inline REL::Relocation<fn_get_manager_t>     GetKnowledgeManager {REL::ID(126578)};
     inline REL::Relocation<fn_set_trait_known_t> SetTraitKnownNative {REL::ID(52155)};
-    inline REL::Relocation<fn_planet_progress_t> PlanetProgressNative {REL::ID(52157)};
     inline REL::Relocation<fn_db_lookup_t>       DbLookup {REL::ID(126806)};
     inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
     inline REL::Relocation<fn_set_percent_t>     SetPercentByte {REL::ID(124899)};
     inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
-
-    // ---- GLOBAL 939118 ScannableComponent registry walk -----------------------------------------
-    // The count walker ID_90522 (re/ghidra/output/onp-resolver-2026-06-23.txt:2030) and the outline
-    // reader (ID_83007 via ID_90548) both read the SAME global 939118 ScannableComponent registry —
-    // the BSTHashMap at managerBase+0x268, where managerBase = *(GetKnowledgeManager()+0x8b0) =
-    // GetKnowledgeDB(). Walking that registry yields EXACTLY the loaded scannable refs the count and
-    // outline see, with no "wrong instance" risk (FindAllReferencesWithKeyword can miss the rendered
-    // overlay copies; the registry cannot — every loaded 939118 component is one entry).
-    //
-    // ID_939118: NOT a function — a uint16 domain discriminator (used as `(u64)ID_939118 << 0x30`
-    //   and `CONCAT24(ID_939118, x)`, i.e. concatenated as a 2-byte value: onp-resolver:2070,
-    //   discriminators.txt:3665). Read it as a uint16* global, exactly like TraitDiscriminator(938333).
-    inline REL::Relocation<std::uint16_t*> ScannableDiscriminator {REL::ID(939118)};
-
-    // ID_938083: the ref-keyed LocationManager "encountered/seen" component in db+0x268 — the durable
-    // store a real trait scan writes that the planet-keyed 938333 does NOT (so 938333 alone leaves the
-    // in-world object stuck at 0/N on reload). Same disc-global pattern (CONCAT24(ID_938083, refId)<<0x10,
-    // discriminators.txt:1409, loc-reflist:25). Read as uint16* like the other two.
-    inline REL::Relocation<std::uint16_t*> LocRefDiscriminator {REL::ID(938083)};
-
-    // ID_126805: the registry BEGIN/lower-bound iterator over the same BSTHashMap ID_126806 point-looks
-    //   up. Signature mirrors ID_126806 (q4-126806-confirm.txt): (container=db+0x268, out[4]u64 scratch,
-    //   &keyLow) -> returns the out buffer (ptr to 4 u64s {b8,b0,a8,a0}). The caller passes an 80-byte
-    //   scratch (`undefined1 local_90[80]`), so we give it >= 80 bytes. a8 (out[2]) = entry-bucket base,
-    //   a0 (out[3]) = index; sentinel a0==0xfe0 && a8==0 means end. (onp-resolver:2073.)
-    using fn_registry_begin_t = std::uint64_t* (*)(std::uintptr_t* container, void* out80, const std::uint64_t* keyLow);
-    inline REL::Relocation<fn_registry_begin_t> ScannableRegistryBegin {REL::ID(126805)};
-
-    // ID_39372: the iterator ADVANCE. Takes &iterState (the 4 u64s {b8,b0,a8,a0} laid out contiguously,
-    //   as `&local_b8`) and updates them in place to the next entry. (onp-resolver:2163.)
-    using fn_registry_advance_t = void (*)(void* iterState4);
-    inline REL::Relocation<fn_registry_advance_t> ScannableRegistryAdvance {REL::ID(39372)};
-
-    // Registry-entry / sentinel constants, read straight from the ID_90522 decompile (onp-resolver:2078-2121):
-    //   entryOff = *(u16*)(a8 + 0x12 + a0*4);  formID = *(u32*)(entryOff + 0x20 + a8);
-    //   byte     = *(u8*) (entryOff + 0x28 + a8);  keyHigh = (u64)disc<<0x30 | 0xffffffffffff.
-    constexpr std::size_t  kRegOffsetTableBase = 0x12;   // a8 + 0x12 + a0*4 -> u16 entry offset
-    constexpr std::size_t  kRegEntryKeyOffset  = 0x10;   // entryOff + 0x10 + a8 -> u64 key (vs keyHigh)
-    constexpr std::size_t  kRegEntryFormId     = 0x20;   // entryOff + 0x20 + a8 -> u32 FormID
-    constexpr std::size_t  kRegEntryStateByte  = 0x28;   // entryOff + 0x28 + a8 -> u8 scanned state
-    constexpr std::uintptr_t kRegEndIndex      = 0xfe0;  // a0 sentinel for "end"
-    constexpr std::uint64_t  kRegKeyLowMask    = 0xffffffffffffULL;  // OR'd into keyHigh
-    constexpr std::size_t  kRegScratchBytes    = 96;     // >= the caller's 80-byte scratch, rounded up
-    constexpr std::uint32_t kRegMaxIterations  = 4096;   // infinite-loop backstop (registry is small)
-    constexpr std::uint32_t kHandscannerHighlightRangeKw = 0x001CBEA3;  // Handscanner_AllowScanAtHighlightRange
-    // ID_52161: the engine's per-TYPE completion writer (resolves the species' canonical key
-    //   from a LIVE instance, then writes the planet's "scanned species" tree — the green state).
-    //   Normally fed the current planet by the scan path; we drive it directly with an EXPLICIT
-    //   target planet so any planet can be greened from one spot. Context: {uint32 planetId @0x00,
-    //   uint32 liveInstanceFormID @0x10}; param_2 -> &db. The instance must be live + dynamic-id.
-    using fn_type_scan_inner_t = void (*)(void* ctx, std::uintptr_t* dbPtr);
-    inline REL::Relocation<fn_type_scan_inner_t> TypeScanInner {REL::ID(52161)};
-
-    // ID_52158: the per-species COUNT completion — the OTHER half of the green (paired with the
-    //   tree write ID_52161). It sets the +0x21 scan-flag / +0x20 percent for (planet, species)
-    //   and runs the biome propagation. Normally reached via ID_52157, which resolves the planet
-    //   from the ref's location (ID_52188 = "the planet you're on"). We drive it DIRECTLY with an
-    //   EXPLICIT target planet in the context so the count completes for ANY planet from one spot.
-    //   Context confirmed from ID_52157's stack build: {uint32 planetId @0x00, uint32 species @0x04,
-    //   byte delta @0x08, void* ref @0x10, byte* outScanned @0x18, byte* outPercent @0x20,
-    //   byte flag @0x28}; param_2 -> &db. (NB: ID_52158 reads the CURRENT biome at ID_937609+0x160
-    //   for its propagation, so the biome half may no-op for a never-visited target.)
-    using fn_progress_inner_t = void (*)(void* ctx, std::uintptr_t* dbPtr);
-    inline REL::Relocation<fn_progress_inner_t> PlanetProgressInner {REL::ID(52158)};
 
     // ID_1016657: per-planet survey aggregator constructor.
     //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
@@ -199,67 +128,19 @@ namespace Engine
                                                        kPlanetIdOffset);
     }
 
-    // ID_52188: resolve the RENDER-domain planet id for a ref — the BSGalaxy NumericID the outline
-    // renderer keys the green PlayerKnowledge entry on (from the ref's ExtraLocation 0x81 / parentCell
-    // / current-planet global). This is a DIFFERENT id domain than ReadPlanetId's form +0x54 FormID
-    // (which the data sweep + survey-% use). THE "100% but blue" BUG: the mod wrote +0x21 under the
-    // +0x54 id, but the outline reads (938333|ID_52188(player)) — a different entry. A real scan
-    // writes via ID_52188(ref), same domain it reads, which is why CompleteSurvey greens. See
-    // render-read-target-2026-06-22.md. Out params are two int* (planetId + a small secondary).
-    using fn_resolve_planet_t = std::uint64_t (*)(void* ref, std::int32_t* outPlanetId, std::int32_t* outSecondary);
-    inline REL::Relocation<fn_resolve_planet_t> ResolvePlanetFromRef {REL::ID(52188)};
-
-    std::uint32_t GetRenderPlanetId(RE::TESObjectREFR* ref)
-    {
-        if (!ref)
-            return 0;
-        std::int32_t planetId  = 0;
-        std::int32_t secondary = 0;
-        ResolvePlanetFromRef(ref, &planetId, &secondary);
-        return static_cast<std::uint32_t>(planetId);
-    }
-
-    // ID_52159: the OUTLINE renderer's OWN green read — `ID_52159(playerRef, speciesId)` returns the
-    // +0x21 byte for (player's planet via ID_52188, species via FNV hash) — the exact value
-    // ID_90491/ID_90548 use to decide green-vs-blue (species-scanned-check.txt:86-136). Calling it
-    // directly lets us ASK THE ENGINE what the render sees for a species, instead of trusting the
-    // decompile (wrong 4×). It reads the SAME hashmap+slot the mod's ID_124898 writes — so if it
-    // returns 0 for a species we just wrote +0x21 for, the render keys on a DIFFERENT species id
-    // than the authored one (e.g. the live wild creature's id), which is the real discrepancy.
-    using fn_render_green_read_t = char (*)(void* playerRef, std::uint32_t species);
-    inline REL::Relocation<fn_render_green_read_t> RenderGreenRead {REL::ID(52159)};
-
-    std::uint8_t ReadRenderGreen(RE::TESObjectREFR* playerRef, std::uint32_t species)
-    {
-        if (!playerRef || !species)
-            return 0;
-        return static_cast<std::uint8_t>(RenderGreenRead(playerRef, species));
-    }
-
     // ID_124901: the engine's species-slot hash (FNV-1a of the 4-byte species id) -> slot index in a
-    // subobj's species hashmap. Used to dump the RAW per-species slot bytes (mirrors ID_52159's
-    // lookup) so we can DIFF a full scan (green+info+XP) vs a +0x21 byte-poke (half) and find the
-    // missing "species catalogued/known" field the real scan writes and we don't.
+    // subobj's species hashmap. Used to dump the RAW per-species slot bytes so we can DIFF a full
+    // scan (green+info+XP) vs a +0x21 byte-poke (half) and find the missing "species catalogued/known"
+    // field the real scan writes and we don't.
     using fn_species_slot_hash_t = std::uint64_t (*)(std::uintptr_t hashmap, const void* key4);
     inline REL::Relocation<fn_species_slot_hash_t> SpeciesSlotHash {REL::ID(124901)};
 
     // ID_35755: BSTArray<u32>::push_back grow path — (header{begin,end,cap}, pos, &value). Allocates
-    // via the ENGINE allocator (ID_35770) and updates the header + frees the old buffer (ID_35757),
-    // so the array is engine-OWNED and safe to free on teardown (ID_35771). This is how the real scan
-    // fills slot+0x08; we use it to build that array ref-free — the GREEN fix.
+    // via the engine allocator and updates the header + frees the old buffer, so the array is
+    // engine-OWNED and safe to free on teardown. This is how the real scan fills slot+0x08; we use
+    // it to build that array ref-free — the GREEN fix.
     using fn_bstarray_grow_t = std::uint32_t* (*)(std::int64_t* header, std::uint32_t* pos, const std::uint32_t* value);
     inline REL::Relocation<fn_bstarray_grow_t> BSTArrayU32Grow {REL::ID(35755)};
-
-    // ID_35770: the engine's BSTArray heap allocator — void* alloc(size_bytes, alignment). Same allocator
-    // ID_35755 uses to grow slot+0x08, and the same the StoredComponent serializer (ID_45726) walks +
-    // teardown (ID_35771) frees. Used to build the 16-byte pooled BSTArray at subobj+0x08 (below).
-    using fn_engine_alloc_t = void* (*)(std::uint64_t sizeBytes, std::uint64_t alignment);
-    inline REL::Relocation<fn_engine_alloc_t> EngineScalarAlloc {REL::ID(35770)};
-
-    // ID_35771: the matching BSTArray deallocator — void free(void* ptr, size_t byteCount). Frees a buffer
-    // allocated by ID_35770/ID_35755 (the engine calls it on slot teardown / rehash with 4-byte stride).
-    using fn_engine_free_t = void (*)(void* ptr, std::uint64_t byteCount);
-    inline REL::Relocation<fn_engine_free_t> EngineScalarFree {REL::ID(35771)};
 
     // push_back one u32 onto a species slot's +0x08 BSTArray, matching the engine's inline push_back
     // (grow via ID_35755 when full, else in-place). slotAddr = the slot base (subobj+0x40 + idx*0x30);
@@ -280,57 +161,6 @@ namespace Engine
         }
     }
 
-    // The LIVE biome member table holds the engine's EXACT per-species marker set on the CURRENT planet —
-    // it is the source array that slot+0x08 is copied from (ID_52158). Reading it yields the correct
-    // value-specific markers for BOTH kingdoms (flora's resource/genetics/reproduction markers AND fauna's
-    // X) with NO derivation, NO condition VM, NO fault risk (pure loads) — strictly more correct than any
-    // hardcode, and it sidesteps the materialization-bound ID_83024 (which faults ref-free) and the
-    // value-specific flora markers (which a fixed list can't capture). Off-planet the live biome is null
-    // (the table is materialization-bound), so this returns false there. (complete-scan-green-model §3.2a.)
-    inline REL::Relocation<std::uintptr_t*> Singleton937609 {REL::ID(937609)};  // *+0x160 = live biome
-
-    // ID_56887: FNV-1a member find over the biome member hashmap. (table=biome+0x20, out[2], key4) ->
-    // out[0]=table base (==biome+0x20), out[1]=matched index (== bucketCount on MISS). The member entry
-    // is bucketBase + out[1]*0x28; its uint[] marker array is [member+0x08 .. member+0x10).
-    using fn_find_member_t = std::int64_t* (*)(std::int64_t table, std::int64_t out[2], unsigned char* key4);
-    inline REL::Relocation<fn_find_member_t> FindBiomeMember {REL::ID(56887)};
-
-    // Read a (current-planet, species) marker set from the live biome member table. Returns false
-    // off-planet / on miss / on fault (caller leaves the species blue). LOCALLY guarded (/EHa); pure loads.
-    bool ReadLiveMemberMarkers(std::uint32_t speciesFormId, std::vector<std::uint32_t>& out)
-    {
-        out.clear();
-        try
-        {
-            auto* const s = Singleton937609.get();
-            if (!s || !*s)
-                return false;
-            const auto biome = *reinterpret_cast<std::uintptr_t*>(*s + 0x160);
-            if (!biome)  // off-planet / no live biome materialized
-                return false;
-            std::int64_t res[2] = {0, 0};
-            FindBiomeMember(static_cast<std::int64_t>(biome) + 0x20, res, reinterpret_cast<unsigned char*>(&speciesFormId));
-            const auto table       = static_cast<std::uintptr_t>(res[0]);  // == biome+0x20
-            const auto bucketBase  = *reinterpret_cast<std::uintptr_t*>(table + 0x20);
-            const auto bucketCount = *reinterpret_cast<std::uint64_t*>(table + 0x28);
-            const auto idx         = static_cast<std::uint64_t>(res[1]);
-            if (bucketCount == 0 || idx == bucketCount || !bucketBase)  // empty / MISS
-                return false;
-            const auto  member = bucketBase + idx * 0x28;
-            auto* const begin  = *reinterpret_cast<std::uint32_t**>(member + 0x08);
-            auto* const end    = *reinterpret_cast<std::uint32_t**>(member + 0x10);
-            if (!begin || end < begin || (end - begin) > 0x40)  // sanity bound
-                return false;
-            for (auto* p = begin; p != end; ++p)
-                out.push_back(*p);
-            return !out.empty();
-        }
-        catch (...)
-        {
-            return false;
-        }
-    }
-
     bool MarkTraitKnown(std::uint32_t planetId, RE::BGSKeyword* keyword)
     {
         if (!planetId || !keyword)
@@ -339,219 +169,8 @@ namespace Engine
         return true;
     }
 
-    // Skip ID_83038 (which no-ops for un-registered refs) and go straight to the
-    // per-planet progress updater. count = the base form's formID (the "known species id").
-    // Used by spawn-and-scan: after PlaceAtMe + SetScanned, the flora path's
-    // ID_83038 no-ops because the spawned ref lacks the (939118, ref_formID)
-    // component. This updater fires ID_52157 directly — what ID_83038 would have.
-    void UpdatePlanetProgress(void* ref, std::uint32_t speciesFormId)
-    {
-        if (!ref || !speciesFormId)
-            return;
-        PlanetProgressNative(ref, static_cast<std::int32_t>(speciesFormId), kBiomeScanCategory, 0, 0);
-    }
-
-    // ID_83009: resolves the CANONICAL species id (ScannableComponent +0x24) that the outline
-    // renderer (ID_52159, via ID_90491/ID_90548) hashes for a live instance. CONFIRMED by full
-    // decompile trace: the engine's REAL scan keys the persistent green +0x21 byte under THIS
-    // canonical id, NOT the ESM/PPBD authored form id. For leveled/template fauna the two differ,
-    // so our ref-free sweep — which keyed +0x21 by the AUTHORED id — landed in the wrong slot:
-    // GetSurveyPercent (walks the authored array) reads 100%, but the outline (canonical FNV-1a
-    // hash) reads 0 -> blue. That is exactly the "survey complete but flora/fauna blue" signature.
-    // ID_83009 returns entry+0x24 when the instance HAS a scan component, else ref->formID (the
-    // identity case where authored == canonical). Only the ref arg is consumed; rest is spill.
-    using fn_get_canonical_species_t = std::uint32_t (*)(void* ref, void*, void*, void*);
-    inline REL::Relocation<fn_get_canonical_species_t> GetCanonicalSpeciesNative {REL::ID(83009)};
-
-    std::uint32_t GetCanonicalSpeciesId(RE::TESObjectREFR* ref)
-    {
-        if (!ref)
-            return 0;
-        return GetCanonicalSpeciesNative(ref, nullptr, nullptr, nullptr);
-    }
-
-    // ID_83025: the identity-reveal known-set writer (Unknown -> named). Marks the ref's canonical id
-    // "discovered/known" in the live biome's known-set (biome+0x20) so the scanner panel's ID_64337
-    // gate shows the real name instead of "Unknown Feature". SAFE by construction: it does an ID_56887
-    // member-find over biome+0x20 keyed by canonId and ONLY writes if the id is a member (no-ops
-    // otherwise); the inner ID_83024 (which faults ref-free) is reached only after a valid slot lookup.
-    // param_1 = *(937609+0x160) = the live biome (the SAME deref as ReadLiveMemberMarkers); param_2 =
-    // ref; param_3 = canonId (ID_83009). (trait-onplanet-completion-2026-06-23.md §2 step D / §5.)
-    using fn_reveal_known_t = void (*)(std::uintptr_t panelDB, void* ref, std::uint32_t canonId);
-    inline REL::Relocation<fn_reveal_known_t> RevealKnownNative {REL::ID(83025)};
-
-    // DIAGNOSTIC: probe the known-set member's marker array (the inferred source of the serialized rec+0x06
-    // "known" byte). Logs whether the canonId member is found and how many marker ids it holds, so we can see
-    // — before vs after ID_83025 — whether the mark actually FILLS the marker array (member+0x08..+0x10) or
-    // no-ops. (Save21 reloaded 0/2 even though ID_83025 already ran, so we must learn why empirically.)
-    void ProbeKnownMember(std::uintptr_t biome, std::uint32_t canon, const char* tag)
-    {
-        try
-        {
-            std::int64_t res[2] = {0, 0};
-            auto         c      = canon;
-            FindBiomeMember(static_cast<std::int64_t>(biome) + 0x20, res, reinterpret_cast<unsigned char*>(&c));
-            const auto table       = static_cast<std::uintptr_t>(res[0]);
-            const auto bucketBase  = *reinterpret_cast<std::uintptr_t*>(table + 0x20);
-            const auto bucketCount = *reinterpret_cast<std::uint64_t*>(table + 0x28);
-            const auto idx         = static_cast<std::uint64_t>(res[1]);
-            const bool found       = (bucketCount != 0 && idx != bucketCount && bucketBase != 0);
-            long long  count       = -1;
-            if (found)
-            {
-                const auto  member = bucketBase + idx * 0x28;
-                auto* const begin  = *reinterpret_cast<std::uint32_t**>(member + 0x08);
-                auto* const end    = *reinterpret_cast<std::uint32_t**>(member + 0x10);
-                count = (begin && end >= begin) ? static_cast<long long>(end - begin) : -2;
-            }
-            spdlog::info("[known-probe] {} canon=0x{:08X} found={} markerCount={} (bucketCount={} idx={})",
-                         tag, canon, found, count, bucketCount, idx);
-        }
-        catch (...)
-        {
-            spdlog::info("[known-probe] {} canon=0x{:08X} FAULT", tag, canon);
-        }
-    }
-
-    void RevealScanTargetIdentity(RE::TESObjectREFR* ref)
-    {
-        if (!ref)
-            return;
-        auto* const s = Singleton937609.get();
-        if (!s || !*s)
-            return;
-        const auto biome = *reinterpret_cast<std::uintptr_t*>(*s + 0x160);
-        if (!biome)  // off-planet / no live biome materialized -> nothing to reveal into
-            return;
-        std::uint32_t canon = GetCanonicalSpeciesId(ref);
-        if (!canon)
-            return;
-        // ID_83025 finds the canonId member and (via ID_83024) appends runtime scan-markers into its marker
-        // array (member+0x08..+0x10); the serializer projects "marker array non-empty" -> the durable rec+0x06
-        // "known" byte the panel reveal reads. The members PRE-EXIST (save-verified: 31 in every save), so no
-        // create is needed.
-        RevealKnownNative(biome, ref, canon);  // ID_83025: fill the member's marker array (Unknown -> named)
-    }
-
-    // READ-ONLY: resolve a loaded trait scan-target's known-set member and log its state — NO writes.
-    // Mirrors RevealScanTargetIdentity's resolution but only probes, so the diagnostic registry walk can
-    // run without setting the on-planet "scanned" byte (which jams manual re-scanning until the planet
-    // re-materializes) or the durable 938333 record. Used by TestTraitRegistryWalk (now non-destructive).
-    void ProbeScanTargetKnownSet(RE::TESObjectREFR* ref)
-    {
-        if (!ref)
-            return;
-        auto* const s = Singleton937609.get();
-        if (!s || !*s)
-            return;
-        const auto biome = *reinterpret_cast<std::uintptr_t*>(*s + 0x160);
-        if (!biome)
-            return;
-        const std::uint32_t canon = GetCanonicalSpeciesId(ref);
-        if (!canon)
-            return;
-        ProbeKnownMember(biome, canon, "walk");
-    }
-
-    // Walk the GLOBAL 939118 ScannableComponent registry exactly as the count walker ID_90522 does
-    // (re/ghidra/output/onp-resolver-2026-06-23.txt:2070-2167), invoking `fn(formID, stateByte, REFR*)`
-    // for each loaded scannable. This is the EXACT store the outline reader (ID_83007/ID_90548) and the
-    // N/M count (ID_90522) both read, so it cannot miss the rendered overlay instances the way
-    // FindAllReferencesWithKeyword can. Returns the number of entries visited (capped).
-    //
-    // SAFETY: the whole walk is wrapped in try/catch — src/ is built /EHa, so a wrong offset deref
-    // (access violation) is caught as a C++ exception rather than hard-crashing the process. Every
-    // pointer is null-checked before deref and the loop is hard-capped at kRegMaxIterations as an
-    // infinite-loop backstop. fn itself is invoked inside the try, so a fault inside a callback also
-    // unwinds cleanly. Caller must still hold a stable game state (on-surface, menus quiescent).
-    template <typename Fn>
-    std::uint32_t ForEachScannableInRegistry(Fn&& fn)
-    {
-        std::uint32_t visited = 0;
-        try
-        {
-            const auto db = GetKnowledgeDB();  // == *(GetKnowledgeManager()+0x8b0) == ID_90521's managerBase
-            if (!db)
-                return 0;
-
-            const std::uint16_t disc    = *ScannableDiscriminator.get();  // ID_939118 (uint16 domain prefix)
-            const std::uint64_t keyLow  = static_cast<std::uint64_t>(disc) << 0x30;
-            const std::uint64_t keyHigh = keyLow | kRegKeyLowMask;
-
-            // Scratch for the iterator (caller uses an 80-byte local; give it 96 to be safe), plus the
-            // 4-u64 iterator state {b8,b0,a8,a0} laid out contiguously (ID_39372 takes &b8).
-            alignas(16) std::uint8_t scratch[kRegScratchBytes] {};
-            auto container = reinterpret_cast<std::uintptr_t*>(db + kDbContainerOffset);  // db+0x268
-
-            std::uint64_t* it = ScannableRegistryBegin(container, scratch, &keyLow);
-            if (!it)
-                return 0;
-
-            // iterState = {b8, b0, a8(entry-bucket base), a0(index)} — ID_39372 advances in place.
-            std::uint64_t iterState[4] = {it[0], it[1], it[2], it[3]};
-
-            for (std::uint32_t guard = 0; guard < kRegMaxIterations; ++guard)
-            {
-                const std::uintptr_t a8 = static_cast<std::uintptr_t>(iterState[2]);
-                const std::uintptr_t a0 = static_cast<std::uintptr_t>(iterState[3]);
-
-                // End sentinel: (a0 == 0xfe0 && a8 == 0). Match the decompile's exact condition.
-                if (a0 == kRegEndIndex && a8 == 0)
-                    break;
-                if (!a8)
-                    break;
-
-                // entryOff = *(u16*)(a8 + 0x12 + a0*4). Bounds the read within the bucket.
-                const auto* offTablePtr =
-                    reinterpret_cast<const std::uint16_t*>(a8 + kRegOffsetTableBase + a0 * 4);
-                const std::uintptr_t entryOff = *offTablePtr;
-                const std::uintptr_t entry    = a8 + entryOff;
-
-                // keyHigh guard: stop once the entry key exceeds the 939118 domain ceiling (the
-                // walker's `*(u64*)(entryOff+0x10+a8) <= keyHigh` loop condition).
-                const std::uint64_t entryKey = *reinterpret_cast<const std::uint64_t*>(entry + kRegEntryKeyOffset);
-                if (entryKey > keyHigh)
-                    break;
-
-                ++visited;
-
-                const std::uint32_t formID    = *reinterpret_cast<const std::uint32_t*>(entry + kRegEntryFormId);
-                const std::uint8_t  stateByte = *reinterpret_cast<const std::uint8_t*>(entry + kRegEntryStateByte);
-
-                RE::TESObjectREFR* refr = nullptr;
-                if (formID)
-                {
-                    auto* form = RE::TESForm::LookupByID(formID);  // == ID_47401
-                    if (form)
-                    {
-                        // The walker resolves the live REFR via the form's vtable slot +0x228. In
-                        // CommonLibSF the loaded scannable entries ARE references, so a direct cast is
-                        // sufficient and avoids a hand-rolled vtable call. Guard the form type so a
-                        // stray non-REFR form can't be reinterpreted.
-                        if (form->Is(RE::FormType::kREFR) || form->GetFormType() == RE::FormType::kACHR)
-                            refr = static_cast<RE::TESObjectREFR*>(form);
-                    }
-                }
-
-                fn(formID, stateByte, refr);
-
-                // Advance the iterator in place (ID_39372 updates iterState[0..3]).
-                ScannableRegistryAdvance(iterState);
-            }
-
-            if (visited >= kRegMaxIterations)
-                spdlog::warn("[trait-walk] hit iteration cap {} — registry larger than expected or loop stuck",
-                             kRegMaxIterations);
-        }
-        catch (...)
-        {
-            spdlog::error("[trait-walk] caught fault during registry walk after {} entries — aborting walk", visited);
-        }
-        return visited;
-    }
-
     // ID_83006: resolve a species base FORM to its CANONICAL form. This is the missing piece.
-    // The outline reader ID_52159 hashes the canonical id stamped into a scanned instance's
+    // The outline renderer hashes the canonical id stamped into a scanned instance's
     // ScannableComponent +0x24, which the engine computes as *(uint32*)(ID_83006(base)+0x28)
     // (scan-component-lifecycle.txt:33-35, scan-inner.txt:63-84). We were writing +0x21 under the
     // RAW ESM form id, but the renderer keys on this canonical id instead -> survey reads 100%
@@ -650,73 +269,6 @@ namespace Engine
         IncrementScanFlag(subobj, speciesFormId, delta, 0);
         SetPercentByte(subobj, speciesFormId, Engine::kScanPercentComplete, 0);
         return 1;
-    }
-
-    // Green a single species TYPE on an EXPLICIT target planet by driving the engine's own
-    // type-completion writer (ID_52161) directly. `ref` must be a LIVE, dynamic-id instance of
-    // the species (spawned via PlaceAtMe) — ID_52161 resolves the species' canonical key off it
-    // and writes `planetId`'s scanned-species tree (the green state). Because the planet is an
-    // explicit ARGUMENT here (not "wherever the player is"), one live instance can green that
-    // species on ANY planet. The planet's survey entry must already exist (discover/MarkResources).
-    void GreenTypeForPlanet(RE::TESObjectREFR* ref, std::uint32_t planetId)
-    {
-        if (!ref || !planetId)
-            return;
-        const auto db = GetKnowledgeDB();
-        if (!db)
-            return;
-        // Context ID_52161 consumes: planetId @0x00, live-instance FormID @0x10.
-        struct alignas(8) TypeScanCtx
-        {
-            std::uint32_t planetId;    // +0x00
-            std::uint32_t pad04 {0};
-            std::uint64_t pad08 {0};   // +0x08
-            std::uint32_t instanceId;  // +0x10
-            std::uint32_t pad14 {0};
-        } ctx {planetId, 0, 0, ref->GetFormID(), 0};
-        std::uintptr_t dbPtr = db;
-        TypeScanInner(&ctx, &dbPtr);
-    }
-
-    // Complete a species TYPE's COUNT on an EXPLICIT target planet by driving ID_52158 directly,
-    // bypassing ID_52157's ID_52188 "current planet" resolution. Pairs with GreenTypeForPlanet:
-    // in testing, the tree write ALONE stayed blue (#6); tree write + this count completion (#7)
-    // greened the planet, fresh instances included. `ref` is the live spawned instance (ID_52158
-    // reads it for biome propagation + notify; the count itself credits `planetId`). The planet's
-    // survey entry must already exist (the data sweep creates it) or ID_52158 early-returns.
-    void CompleteTypeForPlanet(std::uint32_t planetId, std::uint32_t species, RE::TESObjectREFR* ref)
-    {
-        if (!planetId || !species || !ref)
-            return;
-        const auto db = GetKnowledgeDB();
-        if (!db)
-            return;
-        std::uint8_t outScanned = 0;  // ID_52158 writes "was-unscanned" flag here (param_1+6)
-        std::uint8_t outPercent = 0;  // ID_52158 writes the new percent byte here (param_1+8)
-        struct alignas(8) ProgressCtx
-        {
-            std::uint32_t planetId;   // +0x00
-            std::uint32_t species;    // +0x04
-            std::uint8_t  delta;      // +0x08  (ID_52157 passes 1)
-            std::uint8_t  pad09[7];
-            void*         ref;         // +0x10
-            std::uint8_t* outScanned;  // +0x18
-            std::uint8_t* outPercent;  // +0x20
-            std::uint8_t  flag28;      // +0x28  (ID_52157 passes param_5; UpdatePlanetProgress=0)
-            std::uint8_t  pad29[7];
-        } ctx {planetId, species, 1, {}, ref, &outScanned, &outPercent, 0, {}};
-        std::uintptr_t dbPtr = db;
-        PlanetProgressInner(&ctx, &dbPtr);
-    }
-
-    // One species TYPE fully greened on one target planet: the tree write (ID_52161) + the count
-    // completion (ID_52158), both with the planet handed in explicitly. This is the per-(planet,
-    // species) unit of the atomic galaxy green — the same pair that greened in test #7, but aimed
-    // at an arbitrary planet instead of "the one you're standing on".
-    void GreenAndCompleteTypeForPlanet(RE::TESObjectREFR* ref, std::uint32_t planetId, std::uint32_t species)
-    {
-        GreenTypeForPlanet(ref, planetId);
-        CompleteTypeForPlanet(planetId, species, ref);
     }
 
     // Inverse of Esm::GetPlanetSpecies() (planetId -> [speciesFid]): speciesFid -> [planetId].
