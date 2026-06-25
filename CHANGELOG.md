@@ -46,10 +46,10 @@ verified.
 Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.1.0 — a drop-in
 upgrade; no game or SFSE change required).
 
-Turns the single galaxy command into a **parameterized completion suite** you point at exactly what
-you want, and closes the two gaps v1.1.0 left open: the in-world **trait scan-target objects**
-("Unknown Feature / 0-of-N SCANNED") now complete properly, and flora/fauna render **fully** green —
-outline *and* species info — persistently, even on worlds you have never visited.
+Turns the single galaxy command into a **parameterized completion suite** you point at exactly the
+worlds and categories you want, makes every category write strictly its own survey data (no
+cross-category bleed), and settles the green model on the engine's own state: survey data is written
+instantly and durably, and the on-surface scanned outline follows on the next fresh load of the world.
 
 ### Added
 
@@ -64,23 +64,37 @@ outline *and* species info — persistently, even on worlds you have never visit
 
   See [`docs/COMPLETION-COMMANDS.md`](docs/COMPLETION-COMMANDS.md) and the playstyle guide in
   [`docs/MOD-DESCRIPTION.md`](docs/MOD-DESCRIPTION.md).
-- **In-world trait scan-target completion.** The surface "Unknown Feature" objects that read
-  "0 of N SCANNED" now complete by driving the game's OWN survey-quest path
-  (`SQ_Parent.DiscoverMatchingPlanetTraits`) — exactly what a real hand-scan does, in plain Papyrus,
-  with no engine pokes. The object reloads complete and named, with no "0/N" corruption, and the
-  hand scanner stays fully usable. Remote worlds' objects auto-resolve on arrival (the game's own
-  `CheckForScanTargetUpdate`, since the trait is now known) — the same path the Astrophysics skill uses.
+- **Category validation.** An unrecognised or empty category string is a clean no-op (with a
+  notification) instead of half-running a command.
 
 ### Changed
 
-- **Proper persistent green.** v1.1.0 set the species scan flag (a half-green); v1.2.0 also builds the
-  ESM-derived `slot+0x08` attribute-marker catalogue (genetics / reproduction / temperament /
-  abilities), so flora & fauna render **fully** green — outline *and* species info — after a reload,
-  including freshly-spawned instances.
-- **Flora and fauna are split.** `"fauna"` greens only creatures and `"flora"` only plants (they were
-  previously greened together).
-- **`resources` is pure** — it marks resource + attribute survey data only and never touches species,
-  so `"resources"` on a life world leaves its creatures untouched (add `fauna,flora` / `all` to green them).
+- **Strict category purity.** Each category writes only its own survey data: `"resources"` never
+  touches species, `"fauna"`/`"flora"` complete only that kind, `"traits"` writes only trait-known
+  data. Previously a completion could bleed across categories (e.g. `"fauna"` also catching nearby
+  plants). `CompleteAllPlanets` now respects the category too: `"fauna"` completes the living worlds
+  without running the barren resource sweep.
+- **Survey data is instant and durable; the scanner outline follows on reload.** The survey %, star
+  map, survey panel and `<Planet> Survey Data` rewards are written the moment a command finishes, on
+  any world (including never-visited ones), and persist across save/reload. The scanned outline on
+  already-loaded creatures/plants refreshes when those objects next load fresh: already done when you
+  arrive at a world completed remotely, or after a re-entry on the world you are standing on. The
+  ESM-derived species detail markers (genetics / reproduction / temperament / abilities) are written
+  alongside the scan flag.
+- **Flora and fauna are split.** `"fauna"` completes only creatures and `"flora"` only plants.
+
+### Removed
+
+- **In-place outline ref-scan and the on-foot trait scan-target driver.** The green outline and the
+  in-world "0 of N SCANNED" feature pillars now resolve through the game's own state on reload/arrival
+  (the outline from the saved scan flag; the pillars via `CheckForScanTargetUpdate`, since the trait is
+  known), instead of driving the engine on the live cell. This removes the live-instance contention
+  that could leave a just-completed creature blue until something else recomputed.
+
+### Fixed
+
+- **`"traits"` no longer writes resources** on the barren / `all` sweep: with only traits requested,
+  the sweep enumerates the worlds without writing any resource or attribute data.
 
 ### Internal (no player-facing change)
 

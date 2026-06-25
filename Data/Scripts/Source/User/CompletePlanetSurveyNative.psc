@@ -32,10 +32,6 @@ int  Function MarkResourcesForPlanet(Form akPlanet, int aiDelta) global native
 ; sets the surveyed bit, fires the Survey Data slate, and recurses moons. Returns 1 on success.
 int  Function DiscoverPlanetEntry(Form akPlanet) global native
 
-; Queue per-ref visual outline refresh. C++ polls a flag and runs a sweep on parentCell's references
-; when menus are closed — outside the scanner UI's active state, avoiding a cell-iteration race.
-int  Function ScanNearbyRefs() global native
-
 ; Queue a deferred CompleteSurvey dispatch. The scan hook calls this instead of invoking CompleteSurvey
 ; directly so PlaceAtMe doesn't race with the active scanner UI. C++ polls the flag, waits until the
 ; scanner is closed + grace period, then dispatches Papyrus CompleteSurvey from a clean state.
@@ -46,10 +42,10 @@ Function QueueCompleteSurvey() global native
 ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
 Function CancelPendingAutoComplete() global native
 
-; Sweep every planet/moon in the galaxy and complete its survey ref-free (no teleport, no spawn):
-; discover each, then write its attribute bits + species/resource scan flags. Records the planets it
-; touched for the finalize pass. Returns the number of planets processed.
-int Function CompleteAllPlanetsSurveyData() global native
+; Sweep the barren worlds and record them for the finalize pass. abWriteResources: TRUE writes each
+; world's attribute bits + resource scan flags (the resources/all path); FALSE only enumerates them, so a
+; traits-only run can mark trait-known without writing resources. Returns the number of planets swept.
+int Function CompleteAllPlanetsSurveyData(bool abWriteResources) global native
 
 ; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep touched, so the finalize pass
 ; can re-resolve each as a Planet (and mark its traits via GetKeywordTypeList(44) -> MarkTraitKnownForPlanet).
@@ -72,3 +68,8 @@ int Function GetLifePlanetFormIdAt(int aiIndex) global native
 ; Parse a "resources,traits,fauna,flora" category string (base Papyrus can't split a string):
 ; returns true if the list contains asToken (case-insensitive) or the wildcard "all".
 bool Function CategoryEnabled(string asCategoryList, string asToken) global native
+
+; Validate a category string: true ONLY if every comma-separated token is a recognized option
+; (resources/traits/fauna/flora/species/creatures/all) and at least one is present. A typo ("res",
+; "creature") or empty string returns false, so a command can no-op cleanly instead of half-running.
+bool Function CategoriesValid(string asCategoryList) global native

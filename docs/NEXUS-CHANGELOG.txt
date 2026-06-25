@@ -1,0 +1,10 @@
+[b]Version 1.2.0[/b]
+
+[list]
+[*][b]Point each command at exactly what you want.[/b] Four commands (the world you're on, every dead world, every living world, or the whole galaxy). Each takes a category: resources, traits, fauna, flora, or all. Runs from anywhere.
+[*][b]Every category sticks to its own job now.[/b] "fauna" doesn't grab nearby plants, "resources" doesn't do more than resources, "traits" only does traits.
+[*][b]The survey finishes the moment the command runs.[/b] Survey panel, star map, and Survey Data all update right away, on any world, and it stays done after a reload.
+[*][b]Creatures and plants next to you read as scanned once the area reloads.[/b] Already done when you land somewhere you finished from orbit, or after a quick trip to orbit and back on the world you're on.
+[/list]
+
+Built and tested on Starfield 1.16.244 / SFSE 0.2.21.
