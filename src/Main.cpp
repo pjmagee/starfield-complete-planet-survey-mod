@@ -786,16 +786,11 @@ namespace Papyrus
             return 0;
 
         // Marker source: Esm::GetSpeciesMarkers — the per-species slot+0x08 set derived PURELY from
-        // Starfield.esm (no game, no visiting, no live instance). Fauna resolves its temperament X via
-        // NPC_->OBTS->temperament OMOD->NKEY->FLST 0x00160C97 (proven 100% on ground truth); flora gets
-        // the 4-marker skeleton with correct per-species reproduction (PRPS) + the >=3-biome 5th marker.
-        // This replaces the materialization-bound live-member read (kept below as an optional validator),
-        // so fauna now greens REMOTELY too. Unknown forms come back empty -> left blue.
-        // ROBUSTNESS + DIAGNOSTIC pass (2026-06-25). "Some creatures green, others not" is NOT a command-
-        // ordering symptom — it is per-species HERE: a species was left BLUE when either (a) its slot did
-        // not resolve in the map (the old silent `continue`), or (b) the ESM derivation returned no markers
-        // (empty +0x08). Both are now recovered, and EACH per-species outcome logs at INFO so a single
-        // in-game run shows exactly which species hit which path (the release build otherwise hides this).
+        // Starfield.esm (no game, no visiting, no live instance), so fauna greens remotely. Fauna resolves
+        // its temperament X via NPC_->OBTS->temperament OMOD->NKEY->FLST 0x00160C97; flora gets a 4-marker
+        // skeleton with per-species reproduction (PRPS) + the >=3-biome 5th marker. Unknown forms come back
+        // empty -> left blue. A species is recovered (not left silently blue) when its slot doesn't resolve
+        // or the derivation returns nothing; each per-species outcome logs at INFO.
         int built = 0, slotMiss = 0, fallbackUsed = 0, alreadyComplete = 0;
         for (const auto sf : it->second)
         {
@@ -872,12 +867,10 @@ namespace Papyrus
         }
         spdlog::info("TestBuildArray: planet 0x{:08X} kind={} -> {} (re)built, {} already-complete (skipped), {} slot-miss, {} marker-fallback",
                      planetId, kind, built, alreadyComplete, slotMiss, fallbackUsed);
-        // The green STATE (+0x21/+0x08) is written, but the scanner OUTLINE only repaints when a survey
-        // recompute fires (ID_97853). The resources path fires it; a species-only completion ("fauna"/
-        // "flora") otherwise leaves creatures green-in-state but BLUE on screen until something else
-        // recomputes (e.g. a later "all"). Log-confirmed 2026-06-25: "fauna" wrote 9/9 fauna (0 miss,
-        // 0 fallback) yet a creature stayed blue until "all" ran resources -> notify. Fire it here so
-        // EVERY green path repaints immediately. Idempotent — the same call resources/finalize make.
+        // Fire the survey recompute (ID_97853) now the planet's +0x21/+0x08 state is written, so its
+        // survey %, the star map and the Survey Data slate update. Every green path fires it (the same
+        // call the resources + finalize paths make); idempotent. On-surface creature outlines refresh on
+        // reload, not here — that is the game's own per-ref state.
         Engine::NotifySurveyProgress(planetId);
         return built;
     }
