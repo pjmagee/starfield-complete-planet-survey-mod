@@ -1,366 +1,141 @@
 # Complete Planet Survey
 
+A Starfield mod that completes planet surveys from the console: one world, or the whole galaxy.
+
 **Nexus:** <https://www.nexusmods.com/starfield/mods/16493>
 
-A Starfield mod that completes a planet's survey — across every biome — the
-moment you scan any single flora or fauna. Toggleable from **Settings →
-Gameplay**. Or complete the **entire galaxy at once** — survey data, traits, and
-the persistent green flora/fauna scanner outline for every planet — with a single
-console command.
+Resources, traits, flora, and fauna get marked surveyed. The survey reads 100%, the star map updates,
+and the `<Planet> Survey Data` rewards drop into your inventory, even for worlds you have never visited.
 
-Built as an SFSE plugin (DLL) + a tiny ESM (Settings toggle) + a Papyrus glue
-script. Address Library makes the native IDs version-independent — see
-"Ghidra findings" below. The game / SFSE versions each release was built and
-tested against are recorded in [CHANGELOG.md](CHANGELOG.md).
-
----
+It is an SFSE plugin (DLL) plus a small ESM (one Settings toggle) and a Papyrus script. Native engine
+IDs are resolved through Address Library, so the mod keeps working across game patches as long as those
+IDs stay mapped. The exact game and SFSE build each release was tested against is recorded in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## What it does
 
-When you press E on any plant or creature (scanner up via F, or a single tap
-to trigger a scan):
+Four console commands, each pointed at the categories you choose. Categories are any comma-separated mix
+of `resources`, `traits`, `fauna`, `flora`, or the wildcard `all`:
 
-- Planet survey % → **100%**, the `<Planet> Survey Data` slate drops into
-  your inventory — same engine event that fires after a vanilla full survey.
-- **BIOME COMPLETE** label fires for every biome on the planet, not just
-  the one you're standing in.
-- Instant Scan per-species GMSTs are patched so natural scans also complete
-  individual species in a single press (same effect as the separate
-  [Instant Scan](https://www.nexusmods.com/starfield/mods/759) mod — built in).
-- Nearby in-world refs (flora/fauna you can see in the scanner) refresh
-  from blue "unscanned" to the scanned-colour outline.
+```
+cgf "CompletePlanetSurveyQuest.<Command>" "<categories>"
+```
 
-`cgf "CompletePlanetSurveyQuest.CompleteSurvey"` from the console does the
-same thing regardless of the toggle state.
+| Command | Completes |
+|---|---|
+| `CompletePlanet` | the world you are standing on |
+| `CompleteBarrenPlanets` | every lifeless world |
+| `CompleteLifePlanets` | every world with life |
+| `CompleteAllPlanets` | the whole galaxy, both sweeps in one command |
 
-### Complete the entire galaxy (one command)
+Each category does only its own thing. The survey data (percentage, star map, survey panel, and the
+Survey Data rewards) is written instantly and persists across saves, on any world including never-visited
+ones. The galaxy commands run from anywhere: orbit, another system, or on foot. On-surface scanned
+outlines and the in-world trait pillars refresh on the next area load.
 
-`cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"` completes **every
-planet and moon in the galaxy** in a single pass — no fast-travel, no visiting:
+There is also an optional **Settings > Gameplay > Auto-Complete Survey on Scan** toggle: with it on,
+scanning any single plant or creature completes that whole world. (The plugin also sets the hand-scanner
+to complete a species in one scan, the built-in equivalent of the Instant Scan mod.)
 
-- **Survey data** for all ~1798 bodies — attribute bits, every species/resource
-  scan flag, and the `<Planet> Survey Data` slate — written ref-free.
-- **Traits** marked on every planet.
-- **Persistent green flora/fauna** — the "scanned" scanner outline, saved per
-  species per planet. Land on any planet you completed this way — even one you
-  have never set foot on — and its plants and creatures render green, including
-  freshly-spawned instances, and across save/reload.
+Full command reference: [docs/COMPLETION-COMMANDS.md](docs/COMPLETION-COMMANDS.md). Playstyle guide and
+the Nexus page text: [docs/MOD-DESCRIPTION.md](docs/MOD-DESCRIPTION.md).
 
-The pass takes a minute or two (it spawns one invisible handle per unique species
-to drive the engine's completion, then deletes it) and may briefly stutter.
+## Requirements and install
 
----
-
-## Install
-
-1. Install [SFSE](https://www.nexusmods.com/starfield/mods/7589) and
-   [Address Library](https://www.nexusmods.com/starfield/mods/3256).
-2. Drop `CompletePlanetSurvey.zip` into Vortex / Mod Organizer 2 via
-   `Mods → Install From File`. The archive is a flat `Data/`-prefixed layout
-   (no FOMOD installer), which matches what popular Starfield SFSE mods ship
-   and avoids a known MO2 install issue.
-3. Launch via `sfse_loader.exe`.
-4. In game: `Settings → Gameplay → Complete Planet Survey → Auto-Complete
-   Survey on Scan` → **On**.
-
----
+- [SFSE](https://www.nexusmods.com/starfield/mods/106) and
+  [Address Library for SFSE Plugins](https://www.nexusmods.com/starfield/mods/3256), matching your game
+  build. SFSE is locked to one exact build, so do not update the game ahead of a matching SFSE and mod
+  build. See [CHANGELOG.md](CHANGELOG.md) for the versions each release targets.
+- Install the release zip with Vortex or Mod Organizer 2 ("Install from file"). It is a flat `Data/`
+  layout, no FOMOD. Enable `CompletePlanetSurvey.esm`, and launch through `sfse_loader.exe`.
 
 ## How it works
 
-Three layers. Each does one thing:
+Three layers, each with one job:
 
 ```text
-ESM (CompletePlanetSurvey.esm) ─── a Settings-menu toggle record only.
-                                   CK-authored GPOG + GPOF.
-                ▲
-                │ Game.GetFormFromFile(0x80C, ...) → GameplayOption.GetValue()
-                ▼
-Papyrus (CompletePlanetSurveyQuest.psc) ─── reads the toggle, orchestrates the
-                                            four survey categories, calls DLL
-                                            natives for the heavy lifting.
-                ▲
-                │ DispatchStaticCall("CompleteSurvey") from the poller.
-                ▼
-DLL (CompletePlanetSurvey.dll) ─── SFSE plugin: hooks the scan call site,
-                                   binds the Papyrus natives, enumerates
-                                   species, flips per-ref scan state, patches
-                                   the Instant Scan GMSTs, runs a per-frame
-                                   poller that gates deferred work.
+ESM (CompletePlanetSurvey.esm)        one CK-authored Settings toggle (GPOG + GPOF).
+        |   Game.GetFormFromFile -> GameplayOption.GetValue()
+Papyrus (CompletePlanetSurveyQuest)   the console commands: reads the toggle, validates and routes
+        |                             the categories, calls the DLL natives.
+DLL (CompletePlanetSurvey.dll)        the SFSE plugin: binds the Papyrus natives, writes survey state
+                                      into the game's knowledge DB, reads authored species from
+                                      Starfield.esm, and hooks the scan call site for the toggle.
 ```
 
-### The core trick: spawn-and-scan per species
+Survey state is written directly into the engine's per-body knowledge database. No spawning, no
+teleporting, no fast-travel. Species lists for never-visited worlds come from parsing Starfield.esm's
+PNDT / Per Biome Data records at startup. The on-surface scanner outlines and trait pillars are the
+game's own per-instance state, so they resolve when an area loads rather than being painted in place.
 
-DB-level marks alone don't fire **BIOME COMPLETE** — the engine's per-biome
-tracker only advances when a real `SetScanned` call fires on a ref of each
-species. To cover every biome without physically visiting them:
-
-1. Enumerate every flora + fauna species the planet tracks (engine aggregator
-   `ID_1016657`, broader than Papyrus's per-biome `GetBiomeFlora`).
-2. `PlaceAtMe` a ref of each species on the player — kept **initially disabled
-   so invisible, no visual flicker**.
-3. Call `SetScanned(true)` on each. That drives `ID_83008 → ID_52160` for
-   fauna (works cleanly) or `ID_83008 → ID_83038` for flora. The flora path
-   no-ops on `PlaceAtMe`'d refs because they lack the
-   `(ID_939118, ref_formID)` component that `ID_83038` checks for.
-4. For the flora gap, call `UpdatePlanetProgressForSpecies` — invokes
-   `ID_52157` (the per-planet progress updater) directly, bypassing
-   `ID_83038`'s component check.
-5. `Disable + Delete` the spawned refs. Scan flags persist, refs don't.
-
-### Galaxy-wide completion + persistent green
-
-`CompleteAllPlanetsSurveyData` completes every body without visiting it. Two
-problems had to be solved that the single-planet path sidesteps:
-
-**1. Enumerating a never-visited planet's species.** The runtime only
-materialises a planet's biome flora/fauna when you land. So instead of asking the
-runtime, the DLL parses `Starfield.esm` directly: each planet's `PNDT` record
-carries a *Per Biome Data* (`PPBD`) subrecord listing its authored species
-(zlib-compressed). `EsmReader` inflates and parses it once at startup — ~1097
-unique species across the galaxy — and inverts it to a species → planets map.
-
-**2. Setting the green outline for a planet you're not on.** The green "scanned"
-outline is **persistent per-(planet, species)** state in the saved knowledge DB —
-fresh instances read it when they spawn, which is why a completed planet is green
-on a later visit, even on a fresh game launch. Writing it for an arbitrary target
-planet takes **two** engine routines, each driven with the planet passed
-*explicitly* (rather than letting the engine infer "the planet you're on"):
-
-- `ID_52161` — the per-type scanned-species tree writer (the green state itself).
-- `ID_52158` — the per-species count completion.
-
-The tree write **alone** leaves the outline blue; the **pair** greens it. The
-galaxy pass spawns one invisible handle per unique species, calls both routines
-for every planet that hosts that species, then deletes the handle — only one ref
-is ever live at a time. Every direct-write shortcut that skipped the engine
-routines (raw scan byte, hand-built tree key, stamping a key captured from the
-per-instance catalog) failed; the full trail is in
-[`docs/green-outline-attempts.md`](docs/green-outline-attempts.md).
-
-### Why the dispatch is deferred
-
-The scan hook fires *inside* the engine's scan call chain (`ID_52157 →
-ID_97853`). Running `PlaceAtMe` for 20+ species from that context races
-with the live scanner UI's ref-list rendering and crashes. So the hook only
-sets a pending flag; an SFSE per-frame task (running between frames, outside
-any engine call stack) picks up the flag and dispatches the actual
-`CompleteSurvey` from a clean context.
-
-### Instant Scan GMST patch
-
-On plugin init we set `iHandScannerAnimalCountBase` and
-`iHandScannerPlantsCountBase` to `1` via `RE::GameSettingCollection`. Each
-individual scan now completes a species in one press — equivalent to the
-dedicated [Instant Scan](https://www.nexusmods.com/starfield/mods/759) mod.
-
-### The ESM
-
-Two CK-authored records, wired into the existing Gameplay settings section:
-
-| Type | EditorID              | FormID   | Purpose                                   |
-| ---- | --------------------- | -------- | ----------------------------------------- |
-| GPOG | `CPSGroup`            | `0x080B` | Section header in Settings → Gameplay     |
-| GPOF | `CPSScanAutoComplete` | `0x080C` | The actual toggle (checkbox, default off) |
-
-### The hook
-
-`REL::GetTrampoline().write_call<5>` on the `CALL` from `ID_52157`
-(planet-progress updater) to `ID_97853` (survey notify). The call site is
-found at runtime by scanning the first `0x400` bytes of `ID_52157` for an
-`E8 rel32` whose decoded target equals the address of `ID_97853`.
-
----
-
-## Ghidra findings we actually use
-
-The IDs below were Ghidra-derived on Starfield 1.16.236.0. Address Library
-decouples these IDs from runtime offsets so the mod survives game patches
-(as long as the IDs stay mapped); the game / SFSE versions each release was
-built and tested against are recorded in [CHANGELOG.md](CHANGELOG.md).
-
-### Knowledge database
-
-Survey state lives in a `BSComponentDB2` component called
-`BSGalaxy::PlayerKnowledge`, attached **per body** (not on
-`BGSPlanet::PlanetData`, which is shared immutable data). Two discriminator
-globals select the component family:
-
-- `ID_938333` (uint16, `.bss`) — per-planet-progress + trait discriminator
-- `ID_939118` (uint16, `.bss`) — per-reference scan-state discriminator.
-  Attached by biome procedural generation; **absent on `PlaceAtMe`'d refs**,
-  which is why `ID_83038` (flora writer) no-ops on them and we bypass to
-  `ID_52157` directly.
-
-The knowledge manager singleton is `ID_126578()`. From there:
-
-- `manager + 0x8B0` → DB pointer
-- `db + 0x268` → `BSTHashMap` keyed on the 64-bit composite
-  `(disc << 48) | (lower_id << 16)`
-- Lookup via `ID_126806(container, out[4], &key)`:
-  `out[3] == 0xfe0` → miss; otherwise
-  `entry = out[2] + *(uint16*)(out[2] + 0x12 + out[3] * 4)`.
-
-### Per-planet component value layout
-
-```text
-+0x00  uint64   header (slot count, etc.)
-+0x18  ptr      slot array → 0x10-byte entries
-                  +0x00  uint32  form_id
-                  +0x04  uint32  flags (bit 0 = "known")
-+0x20  ptr      subobj — used by ID_124898 to flip the scan byte at +0x21
-```
-
-The aggregator `ID_1016657` populates a caller-provided buffer (`>= 0x250`
-bytes; we allocate `0x400`) with four arrays of form IDs across all biomes:
-two uint-arrays (inline IDs, e.g. traits) and two `TESForm*[]` arrays
-(pointer indirection, form ID at `*ptr + 0x28`). Our `MarkResourcesForPlanet`
-iterates all four and calls `IncrementScanFlag`; our `EnumeratePlanetSpecies`
-filters to `FLOR` + `NPC_` types to produce the spawn-and-scan list.
-
-### Engine functions we call
-
-| ID         | Signature                                       | What it does                                                          |
-| ---------- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| `126578`   | `void*()`                                       | Knowledge-manager singleton getter                                    |
-| `126806`   | `void*(container, out[4], &key)`                | Generic `BSTHashMap` lookup                                           |
-| `52155`    | `void(planetId, BGSKeyword*, bool)`             | `SetTraitKnown` — sets bit + dispatches trait-progress event          |
-| `52157`    | `void(ref, count, byte=0xd, byte, byte)`        | Per-planet progress updater. Hook target; we also call it directly    |
-| `52158`    | `void(ctx, &db)`                                | Per-species count completion. Driven with an explicit target planet   |
-| `52161`    | `void(ctx, &db)`                                | Per-type scanned-species tree writer — the persistent green state     |
-| `102650`   | `void(ctx, planetId, full)`                     | Ref-free "scan & survey a planet" — discover, slate, recurse on moons  |
-| `83008`    | `void(ref, scanned, byte=0xd, byte=0)`          | `SetScanned` inner — dispatches to flora or actor writer              |
-| `97853`    | `void(ctx)`                                     | Survey-completion notify. Hook callee; generates Survey Data slate    |
-| `124898`   | `void(subobj*, species_id, delta, 0)`           | Per-species scan-flag increment on subobj at `value + 0x20`           |
-| `1016657`  | `void(buffer, planet_id)`                       | Per-planet survey aggregator — enumerates all tracked forms           |
-| `83007`    | `char(ref)`                                     | `IsBiomeRef` — returns 0/1/2 based on biome component presence        |
-| `65318`    | `void(buffer)`                                  | Aggregator buffer cleanup                                             |
-
-### Hook path: from E-key to our code
-
-```text
-Player presses E to scan (scanner UI up via F)
-  └─ Engine scan dispatch
-       └─ ID_83008 (SetScanned inner)
-            ├─ flora path:  ID_83038 → (component exists) → ID_52157
-            └─ fauna path:  ID_52160 → ID_52157
-                 └─ ID_52157 (planet-progress updater)
-                      └─ CALL ID_97853 (survey notify)  ◄─── HOOK HERE
-                           └─ our thunk:
-                                ├─ call original ID_97853 first
-                                └─ DispatchStaticCall("CompleteSurveyIfEnabled")
-                                     └─ Papyrus: read GPOF, gate on
-                                                 planet < 100%, queue flag
-                                                                │
-                                                                ▼
-                              (engine scan unwinds, frames advance)
-                                                                │
-                              SFSE per-frame task polls the flag,
-                              dispatches CompleteSurvey from clean context,
-                              spawns + scans + cleans up every species.
-```
-
-A single intercept point covers all scan paths because every path converges
-at `ID_52157 → ID_97853`. Deferring via the poller avoids the active-scanner
-race.
-
----
+The reverse-engineering behind this (engine offsets, Address Library IDs, Ghidra decompiles, and every
+approach that was tried) lives in [`re/`](re/). The details that matter for a given piece of code are
+documented in comments right next to it.
 
 ## Repo layout
 
 ```text
-src/Main.cpp                                      # SFSE plugin
-src/EsmReader.cpp / include/EsmReader.h           # Starfield.esm PNDT/PPBD reader (galaxy species)
-include/PCH.h                                     # precompiled header
-docs/                                             # design notes + the green-outline RE attempt log
-Data/CompletePlanetSurvey.esm                     # CK-authored Settings toggle
-Data/Scripts/Source/User/*.psc                    # Papyrus sources
-Data/Scripts/*.pex                                # Compiled scripts
-extern/CommonLibSF/                               # SFSE/CommonLibSF (GPL-3.0)
-re/                                               # Ghidra scripts + output dumps
-.clang-format / .clang-tidy                       # C++ style + lint
-.vscode/settings.json                             # compile_commands wiring
+src/Main.cpp                              SFSE plugin: natives, knowledge-DB writes, the scan hook
+src/EsmReader.cpp, include/EsmReader.h    Starfield.esm PNDT/PPBD reader (galaxy species + markers)
+Data/CompletePlanetSurvey.esm             CK-authored Settings toggle
+Data/Scripts/Source/User/*.psc            Papyrus sources (the console commands)
+Data/Scripts/*.pex                        compiled scripts
+docs/                                     usage and design notes
+re/                                       reverse-engineering trail (Ghidra output, save parsing, probes)
+extern/CommonLibSF/                       SFSE / CommonLibSF (GPL-3.0)
 build.bat / deploy.bat / import-esm.bat / package.py
 ```
 
----
+## Build and development
 
-## Build & development setup
+Building the DLL needs little. Everything else is optional.
 
-A fresh clone needs different things depending on what you're doing —
-**building the DLL needs very little; everything else is optional.**
-
-### 1. Build the DLL (the only hard requirement)
+Build the DLL:
 
 ```bat
-git submodule update --init --recursive   :: fetch CommonLibSF (clones empty otherwise)
-build.bat                                  :: compile the DLL via xmake
+git submodule update --init --recursive   :: fetch CommonLibSF
+build.bat                                  :: compile via xmake (releasedbg)
 ```
 
-Needs **xmake**, **MSVC** (VS Build Tools), and **Python 3** (for packaging).
-xmake fetches the rest (spdlog) on first build — this is exactly what CI does.
+Needs xmake, MSVC (VS Build Tools), and Python 3. xmake fetches the rest (spdlog) on first build, the
+same as CI.
 
-### 2. Recompile Papyrus / deploy locally
+Recompile Papyrus and deploy locally:
 
 ```bat
-deploy.bat       :: compile Papyrus, copy DLL+ESM+PEX to the game, manage plugins.txt
-import-esm.bat   :: copy the game ESM back into the repo (after editing in CK)
+deploy.bat       :: compile Papyrus, copy DLL+ESM+PEX into the game, manage plugins.txt
+import-esm.bat   :: copy the game ESM back into the repo (after editing in the Creation Kit)
 ```
 
-`deploy.bat` compiles against the **game's own base scripts** — it points the
-compiler's import path at `<Starfield>\Data\Scripts\Source` (1500+ base `.psc` +
-`Starfield_Papyrus_Flags.flg`) and uses the Creation Kit Papyrus Compiler at
-`<Starfield>\Tools\Papyrus Compiler\PapyrusCompiler.exe`. No separate
-`temp_scripts/` copy is needed. (CI never runs this — it packages the committed
-`.pex`.) Both paths are derived from `GAME_DIR` at the top of `deploy.bat`; adjust
-that one line if your Starfield install is elsewhere.
+`deploy.bat` compiles against the game's own base scripts and refuses to run while Starfield is open (a
+locked partial copy would otherwise leave a stale DLL). Paths derive from `GAME_DIR` at the top of the
+file; adjust that one line if your install is elsewhere.
 
-### 3. Package the distributable
+Package the distributable:
 
 ```bat
-python package.py --version 1.1.0    :: -> Complete-Planet-Survey-1.1.0.zip in CWD
+python package.py --version X.Y.Z   :: -> Complete-Planet-Survey-X.Y.Z.zip
 ```
 
-Packages the current build, so run `build.bat` first. CI runs the same command
-(`python package.py --version $version`) on `v*` tags.
+Run `build.bat` first. CI runs the same command on `v*` tags, which also cut the GitHub release and
+upload to Nexus.
 
-### 4. Reverse engineering (optional)
-
-- **Ghidra** (headless or GUI) plus a copy of `Starfield.exe` to analyse.
-- `offsets-1-16-236-0.txt` — **not** checked in (~19 MB); download from
-  [Address Library on Nexus](https://www.nexusmods.com/starfield/mods/3256) and
-  place at the repo root. Used only to label IDs in Ghidra — **not** to build.
-- `ghidra-project/` (gitignored) — regenerate by importing + analysing the exe.
-- `tools/champollion/` (gitignored) —
-  [Champollion](https://github.com/Orvid/Champollion) for decompiling `.pex`.
-
-### 5. Run / test in-game
-
-The game, a matching **SFSE** build, and the **Address Library** versionlib for
-your game version (both from Nexus).
-[CrashLoggerSF](https://www.nexusmods.com/starfield/mods/3273) is strongly
-recommended for any hooking/RE work.
-
-For VSCode IntelliSense, regenerate `compile_commands.json` after cloning
-(machine-specific, gitignored):
-
-```bat
-xmake project -k compile_commands .
-```
-
----
+For reverse engineering you need Ghidra and a copy of `Starfield.exe`; the Address Library offsets file
+(downloaded from Nexus, not checked in) only labels IDs in Ghidra and is not needed to build.
+[CrashLoggerSF](https://www.nexusmods.com/starfield/mods/3273) is recommended for any hooking work. The
+workflow notes are in the [starfield-modding skill](.claude/skills/starfield-modding/).
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
-
-This mod links against [CommonLibSF](https://github.com/Starfield-Reverse-Engineering/CommonLibSF)
-which is GPL-3.0 licensed; derived works (this mod) inherit GPL-3.0.
+GPL-3.0, see [LICENSE](LICENSE). This mod links against
+[CommonLibSF](https://github.com/Starfield-Reverse-Engineering/CommonLibSF), which is GPL-3.0, so derived
+works inherit GPL-3.0.
 
 ## Credits
 
-- **SFSE** — script extender, author: ianpatt
-- **CommonLibSF** — Bethesda RE library (GPL-3.0)
-- **Address Library for Starfield** — author: meh321 (Nexus mod 3256)
-- **Instant Scan** (Nexus mod 759) — reference for the GMST patch approach
-- **Champollion** — Papyrus decompiler, used for stub generation
-- **Ghidra** — National Security Agency, used for static analysis
+- **SFSE** by ianpatt: the script extender
+- **CommonLibSF**: Bethesda RE library (GPL-3.0)
+- **Address Library for Starfield** by meh321 ([Nexus 3256](https://www.nexusmods.com/starfield/mods/3256))
+- **Instant Scan** ([Nexus 759](https://www.nexusmods.com/starfield/mods/759)): reference for the hand-scanner setting
+- **Ghidra** by the NSA: static analysis
+- **Champollion**: Papyrus decompiler, used for stub generation
