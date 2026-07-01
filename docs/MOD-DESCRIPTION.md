@@ -111,6 +111,37 @@ If you'd rather skip the levels:
   example `player.setlevel 5`). Heads up: any console command turns achievements off for that save unless
   you're running an Achievement Enabler mod.
 
+## Adjusting the exploration stats yourself
+
+As it completes worlds, the mod also updates the exploration counters on your character sheet
+(Data > Statistics): **Planets Scanned**, **Planets Fully Surveyed**, **Flora Fully Scanned**,
+**Fauna Fully Scanned** and **Unique Creatures Scanned**.
+
+Those are ordinary Starfield "misc stats", so you can view or adjust any of them yourself straight
+from the console — no extra mod needed:
+
+```
+GetPCMiscStat  "Flora Fully Scanned"        ; read a stat   (short form: GetPCMS)
+ModPCMiscStat  "Flora Fully Scanned" 10     ; add 10        (short form: ModPCMS)
+ModPCMiscStat  "Flora Fully Scanned" -10    ; subtract 10
+```
+
+The names are in quotes and case-sensitive. The ones this mod touches:
+
+- `"Planets Scanned"`
+- `"Planets Fully Surveyed"`
+- `"Flora Fully Scanned"`
+- `"Fauna Fully Scanned"`
+- `"Unique Creatures Scanned"`
+
+**Why you might.** These counters are cumulative and additive. If you run a completion command
+several times on the same save, some can climb past the real galaxy total (each run counts again).
+To pull one back to the true number, subtract the excess — e.g. `ModPCMS "Planets Fully Surveyed" -2000`
+— then re-check with `GetPCMS`. Same tool if you'd rather zero a counter out and start clean.
+
+These changes are additive and permanent in the save, and (like any console command) they switch
+achievements off for that save unless you run an Achievement Enabler mod.
+
 ## Optional setting
 
 There's an "auto-complete on scan" toggle under Settings > Gameplay. Turn it on and scanning any single
