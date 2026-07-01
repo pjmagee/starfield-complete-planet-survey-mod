@@ -91,6 +91,7 @@ Function CompletePlanet(string asCategories) global
     EndIf
     float surveyAfter = currentPlanet.GetSurveyPercent()
     CompletePlanetSurveyNative.DebugLog("CompletePlanet[" + asCategories + "]: traits=" + traitCount + " resources=" + resourceCount + " species=" + speciesCount + " survey=" + (surveyAfter * 100) as int + "%")
+    _ReconcilePlanetsScanned()   ; surveying this world implies it was scanned -> keep Planets Scanned >= Fully Surveyed
     Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "% (" + asCategories + ")")
 EndFunction
 
@@ -184,6 +185,7 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     ; Survey Data slate cascade and surface buried, minutes later). Honest wording: barren worlds are
     ; fully done; living worlds need their flora/fauna catalogued. Suppressed when CompleteAllPlanets
     ; runs us (it shows ONE combined result for the whole galaxy).
+    _ReconcilePlanetsScanned()   ; keep Planets Scanned >= Planets Fully Surveyed after the barren sweep
     If abShowResult
         Debug.MessageBox("Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s.")
     EndIf
@@ -226,6 +228,7 @@ int Function CompleteLifePlanets(string asCategories, bool abShowResult = true) 
         int pid = CompletePlanetSurveyNative.GetLifePlanetFormIdAt(i)
         Planet p = Game.GetForm(pid) as Planet
         If p != None
+            Bool wasComplete = p.GetSurveyPercent() >= 1.0   ; already fully surveyed BEFORE this run?
             Form pf = p as Form
             ; Resources + species need the knowledge entry to exist (ResolvePlanetSubobj is a pure
             ; lookup) — discover it ref-free first so those writes land on never-visited worlds.
@@ -246,19 +249,61 @@ int Function CompleteLifePlanets(string asCategories, bool abShowResult = true) 
                 MarkTraits(p, p.GetKeywordTypeList(44))
             EndIf
             If doSpecies
-                If _GreenPlanet(pf, _SpeciesKind(asCategories)) > 0
+                ; Always (re)green — idempotent, keeps the outline green — but only COUNT worlds this run
+                ; newly greened, so the result popup's "N greened" is honest on re-runs (matches worlds).
+                Int gr = _GreenPlanet(pf, _SpeciesKind(asCategories))
+                If gr > 0 && !wasComplete
                     greened += 1
                 EndIf
             EndIf
-            worlds += 1
+            ; Count only worlds this run NEWLY brought forward (were < 100% before), so the result popup
+            ; reflects actual work — re-running an already-complete galaxy reports 0, matching the barren
+            ; sweep. (The writes above are idempotent no-ops on an already-surveyed world; only the count
+            ; changes.) A category that can't reach 100% on its own (e.g. "fauna,flora", no resources) stays
+            ; < 100%, so those worlds keep counting each run — expected, they never fully "complete".
+            If !wasComplete
+                worlds += 1
+            EndIf
         EndIf
         i += 1
     EndWhile
+
+    ; FINALIZE PASS. DiscoverPlanetEntry -> ID_102650 creates a never-visited world's knowledge entry
+    ; ASYNCHRONOUSLY, so a handful of worlds' entries aren't ready when the same-pass resource/species
+    ; writes ran above -> those worlds sit just under 100% after one loop. Utility.Wait yields frames so
+    ; the deferred creates flush, then we re-run resources/traits/species for any world STILL < 100%.
+    ; We deliberately do NOT re-run DiscoverPlanetEntry here: the entry now exists, and re-discovering
+    ; would re-count Planets Scanned (each world is discovered/counted exactly once, in the loop above).
+    ; This makes ONE command complete the whole set — the same reason the barren command has a finalize
+    ; pass. Only needed when we created entries (doResources/doSpecies); a traits-only run is self-
+    ; sufficient (MarkTraits needs no entry) and completes in the first loop.
+    If doResources || doSpecies
+        Utility.Wait(1.0)
+        i = 0
+        While i < n
+            int fpid = CompletePlanetSurveyNative.GetLifePlanetFormIdAt(i)
+            Planet fp = Game.GetForm(fpid) as Planet
+            If fp != None && fp.GetSurveyPercent() < 1.0
+                Form fpf = fp as Form
+                If doResources
+                    CompletePlanetSurveyNative.MarkResourcesForPlanet(fpf, 100)
+                EndIf
+                If doTraits
+                    MarkTraits(fp, fp.GetKeywordTypeList(44))
+                EndIf
+                If doSpecies
+                    _GreenPlanet(fpf, _SpeciesKind(asCategories))
+                EndIf
+            EndIf
+            i += 1
+        EndWhile
+    EndIf
 
     ; Every life world's traits are marked KNOWN (data) in the loop above; the in-world "0/N SCANNED"
     ; pillars resolve on arrival/re-entry via the game's own CheckForScanTargetUpdate (the trait is known).
     float secs = Utility.GetCurrentRealTime() - t0
     CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets[" + asCategories + "]: " + worlds + " life worlds, " + greened + " greened in " + secs + "s")
+    _ReconcilePlanetsScanned()   ; keep Planets Scanned >= Planets Fully Surveyed after the life sweep + finalize
     If abShowResult
         Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + ").  " + greened + " greened.  Done in " + (secs as int) + "s.")
     EndIf
@@ -283,7 +328,13 @@ Function CompleteAllPlanets(string asCategories) global
     ; so neither pops its own box — we present ONE cohesive combined result for the whole galaxy.
     int barren = CompleteBarrenPlanets(asCategories, false)
     int life   = CompleteLifePlanets(asCategories, false)
-    Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
+    ; barren/life are NEWLY-completed counts (0 when everything was already done), so a re-run reads
+    ; honestly as "already surveyed" instead of always re-claiming the whole galaxy.
+    If barren + life == 0
+        Debug.MessageBox("Galaxy already fully surveyed — nothing new to catalogue (" + asCategories + ").")
+    Else
+        Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
+    EndIf
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
@@ -334,6 +385,20 @@ EndFunction
 ; True if the category list asks for creatures (any of fauna/flora/species/creatures, or "all").
 bool Function _WantsSpecies(string asCategories) global
     Return CompletePlanetSurveyNative.CategoryEnabled(asCategories, "fauna") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "flora") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "species") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "creatures")
+EndFunction
+
+; Ensure Planets Scanned >= Planets Fully Surveyed. Surveying a world implies scanning it first, and
+; once a world is surveyed you can no longer scan it — so a completion that drives Fully Surveyed up
+; must top Planets Scanned up too, or the character sheet shows the impossible "surveyed > scanned"
+; (e.g. CompletePlanet on New Atlantis: Fully Surveyed 1, Planets Scanned stuck at 0 forever). Uses the
+; game's OWN misc-stat natives (the same system the ModPCMS console command edits). Only bumps UP — it
+; never reduces a player's real orbital-scan tally — and is idempotent (a no-op once scanned >= surveyed).
+Function _ReconcilePlanetsScanned() global
+    int scanned  = Game.QueryStat("Planets Scanned")
+    int surveyed = Game.QueryStat("Planets Fully Surveyed")
+    If scanned < surveyed
+        Game.IncrementStat("Planets Scanned", surveyed - scanned)
+    EndIf
 EndFunction
 
 ; INTERNAL — the on-scan auto-complete dispatch target. The C++ poller calls this by name (no args)
