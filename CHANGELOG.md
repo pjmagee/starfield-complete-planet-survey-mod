@@ -41,6 +41,52 @@ verified.
 
 *No unreleased changes.*
 
+## [1.3.0] — 2026-07-01
+
+Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.2.0 — a drop-in
+upgrade; no game or SFSE change required).
+
+Completion now reflects itself on your **character's exploration Statistics**, and several
+completion-flow bugs are fixed: console commands surviving a Main-Menu reload, life worlds finishing
+in a single command, and re-runs being true no-ops instead of inflating counters.
+
+### Added
+
+- **Character exploration Statistics.** Completing worlds now writes the counters on the character
+  sheet (Data > Statistics): **Flora Fully Scanned**, **Fauna Fully Scanned**, **Unique Creatures
+  Scanned**, and **Planets Scanned**. Flora/fauna are counted once per species that newly reaches a
+  full scan (idempotent — re-running a completion does not double-count). **Planets Scanned** is kept
+  at or above **Planets Fully Surveyed** (surveying a world implies scanning it, and a surveyed world
+  can no longer be scanned), reconciled through the game's own stat API. A new
+  [`docs/MOD-DESCRIPTION.md`](docs/MOD-DESCRIPTION.md) section shows how to view or adjust these
+  counters yourself with the vanilla `GetPCMiscStat` / `ModPCMiscStat` console commands.
+
+### Fixed
+
+- **Console commands stopped working after quitting to the Main Menu and loading a save.** The mod's
+  formless scripts had their VM script types dropped on session teardown, which unbound the native
+  functions; the plugin now re-binds them once gameplay resumes, so the `cgf` commands keep working
+  across reloads.
+- **`CompleteLifePlanets` / `CompleteAllPlanets` now finish in a single command.** The engine creates
+  a never-visited world's knowledge entry asynchronously, so a handful of worlds were left just under
+  100% on the first pass (you had to run the command twice). A finalize pass now waits for those
+  deferred creates and completes the stragglers in the same run.
+- **Re-running a completion no longer inflates *Planets Fully Surveyed*.** The game's survey-complete
+  event is fired only when a world *newly* reaches 100%, so repeat runs are genuine no-ops instead of
+  re-counting worlds that were already done.
+- **Honest completion results.** `CompleteLifePlanets` / `CompleteAllPlanets` now report the worlds
+  *newly* completed (0 on a re-run, matching the barren sweep), and `CompleteAllPlanets` says the
+  galaxy is *already fully surveyed* when nothing was new — instead of always re-claiming all worlds.
+
+### Internal (no player-facing change)
+
+- Removed ~490 lines of unreachable dead code (orphaned probe / reveal / render chains), the
+  `kBiomeScanCategory` constant, and the now-unused `EsmReader` multi-biome-count machinery
+  (`SpeciesBiomeCount` / `GetSpeciesBiomeCount`); trimmed stale diary comments in `TestBuildArray`.
+- Repo tooling/docs only: `README.md` rewritten as an evergreen project README;
+  `docs/COMPLETION-COMMANDS.md` updated to shipped v1.2.0 behaviour; `docs/MISC-STATS.md` and the
+  misc-stat reverse-engineering notes added; multi-agent grok review reports + dead-code audit added.
+
 ## [1.2.0] — 2026-06-25
 
 Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.1.0 — a drop-in
@@ -299,7 +345,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.8...v1.1.0
 [1.0.8]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.7...v1.0.8
