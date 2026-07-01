@@ -43,6 +43,21 @@ namespace Engine
     inline REL::Relocation<fn_set_percent_t>     SetPercentByte {REL::ID(124899)};
     inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
 
+    // === Character "Statistics" (Data menu) counters ===
+    // The game keeps Flora/Fauna Fully Scanned + Unique Creatures Scanned in a global
+    // "misc stats" table. A natural scan bumps them via the ID_100393 scan-event handler;
+    // our ref-free green bypasses that event, so we replicate the increment ourselves.
+    // Table layout (RE: re/ghidra/output/misc-stats-increment-2026-07-01.md): base =
+    // *StatTableBase, count = *StatEntryCount, stride 0x20, entry+0x00 = interned stat-name
+    // ptr, entry+0x10 = int32 value (exactly what the Stats menu ID_88202 displays and the
+    // save stores). The Stat*Name globals each hold the interned pointer used as the key.
+    inline REL::Relocation<std::uint32_t*>  StatEntryCount            {REL::ID(889375)};  // *ptr = table entry count
+    inline REL::Relocation<std::uintptr_t*> StatTableBase             {REL::ID(889377)};  // *ptr = table base pointer
+    inline REL::Relocation<std::uint8_t*>   StatTrackingEnabled       {REL::ID(894532)};  // *ptr = stats-enabled gate
+    inline REL::Relocation<std::uintptr_t*> StatNameFloraFullyScanned {REL::ID(923219)};  // *ptr = "Flora Fully Scanned"
+    inline REL::Relocation<std::uintptr_t*> StatNameFaunaFullyScanned {REL::ID(923220)};  // *ptr = "Fauna Fully Scanned"
+    inline REL::Relocation<std::uintptr_t*> StatNameUniqueCreatures   {REL::ID(923223)};  // *ptr = "Unique Creatures Scanned"
+
     // ID_1016657: per-planet survey aggregator constructor.
     //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
     //   across four arrays (two uint-arrays for flora/trait ids, two ptr-arrays for resource/other).
@@ -456,13 +471,107 @@ namespace Engine
         return true;
     }
 
+    // Increment a "Miscellaneous Statistics" counter (the Data-menu Statistics list) by
+    // delta, exactly as the scan-event handler (ID_100393) does: find the table entry whose
+    // name matches `internedName`, then entry+0x10 += delta. `internedName` is the value of
+    // one of the Stat*Name globals. Bounded scan + in-place int add on an already-allocated
+    // entry — NOT a BSTArray grow/allocator poke, so the heap-corruption rule doesn't apply.
+    // Fully guarded: a null/absurd table just no-ops (never faults the player's game).
+    void IncrementMiscStat(std::uintptr_t internedName, int delta)
+    {
+        if (delta == 0 || internedName == 0)
+            return;
+        const auto* enabled = StatTrackingEnabled.get();
+        if (!enabled || *enabled == 0)  // respect the engine's own "stats enabled" gate
+            return;
+        const auto* countPtr = StatEntryCount.get();
+        const auto* basePtr  = StatTableBase.get();
+        if (!countPtr || !basePtr)
+            return;
+        const std::uint32_t  count = *countPtr;
+        const std::uintptr_t base  = *basePtr;
+        if (base == 0 || count == 0 || count > 0x10000)  // sane upper bound on the table
+            return;
+        for (std::uint32_t i = 0; i < count; ++i)
+        {
+            const auto entry = base + static_cast<std::uintptr_t>(i) * 0x20;
+            if (*reinterpret_cast<std::uintptr_t*>(entry) == internedName)
+            {
+                *reinterpret_cast<std::int32_t*>(entry + 0x10) += delta;  // the displayed/saved value
+                return;  // stat names are unique in the table
+            }
+        }
+    }
+
+    // True if `key`'s species slot on this planet's knowledge subobj is ALREADY flagged
+    // scanned (slot+0x21 != 0) — i.e. it was fully scanned before we touch it. Lets the
+    // caller count ONLY newly-scanned species toward the Statistics counters (a natural
+    // scan increments once, on the 0->100% transition). Pure read; guards a missing slot.
+    bool IsSpeciesScanned(void* subobj, std::uint32_t key)
+    {
+        if (!subobj)
+            return false;
+        const auto base    = reinterpret_cast<std::uintptr_t>(subobj);
+        const auto hashmap = base + 0x18;
+        const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
+        const auto slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+        if (!slots)
+            return false;
+        const auto idx = SpeciesSlotHash(hashmap, &key);
+        if (idx == hashEnd)
+            return false;  // no slot yet -> not previously scanned
+        const auto slotAddr = slots + idx * 0x30;
+        return *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21) != 0;
+    }
+
+    // True if this planet is ALREADY fully marked complete BY US: its attribute "known" bits are all
+    // set AND every authored species is scan-flagged. This mirrors the exact state our completion
+    // writes, so it's the idempotency signal for the survey-COMPLETE event. We must NOT re-fire that
+    // event for a planet we already completed: the engine's "Planets Fully Surveyed" statistic is NOT
+    // deduped — every complete-event fire increments it — so re-running a completion would inflate it
+    // without bound (observed 1780 -> 3746). A barren body has no species, so this reduces to the
+    // attribute-bit check. Pure reads, all guarded (bounded by the planet's authored species list).
+    bool IsPlanetFullyMarked(std::uint32_t planetId)
+    {
+        const auto db     = GetKnowledgeDB();
+        const auto subobj = db ? ResolvePlanetSubobj(db, planetId) : nullptr;
+        if (!subobj)
+            return false;  // no entry -> never completed
+        if ((*reinterpret_cast<std::uint32_t*>(subobj) & 0x7u) != 0x7u)
+            return false;  // attribute "known" bits not fully set -> not complete
+        const auto& m  = Esm::GetPlanetSpecies();
+        const auto  it = m.find(planetId);
+        if (it != m.end())
+        {
+            for (const auto sf : it->second)
+            {
+                std::uint32_t key = CanonicalFormId(RE::TESForm::LookupByID(sf));
+                if (key == 0)
+                    key = sf;
+                if (!IsSpeciesScanned(subobj, key))
+                    return false;  // a species still unscanned -> not complete
+            }
+        }
+        return true;
+    }
+
     int MarkEsmSpeciesForPlanet(std::uint32_t planetId, int kind = 0)
     {
         const auto& m  = Esm::GetPlanetSpecies();
         const auto  it = m.find(planetId);
         if (it == m.end())
             return 0;  // barren / resource-only body — no authored flora/fauna
-        int marked = 0;
+
+        // Prior scan-state source for the character Statistics: count ONLY species that
+        // transition to fully-scanned now (like a natural scan), so repeated completions
+        // don't double-count. Resolve the knowledge subobj once and read each slot's +0x21
+        // BEFORE we write it below.
+        void* const subobj = [&]() -> void* {
+            const auto db = GetKnowledgeDB();
+            return db ? ResolvePlanetSubobj(db, planetId) : nullptr;
+        }();
+
+        int marked = 0, floraNew = 0, faunaNew = 0;
         for (const auto speciesFormId : it->second)
         {
             if (!SpeciesMatchesKind(speciesFormId, kind))
@@ -474,9 +583,39 @@ namespace Engine
             std::uint32_t key = CanonicalFormId(RE::TESForm::LookupByID(speciesFormId));
             if (key == 0)
                 key = speciesFormId;
+            const bool wasScanned = IsSpeciesScanned(subobj, key);  // capture BEFORE the write
             if (MarkSpeciesScannedForPlanet(planetId, key, kDefaultScanDelta) == 1)
+            {
                 ++marked;
+                // Newly fully-scanned -> tally by kind for the Statistics counters, matching a
+                // natural scan (the ID_100393 handler classifies flora vs fauna by form type).
+                if (!wasScanned)
+                {
+                    if (auto* f = RE::TESForm::LookupByID(speciesFormId))
+                    {
+                        const auto ft = f->GetFormType();
+                        if (ft == RE::FormType::kFLOR)
+                            ++floraNew;
+                        else if (ft == RE::FormType::kNPC_)
+                            ++faunaNew;
+                    }
+                }
+            }
         }
+
+        // Replicate the per-species Data-menu Statistics increments a natural scan makes.
+        // Flora/Fauna Fully Scanned by newly-completed species of each kind; Unique Creatures
+        // Scanned tracks distinct fauna species (one unique creature per species), so += faunaNew.
+        if (floraNew)
+            IncrementMiscStat(*StatNameFloraFullyScanned.get(), floraNew);
+        if (faunaNew)
+        {
+            IncrementMiscStat(*StatNameFaunaFullyScanned.get(), faunaNew);
+            IncrementMiscStat(*StatNameUniqueCreatures.get(), faunaNew);
+        }
+        if (floraNew || faunaNew)
+            spdlog::debug("MarkEsmSpeciesForPlanet: planet 0x{:08X} stats += flora {}, fauna {} (unique {})",
+                          planetId, floraNew, faunaNew, faunaNew);
         return marked;
     }
 
@@ -594,6 +733,8 @@ namespace Engine
                 // it discovered (async create; the Papyrus finalize pass mops up stragglers + fires the
                 // slate). Then write the ref-free survey state (attribute bits + resources). With no
                 // flora/fauna on these bodies, this reaches a genuine 100%.
+                if (IsPlanetFullyMarked(planetId))  // already completed on a prior run -> skip entirely
+                    return;                          // (no re-fire of the complete event -> no stat inflation)
                 ScanCompletePlanet(0, planetId, 1);
                 markedTotal += WritePlanetSurveyState(planetId, kDefaultScanDelta);
             }
@@ -868,10 +1009,11 @@ namespace Papyrus
         spdlog::info("TestBuildArray: planet 0x{:08X} kind={} -> {} (re)built, {} already-complete (skipped), {} slot-miss, {} marker-fallback",
                      planetId, kind, built, alreadyComplete, slotMiss, fallbackUsed);
         // Fire the survey recompute (ID_97853) now the planet's +0x21/+0x08 state is written, so its
-        // survey %, the star map and the Survey Data slate update. Every green path fires it (the same
-        // call the resources + finalize paths make); idempotent. On-surface creature outlines refresh on
-        // reload, not here — that is the game's own per-ref state.
-        Engine::NotifySurveyProgress(planetId);
+        // survey %, the star map and the Survey Data slate update — but ONLY if we actually (re)built a
+        // slot this call. When nothing changed (all species already green, built == 0), re-firing the
+        // complete event would inflate the game's Planets Fully Surveyed stat (it is not deduped).
+        if (built > 0)
+            Engine::NotifySurveyProgress(planetId);
         return built;
     }
 
@@ -910,8 +1052,18 @@ namespace Papyrus
         const auto planetId = Engine::ReadPlanetId(planetForm);
         if (!planetId)
             return 0;
-        Engine::ScanCompletePlanet(0, planetId, 1);
-        spdlog::debug("DiscoverPlanetEntry: planet=0x{:08X} planetId=0x{:08X} -> ID_102650 discover",
+        // A planet with no prior knowledge entry is one we're scanning for the first time — bump the
+        // "Planets Scanned" Statistic once (completing anything on a planet implies it was scanned).
+        // Probe BEFORE the discover creates the entry; idempotent (the entry persists on re-run).
+        // Skip the engine discover (which fires the survey-complete event) if we've already fully
+        // completed this planet — re-firing would inflate the game's Planets Fully Surveyed stat.
+        // Planets Scanned is NOT counted here: it's reconciled to >= Planets Fully Surveyed at command
+        // end in Papyrus (Game.IncrementStat, see _ReconcilePlanetsScanned). Per-planet counting here
+        // mis-counted moons (ScanCompletePlanet pre-creates their entries) and never covered the current
+        // world, which CompletePlanet surveys without ever discovering.
+        if (!Engine::IsPlanetFullyMarked(planetId))
+            Engine::ScanCompletePlanet(0, planetId, 1);
+        spdlog::debug("DiscoverPlanetEntry: planet=0x{:08X} planetId=0x{:08X}",
                      planetForm->GetFormID(), planetId);
         return 1;
     }
@@ -929,10 +1081,15 @@ namespace Papyrus
         const auto d        = static_cast<std::uint8_t>(delta <= 0 ? Engine::kDefaultScanDelta : (delta > Engine::kMaxScanDelta ? Engine::kMaxScanDelta : delta));
         // Resources-only: attribute bits + resource scan flags + the survey-complete slate.
         // includeSpecies=false keeps flora/fauna out of the resources category (QA: "resources
-        // touched species when it should not").
-        const auto n = Engine::CompletePlanetSurveyState(planetId, d, /*includeSpecies=*/false);
-        spdlog::debug("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}",
-                     planetForm->GetFormID(), planetId, d, n);
+        // touched species when it should not"). Write is idempotent; the survey-complete event fires
+        // ONLY on first completion — re-firing on an already-complete planet inflates the game's
+        // Planets Fully Surveyed stat (it is not deduped).
+        const bool wasComplete = Engine::IsPlanetFullyMarked(planetId);
+        const auto n           = Engine::WritePlanetSurveyState(planetId, d, /*includeSpecies=*/false);
+        if (!wasComplete)
+            Engine::NotifySurveyProgress(planetId);
+        spdlog::debug("MarkResourcesForPlanet: planet=0x{:08X} planetId=0x{:08X} delta={} -> marked={}{}",
+                     planetForm->GetFormID(), planetId, d, n, wasComplete ? " (already complete, no re-fire)" : "");
         return n;
     }
 
@@ -1336,6 +1493,81 @@ namespace Hook
         });
         spdlog::info("InstallScanSweepPoller: per-frame poller registered");
     }
+
+    // Re-bind the Papyrus natives whenever a new game SESSION becomes active.
+    //
+    // Why this is needed: our scripts (CompletePlanetSurveyQuest /
+    // CompletePlanetSurveyNative) are FORMLESS — nothing in the ESM attaches them
+    // to a quest, so the VM never PINS their script types. When the player quits to
+    // the Main Menu the VM tears the session down and unloads any unpinned script
+    // type (VirtualMachine::typesToUnload / DropAllRunningData). Our C++ native
+    // bindings live inside the dropped CompletePlanetSurveyNative ObjectTypeInfo, so
+    // they die with it. We register in kPostDataLoad, which fires ONLY ONCE per
+    // process and never again, and this SFSE build exposes no PapyrusInterface for
+    // per-VM re-registration. Result: after a main-menu -> load cycle the console
+    // commands call into unbound natives and the "script is no longer recognised".
+    //
+    // Fix: watch the session boundary (Main Menu opening = a session ended) and
+    // re-run Papyrus::Register() once the player is back in gameplay. BindNativeMethod
+    // is idempotent — it overwrites the type's function-table entry — so a redundant
+    // re-bind (e.g. the first load after boot) is harmless. We do NOT re-run
+    // Hook::Install here: that is a code-memory trampoline patch that persists for the
+    // whole process; re-applying it would double-patch the call site.
+    //
+    // We POLL from a permanent task rather than sink MenuOpenCloseEvent because the
+    // event-sink path crashes DLL init on 1.16.236–244 here (see InstallScanSweepPoller).
+    // If the menu-name strings ever drift, IsMenuOpen simply returns false and this
+    // no-ops (no crash) — the mod degrades to the old once-only behaviour.
+    void InstallSessionReRegisterPoller()
+    {
+        auto* task = SFSE::GetTaskInterface();
+        if (!task) {
+            spdlog::error("InstallSessionReRegisterPoller: no task interface");
+            return;
+        }
+        constexpr int kSessionSettleFrames = 60;  // ~1s after the loading screen closes
+
+        task->AddPermanentTask([]() {
+            auto* ui = RE::UI::GetSingleton();
+            if (!ui)
+                return;
+
+            static const RE::BSFixedString kMainMenu {"MainMenu"};
+            static const RE::BSFixedString kLoadingMenu {"LoadingMenu"};
+
+            // Main-thread task, so plain statics are fine (no cross-thread access).
+            static bool s_prevMainMenuOpen = false;
+            static bool s_armed            = true;  // arm on first boot too (one redundant, harmless re-bind)
+            static int  s_settle           = 0;
+
+            const bool mainMenuOpen = ui->IsMenuOpen(kMainMenu);
+
+            // Rising edge: the Main Menu just opened => the previous game session
+            // ended (its formless script types, and our natives, were unloaded).
+            // Arm a re-bind for the next time we reach gameplay.
+            if (mainMenuOpen && !s_prevMainMenuOpen)
+                s_armed = true;
+            s_prevMainMenuOpen = mainMenuOpen;
+
+            if (!s_armed)
+                return;
+
+            // Only re-bind once we're truly back in gameplay: Main Menu closed AND
+            // the loading screen gone, then settle a beat so VM re-init has finished.
+            if (mainMenuOpen || ui->IsMenuOpen(kLoadingMenu)) {
+                s_settle = 0;
+                return;
+            }
+            if (++s_settle < kSessionSettleFrames)
+                return;
+
+            Papyrus::Register();  // re-attach the 16 natives onto the fresh session's VM
+            s_armed  = false;
+            s_settle = 0;
+            spdlog::info("Re-bound Papyrus natives for new game session (formless-script relink)");
+        });
+        spdlog::info("InstallSessionReRegisterPoller: per-frame session-relink poller registered");
+    }
 }  // namespace Hook
 
 namespace
@@ -1347,6 +1579,7 @@ namespace
             Papyrus::Register();
             Hook::Install();
             Hook::InstallScanSweepPoller();
+            Hook::InstallSessionReRegisterPoller();  // re-bind natives after main-menu -> load (formless scripts)
             Engine::ApplyInstantScanGameSettings();
             spdlog::info("CompletePlanetSurvey initialized");
         }
