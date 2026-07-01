@@ -1,3 +1,15 @@
+[b]Version 1.3.0[/b]
+
+[list]
+[*][b]Your character stats now keep up.[/b] Completing worlds updates the counters on your character sheet (Data, Statistics): Flora Fully Scanned, Fauna Fully Scanned, Unique Creatures Scanned, and Planets Scanned.
+[*][b]Commands survive a trip to the Main Menu.[/b] Quit to the title screen, load a save, and the console commands still work. Before, they stopped being recognised until you restarted the game.
+[*][b]One command finishes every living world.[/b] The living-world and whole-galaxy commands now complete everything in a single run, instead of leaving a few worlds just short of 100% until you ran it again.
+[*][b]Running a command again does nothing extra.[/b] Repeat runs no longer re-count worlds that were already done, and the popup tells you when the galaxy is already fully surveyed.
+[*][b]Adjust the counters yourself if you want.[/b] These are ordinary misc stats, so you can read or change any of them from the console with GetPCMiscStat and ModPCMiscStat.
+[/list]
+
+Built and tested on Starfield 1.16.244 / SFSE 0.2.21.
+
 [b]Version 1.2.0[/b]
 
 [list]
