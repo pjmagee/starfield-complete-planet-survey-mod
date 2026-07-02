@@ -1,12 +1,17 @@
-// Complete Planet Survey — Architecture Model
+// Complete Planet Survey — Architecture Model (shipped v1.3.0)
 //
-// Two completion paths:
-//   1. Single planet — a scan (or the CompleteSurvey console command) completes the
-//      planet you are on: survey data + traits + spawn-and-scan green for its biomes.
-//   2. Whole galaxy — CompleteAllPlanetsSurveyData sweeps every PNDT body ref-free
-//      (data + traits) then GreenAllPlanets writes the persistent green for all planets,
-//      reading each planet's species from Starfield.esm (the runtime only materialises
-//      biome species on landing).
+// Four console commands, each taking a category string (resources,traits,fauna,flora | all):
+//   CompletePlanet         — the world you are standing on
+//   CompleteBarrenPlanets  — every lifeless world (ref-free galaxy sweep)
+//   CompleteLifePlanets    — every life-bearing world (ref-free, works from anywhere)
+//   CompleteAllPlanets     — both sweeps, one combined result
+//
+// The model: survey DATA (attribute bits, scan flags, trait-known, the +0x08 marker
+// catalogue) is written instantly and durably into the engine's knowledge DB — no
+// spawning, no teleporting. Species lists and scan markers for never-visited worlds
+// derive offline from Starfield.esm (PNDT/PPBD + CTDA evaluation). On-surface outlines
+// and trait pillars are the game's own per-instance state and resolve on the next load.
+// Completion also writes the character-sheet Statistics counters.
 
 model {
 
@@ -22,54 +27,39 @@ model {
 
       function setScanned 'SetScanned (ID_83008)' {
         #ghidra
-        description 'Entry point — dispatches to the flora writer (ID_83038) or the actor/type path (ID_52160)'
-      }
-
-      function resolveComponentFlora 'ResolveComponentFlora (ID_83038)' {
-        #ghidra
-        description 'Flora path. Looks up (939118, ref->formID); no-ops on spawned refs that lack it'
-      }
-
-      function typeScanWrapper 'TypeScanWrapper (ID_52160)' {
-        #ghidra
-        description 'Actor/fauna path. Resolves the planet (ID_52188), writes the type tree (ID_52161), fires the biome event (ID_83019)'
+        description 'Scan entry point — flora (ID_83038) and fauna (ID_52160) branches both funnel into the progress updater'
       }
 
       function planetProgress 'PlanetProgress (ID_52157)' {
         #ghidra
-        description 'Per-planet progress updater. Resolves the planet (ID_52188), drives the count completion (ID_52158), then SurveyCheckNotify. The hook call site.'
+        description 'Per-planet progress updater, reached for every successful species scan on any path. The hook call site.'
       }
 
       function surveyCheckNotify 'SurveyCheckNotify (ID_97853)' {
         #ghidra
         description '''
           Survey check-and-dispatch. Fires the progress event, and the complete
-          event when the survey hits 100% — which drops the "<Planet> Survey Data" slate.
+          event when the survey hits 100% — which drops the per-planet "Survey Data" slate.
         '''
       }
     }
 
-    component completion 'Completion Writers' {
-      description 'The engine routines the mod drives directly to complete a type for an EXPLICIT planet'
+    component completion 'Completion & Discovery Writers' {
+      description 'The engine routines the mod drives directly, always with an EXPLICIT planet id'
 
-      function planetResolver 'PlanetResolver (ID_52188)' {
+      function setTraitKnown 'SetTraitKnown (ID_52155)' {
         #ghidra
-        description 'Resolves the planet+biome from a ref location — why the normal path only credits the planet you are on'
+        description 'Marks one trait keyword known for a planet id (the engine\'s own off-planet trait path, discriminator 938333)'
       }
 
-      function typeTree 'TypeTreeWriter (ID_52161)' {
+      function scanFlags 'Scan-flag writers (ID_124898/124899)' {
         #ghidra
-        description 'Per-type scanned-species tree writer (subobj+0x60) — the persistent GREEN state. Driven with an explicit planet.'
+        description 'Per-species scan-flag increment + percent byte (+0x21) — the persistent "scanned" state the outline reads on load'
       }
 
-      function countComplete 'CountCompletion (ID_52158)' {
+      function discoverPlanet 'ScanCompletePlanet (ID_102650)' {
         #ghidra
-        description 'Per-species count completion (+0x21 flag / +0x20 percent + biome propagation). Tree + count together = green. Driven with an explicit planet.'
-      }
-
-      function scanCompletePlanet 'ScanCompletePlanet (ID_102650)' {
-        #ghidra
-        description 'Ref-free "discover & survey a planet": creates the knowledge entry, fires the slate event, recurses over moons'
+        description 'Ref-free "discover a planet": creates the knowledge entry ASYNCHRONOUSLY, fires the slate event, recurses over moons'
       }
     }
 
@@ -78,7 +68,7 @@ model {
 
       function getManager 'GetKnowledgeManager (ID_126578)' {
         #ghidra
-        description 'Returns the per-save knowledge-manager singleton; DB pointer at manager+0x8B0'
+        description 'Returns the per-save knowledge-manager singleton; DB pointer at manager+0x8B0, lookup via ID_126806'
       }
 
       data surveyMap 'Per-planet survey map (db+0x268)' {
@@ -86,20 +76,29 @@ model {
         description '''
           BSTHashMap keyed (discriminator << 48) | (planet_id << 16).
           Value: per-planet component — attribute "known" bits, species/resource
-          scan-flag arrays, and the scanned-species green tree. Lookup via ID_126806.
+          scan flags (+0x21), and the slot+0x08 attribute-marker catalogue.
         '''
       }
+    }
 
-      data catalog 'Species key catalog (db+0x3d8)' {
+    component statsSystem 'Character Statistics' {
+      description 'The misc-stats system behind Data > Statistics (same store the ModPCMiscStat console command edits)'
+
+      data statTable 'Misc-stat table (ID_889375/889377/894532)' {
         #ghidra
-        description 'Transient instance→canonical-key catalog, rebuilt per load. Key has a PER-INSTANCE component — cannot be captured and stamped.'
+        description 'Interned-name → counter table; name globals for Flora/Fauna Fully Scanned + Unique Creatures Scanned (ID_923219/20/23)'
+      }
+
+      function statApi 'Game.QueryStat / IncrementStat' {
+        #papyrus
+        description 'The vanilla Papyrus misc-stat API — used to reconcile Planets Scanned ≥ Planets Fully Surveyed'
       }
     }
 
     component aggregator 'Survey Aggregator' {
       function surveyAggregator 'SurveyAggregator (ID_1016657)' {
         #ghidra
-        description 'Per-planet enumerator: four span pairs (uint32[] traits/flora, TESForm*[] resources/other). Only returns species the player already discovered.'
+        description 'Per-planet enumerator: four span pairs (uint32[] traits/flora, TESForm*[] resources/other). Only returns forms the player already discovered.'
       }
     }
 
@@ -121,25 +120,25 @@ model {
         description 'Fired when survey percentage changes'
       }
       function completeEvent 'PlayerPlanetSurveyCompleteEvent' {
-        description 'Fired at 100% — generates the Survey Data slate'
+        description 'Fired when a survey NEWLY reaches 100% — drops the Survey Data slate and bumps Planets Fully Surveyed'
       }
     }
 
     data starfieldEsm 'Starfield.esm' {
       #esm
-      description 'The base game master. PNDT planet records carry the authored per-biome flora/fauna (PPBD subrecord, zlib-compressed).'
+      description 'The base game master. PNDT records carry the authored per-biome flora/fauna (PPBD, zlib-compressed); FLST/OMOD/PERK CTDA chains encode the scan markers.'
     }
   }
 
   mod completePlanetSurvey 'Complete Planet Survey Mod' {
-    description 'SFSE plugin + CK-authored ESM that complete planet surveys — one planet on scan, or the whole galaxy on command'
+    description 'SFSE plugin + CK-authored ESM + Papyrus commands that complete planet surveys — one world or the whole galaxy'
 
     plugin sfsePlugin 'SFSE Plugin (DLL)' {
       #sfse
-      description 'Native C++ plugin (CommonLibSF). Loaded by SFSE; registers natives + installs the scan hook + per-frame poller on kPostDataLoad.'
+      description 'Native C++ plugin (CommonLibSF). Loaded by SFSE; registers natives + installs the scan hook and per-frame pollers on kPostDataLoad.'
 
       namespace hookNs 'Hook Namespace' {
-        description 'The scan-path hook and the main-thread per-frame poller'
+        description 'The scan-path hook and the two main-thread per-frame pollers'
 
         function installHook 'Install()' {
           description 'write_call<5> on the ID_52157 → ID_97853 call site (found at runtime by scanning for the E8 rel32). Single intercept covers every scan path.'
@@ -149,57 +148,73 @@ model {
           description 'Calls the original ID_97853, then DispatchStaticCall("CompleteSurveyIfEnabled") — defers all real work to Papyrus.'
         }
 
-        function poller 'ScanSweepPoller (AddPermanentTask)' {
+        function autoCompletePoller 'ScanSweepPoller (AddPermanentTask)' {
           description '''
-            Main-thread per-frame task. When its pending flags are set AND menus are
-            closed (+ grace frames): dispatches CompleteSurvey, and runs the nearby-ref
-            outline sweep (ScanAllRefsInCell). Keeps PlaceAtMe out of the live-scanner race.
+            Main-thread per-frame task. When the pending flag is set AND menus are
+            closed (+ grace frames): dispatches _AutoCompleteCurrentPlanet — the
+            auto-complete-on-scan runs from a clean, non-scanner state.
+          '''
+        }
+
+        function relinkPoller 'SessionReRegisterPoller (AddPermanentTask)' {
+          description '''
+            Formless scripts lose their VM types on quit-to-menu, which unbinds the
+            natives. This poller re-binds them once gameplay resumes, so the cgf
+            commands survive a Main-Menu → load. Every NEW native must be in its list.
           '''
         }
       }
 
       namespace papyrusNs 'Papyrus Natives' {
-        description 'C++ functions bound to the Papyrus VM (run on a Papyrus worker thread)'
+        description 'The 16 C++ functions bound to the Papyrus VM (run on a Papyrus worker thread)'
 
+        function categoryCheck 'CategoryEnabled / CategoriesValid' {
+          #papyrus
+          description 'Parses the category string — an unknown token makes the whole command a clean no-op'
+        }
         function markResources 'MarkResourcesForPlanet' {
           #papyrus
-          description 'Shared single-planet completion core (CompletePlanetSurveyState): attribute bits + species/resource scan flags + the survey-complete event'
-        }
-        function enumerateSpecies 'EnumeratePlanetSpecies (+GetAt)' {
-          #papyrus
-          description 'Union of the ESM PPBD species and the engine aggregator for one planet — the spawn-and-scan list'
-        }
-        function updateProgress 'UpdatePlanetProgressForSpecies' {
-          #papyrus
-          description 'Drives ID_52157 directly on a spawned ref (bypasses the ID_83038 component check for flora)'
-        }
-        function queueComplete 'QueueCompleteSurvey' {
-          #papyrus
-          description 'Sets the pending-CompleteSurvey atomic for the poller'
-        }
-        function scanNearby 'ScanNearbyRefs' {
-          #papyrus
-          description 'Sets the pending-outline-sweep atomic for the poller'
+          description 'Single-planet resources completion: attribute bits + resource scan flags + the survey-complete check. Pure — never touches species.'
         }
         function markTrait 'MarkTraitKnownForPlanet' {
           #papyrus
-          description 'Calls ID_52155 SetTraitKnown for a trait keyword'
+          description 'Marks one trait keyword known (ID_52155). Data only — the in-world "0/N" pillars resolve on arrival.'
+        }
+        function greenSpecies 'TestDirectGreen' {
+          #papyrus
+          description 'The production species green, part 1: +0x21 scan flags + survey % for every authored species (kind: 0 both, 1 flora, 2 fauna). Name is historical — the RE probe that became the real method.'
+        }
+        function buildMarkers 'TestBuildArray' {
+          #papyrus
+          description 'The production species green, part 2: builds the slot+0x08 attribute-marker catalogue (genetics/reproduction/temperament/abilities) from the ESM derivation'
+        }
+        function discoverEntry 'DiscoverPlanetEntry' {
+          #papyrus
+          description 'Ref-free discover (ID_102650) so writes land on never-visited worlds. ASYNC — the reason the life sweep needs a finalize pass. Skipped for the current planet.'
         }
         function galaxySweep 'CompleteAllPlanetsSurveyData' {
           #papyrus
-          description 'Galaxy data sweep: enumerate every PNDT, discover (ID_102650) + write survey state + mark ESM species, record the swept planets'
+          description 'The barren galaxy sweep: enumerate every PNDT, skip life-bearing worlds, discover + write survey state (writeResources=false → enumerate-only for the traits path)'
+        }
+        function sweepAccess 'GetSweepPlanetCount / GetSweepPlanetFormIdAt' {
+          #papyrus
+          description 'Exposes the swept-planet list to the Papyrus finalize/trait loop'
         }
         function finalize 'FinalizeSweptPlanet' {
           #papyrus
-          description 'Per-planet finalize after the async entry creates flush: re-apply state + ESM species, re-fire the slate event'
+          description 'Per-planet finalize after the async entry creates flush: re-apply state; fires the completion event only when the world NEWLY hits 100% (idempotent re-runs)'
         }
-        function enumerateAll 'EnumerateAllSpecies (+GetAt)' {
+        function lifeEnum 'EnumerateLifePlanets / GetLifePlanetFormIdAt' {
           #papyrus
-          description 'Every unique flora/fauna species across the galaxy (keys of the species→planets inversion)'
+          description 'The life-sweep worklist: every planet with authored flora/fauna, from the ESM map'
         }
-        function greenEverywhere 'GreenSpeciesEverywhere' {
+        function queueComplete 'QueueCompleteSurvey' {
           #papyrus
-          description 'Greens one species on every planet that hosts it — tree (ID_52161) + count (ID_52158) per planet, planet explicit'
+          description 'Sets the pending auto-complete atomic for the poller'
+        }
+        function cancelPending 'CancelPendingAutoComplete' {
+          #papyrus
+          description 'Manual command wins: clears any queued auto-complete so an explicit category is not overridden'
         }
       }
 
@@ -207,22 +222,19 @@ model {
         description 'C++ helpers over the engine + the cross-thread state'
 
         function completeState 'CompletePlanetSurveyState' {
-          description 'Attribute bits + every species/resource scan flag (ID_124898/124899) + NotifySurveyProgress (ID_97853)'
+          description 'Attribute bits + every tracked resource scan flag (ID_124898/124899) + the survey-complete check (ID_97853)'
         }
         function esmSpecies 'MarkEsmSpeciesForPlanet' {
-          description 'Marks a planet authored flora/fauna scanned — the one thing the runtime cannot give for an unvisited planet'
+          description 'Writes each authored species\' scan flags + the slot+0x08 marker catalogue for one planet — the thing the runtime cannot give for an unvisited world'
         }
-        function speciesInversion 'GetSpeciesToPlanets' {
-          description 'Inverts the EsmReader planet→species map to species→planets (cached, std::call_once)'
+        function isFullyMarked 'IsPlanetFullyMarked' {
+          description 'Idempotency gate: the survey-complete event fires only for worlds NEWLY at 100%, so re-runs never inflate Planets Fully Surveyed'
+        }
+        function incrementStat 'IncrementMiscStat' {
+          description 'Writes the character-sheet counters (Flora/Fauna Fully Scanned, Unique Creatures Scanned) for species that newly reach a full scan'
         }
         function forEachForm 'ForEachFormOfType (PNDT)' {
           description 'Walks the global form registry (ID_883341) to enumerate every planet'
-        }
-        function greenPair 'GreenAndCompleteTypeForPlanet' {
-          description 'The per-(planet,species) green unit: ID_52161 tree write + ID_52158 count completion'
-        }
-        function scanCell 'ScanAllRefsInCell' {
-          description 'Raw BSTArray walk of the player cell; SetScanned on each loaded flora/fauna ref (outline refresh)'
         }
         function instantScan 'ApplyInstantScanGameSettings' {
           description 'Sets the hand-scanner GMSTs to 1 on load (built-in Instant Scan)'
@@ -231,27 +243,30 @@ model {
         data pendingComplete 'g_pendingCompleteSurvey (atomic<bool>)' {
           description 'Set by QueueCompleteSurvey (worker thread), consumed by the poller (main thread)'
         }
-        data pendingSweep 'g_pendingOutlineSweep (atomic<bool>)' {
-          description 'Set by ScanNearbyRefs, consumed by the poller to run ScanAllRefsInCell'
-        }
         data sweptForms 'g_sweepPlanetForms (vector, mutex)' {
-          description 'Planets the last galaxy sweep touched — consumed by the Papyrus finalize/trait pass'
+          description 'Planets the last barren sweep touched — consumed by the Papyrus finalize/trait pass'
+        }
+        data lifeCache 'g_lifePlanetCache (vector)' {
+          description 'Life-bearing planet form ids from the ESM map — consumed via GetLifePlanetFormIdAt'
         }
       }
 
       namespace esmReaderNs 'ESM Reader' {
         #esm
-        description 'Parses Starfield.esm directly (no runtime dependency)'
+        description 'Parses Starfield.esm directly at startup (no runtime dependency) — src/EsmReader.cpp, validated offline by test/build_validate.bat'
 
-        function esmParse 'GetPlanetSpecies' {
+        function esmParse 'Esm::GetPlanetSpecies' {
           description 'Parses PNDT/PPBD (zlib-inflated), once + cached; returns planetId → [flora/fauna species formIDs]'
+        }
+        function speciesMarkers 'Esm::GetSpeciesMarkers (+ActorMarkers)' {
+          description 'Evaluates the authored HandScanner CTDA conditions (FLST/OMOD/PERK chains) — derives every green marker per species per planet, 17/17 validated'
         }
       }
     }
 
     component esmPlugin 'ESM Plugin' {
       #esm
-      description 'Creation Kit-authored CompletePlanetSurvey.esm — the Settings-menu toggle'
+      description 'Creation Kit-authored CompletePlanetSurvey.esm — the Settings toggle + the immersive intro message'
 
       record gpog 'GPOG CPSGroup' {
         description 'Section header in Settings → Gameplay'
@@ -259,17 +274,21 @@ model {
       record gpof 'GPOF CPSScanAutoComplete (0x80C)' {
         description 'The "Auto-Complete Survey on Scan" toggle (checkbox)'
       }
+      record recallMsg 'MESG CPSRecallMessage (0x807)' {
+        description 'The modal immersive intro shown once per galaxy command (button-less message box)'
+      }
     }
 
     component papyrusScripts 'Papyrus Scripts' {
       #papyrus
-      description 'Console entry points + the glue that orchestrates the natives'
+      description 'Console entry points + the glue that validates categories and orchestrates the natives'
 
       script questScript 'CompletePlanetSurveyQuest.psc' {
         description '''
-          CompleteSurvey (current planet), CompleteAllPlanetsSurveyData (galaxy:
-          sweep + finalize loop + GreenAllPlanets), CompleteSurveyIfEnabled (reads
-          the GPOF toggle, gates, queues), SpawnAndScanAllPlanetSpecies, MarkTraits.
+          CompletePlanet / CompleteBarrenPlanets / CompleteLifePlanets /
+          CompleteAllPlanets (each × categories), CompleteSurveyIfEnabled (the
+          hook target: reads the toggle, queues), _AutoCompleteCurrentPlanet
+          (the poller target), MarkTraits, _ReconcilePlanetsScanned.
         '''
       }
       script nativeScript 'CompletePlanetSurveyNative.psc' {
@@ -279,74 +298,78 @@ model {
   }
 
   // ── Player ──
-  player -> completePlanetSurvey 'Installs & uses'
+  player -> completePlanetSurvey 'Installs & runs the console commands'
   player -> starfield 'Plays'
 
-  // ── Single-planet path: scan → hook → deferred CompleteSurvey ──
-  starfield.scanPath.setScanned -[calls]-> starfield.scanPath.resolveComponentFlora 'Flora'
-  starfield.scanPath.setScanned -[calls]-> starfield.scanPath.typeScanWrapper 'Fauna/actor'
-  starfield.scanPath.resolveComponentFlora -[calls]-> starfield.scanPath.planetProgress 'Update progress'
-  starfield.scanPath.typeScanWrapper -[calls]-> starfield.scanPath.planetProgress 'Update progress'
-  starfield.scanPath.typeScanWrapper -[calls]-> starfield.completion.typeTree 'Write green tree'
-  starfield.scanPath.planetProgress -[calls]-> starfield.completion.planetResolver 'Resolve planet'
-  starfield.scanPath.planetProgress -[calls]-> starfield.completion.countComplete 'Count completion'
+  // ── Engine scan path (context) ──
+  starfield.scanPath.setScanned -[calls]-> starfield.scanPath.planetProgress 'Flora + fauna branches'
   starfield.scanPath.planetProgress -[fires]-> starfield.scanPath.surveyCheckNotify 'Completion check'
-  starfield.scanPath.surveyCheckNotify -[fires]-> starfield.events.progressEvent 'Conditional'
-  starfield.scanPath.surveyCheckNotify -[fires]-> starfield.events.completeEvent 'At 100%'
+  starfield.scanPath.surveyCheckNotify -[fires]-> starfield.events.progressEvent 'On % change'
+  starfield.scanPath.surveyCheckNotify -[fires]-> starfield.events.completeEvent 'At a NEW 100%'
 
-  completePlanetSurvey.sfsePlugin.hookNs.installHook -[hooks]-> starfield.scanPath.planetProgress 'Patches ID_52157→ID_97853 call site'
-  completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -[hooks]-> starfield.scanPath.surveyCheckNotify 'Intercepts, then calls original'
+  // ── Auto-complete on scan: hook → toggle gate → deferred dispatch ──
+  completePlanetSurvey.sfsePlugin.hookNs.installHook -[hooks]-> starfield.scanPath.planetProgress 'Patches the ID_52157 → ID_97853 call site'
+  completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -[hooks]-> starfield.scanPath.surveyCheckNotify 'Intercepts, calls the original first'
   completePlanetSurvey.sfsePlugin.hookNs.scanHookThunk -[calls]-> completePlanetSurvey.papyrusScripts.questScript 'DispatchStaticCall(CompleteSurveyIfEnabled)'
   completePlanetSurvey.papyrusScripts.questScript -[reads]-> completePlanetSurvey.esmPlugin.gpof 'Reads the toggle (Game.GetFormFromFile 0x80C)'
   completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.queueComplete 'If toggle on + planet < 100%'
   completePlanetSurvey.sfsePlugin.papyrusNs.queueComplete -[writes]-> completePlanetSurvey.sfsePlugin.engineNs.pendingComplete
-  completePlanetSurvey.sfsePlugin.hookNs.poller -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.pendingComplete 'When scanner closed'
-  completePlanetSurvey.sfsePlugin.hookNs.poller -[calls]-> completePlanetSurvey.papyrusScripts.questScript 'Dispatches CompleteSurvey'
+  completePlanetSurvey.sfsePlugin.papyrusNs.cancelPending -[writes]-> completePlanetSurvey.sfsePlugin.engineNs.pendingComplete 'Manual command clears the queue'
+  completePlanetSurvey.sfsePlugin.hookNs.autoCompletePoller -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.pendingComplete 'When menus closed + grace frames'
+  completePlanetSurvey.sfsePlugin.hookNs.autoCompletePoller -[calls]-> completePlanetSurvey.papyrusScripts.questScript 'Dispatches _AutoCompleteCurrentPlanet → CompletePlanet("all")'
+  completePlanetSurvey.sfsePlugin.hookNs.relinkPoller -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs 'Re-binds all natives after Main-Menu → load'
 
-  // ── CompleteSurvey body (single planet) ──
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.markResources 'Survey data + slate'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.markTrait 'Per trait'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.enumerateSpecies 'Spawn-and-scan list'
-  completePlanetSurvey.sfsePlugin.papyrusNs.enumerateSpecies -[calls]-> starfield.aggregator.surveyAggregator 'Discovered species'
-  completePlanetSurvey.sfsePlugin.papyrusNs.enumerateSpecies -[reads]-> completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse 'Authored species'
-  completePlanetSurvey.sfsePlugin.engineNs.completeState -[calls]-> starfield.aggregator.surveyAggregator 'Mark every tracked form'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> starfield.scanPath.setScanned 'Spawn-and-scan each species'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.updateProgress 'Flora biome tick'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.scanNearby 'Queue outline sweep'
-  completePlanetSurvey.sfsePlugin.papyrusNs.scanNearby -[writes]-> completePlanetSurvey.sfsePlugin.engineNs.pendingSweep
-  completePlanetSurvey.sfsePlugin.hookNs.poller -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.pendingSweep
-  completePlanetSurvey.sfsePlugin.hookNs.poller -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.scanCell 'Outline refresh'
-  completePlanetSurvey.sfsePlugin.engineNs.scanCell -[calls]-> starfield.scanPath.setScanned 'Per loaded ref'
+  // ── Command bodies (category-routed) ──
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.categoryCheck 'Validate + route the category string'
+  completePlanetSurvey.papyrusScripts.questScript -[reads]-> completePlanetSurvey.esmPlugin.recallMsg 'Modal immersive intro (galaxy commands)'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.markResources '"resources"'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.markTrait '"traits" — per trait keyword (MarkTraits)'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.greenSpecies '"fauna"/"flora" — _GreenPlanet part 1'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.buildMarkers '"fauna"/"flora" — _GreenPlanet part 2'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep 'Barren sweep'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.sweepAccess 'Finalize/trait loop worklist'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.finalize 'Per swept planet'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.lifeEnum 'Life-sweep worklist'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.discoverEntry 'Never-visited life worlds first'
+  completePlanetSurvey.papyrusScripts.questScript -[calls]-> starfield.statsSystem.statApi 'Reconcile Planets Scanned ≥ Fully Surveyed'
 
-  // ── Galaxy path: CompleteAllPlanetsSurveyData ──
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep 'Data sweep'
+  // ── Natives → engine helpers → engine ──
+  completePlanetSurvey.sfsePlugin.papyrusNs.markResources -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.completeState
+  completePlanetSurvey.sfsePlugin.papyrusNs.discoverEntry -[calls]-> starfield.completion.discoverPlanet 'Async knowledge-entry create'
+  completePlanetSurvey.sfsePlugin.papyrusNs.markTrait -[calls]-> starfield.completion.setTraitKnown
+  completePlanetSurvey.sfsePlugin.papyrusNs.greenSpecies -[calls]-> starfield.completion.scanFlags 'Per authored species'
+  completePlanetSurvey.sfsePlugin.papyrusNs.greenSpecies -[reads]-> completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse 'Authored species list'
+  completePlanetSurvey.sfsePlugin.papyrusNs.buildMarkers -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.esmSpecies
   completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.forEachForm 'Enumerate planets'
+  completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[calls]-> starfield.completion.discoverPlanet 'Discover + slate per barren world'
+  completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.completeState 'When writeResources'
+  completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[writes]-> completePlanetSurvey.sfsePlugin.engineNs.sweptForms
+  completePlanetSurvey.sfsePlugin.papyrusNs.sweepAccess -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.sweptForms
+  completePlanetSurvey.sfsePlugin.papyrusNs.finalize -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.completeState 'Re-apply after async creates flush'
+  completePlanetSurvey.sfsePlugin.papyrusNs.finalize -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.isFullyMarked 'Fire complete only when NEWLY 100%'
+  completePlanetSurvey.sfsePlugin.papyrusNs.lifeEnum -[reads]-> completePlanetSurvey.sfsePlugin.engineNs.lifeCache
+  completePlanetSurvey.sfsePlugin.engineNs.lifeCache -[reads]-> completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse 'Worlds with authored species'
   completePlanetSurvey.sfsePlugin.engineNs.forEachForm -[reads]-> starfield.formRegistry.allFormsMap
-  completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[calls]-> starfield.completion.scanCompletePlanet 'Discover + slate'
-  completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.completeState 'Survey state'
-  completePlanetSurvey.sfsePlugin.papyrusNs.galaxySweep -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.esmSpecies 'ESM flora/fauna'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.finalize 'Mop-up pass'
-  completePlanetSurvey.sfsePlugin.papyrusNs.finalize -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.completeState
 
-  // ── Galaxy green: GreenAllPlanets ──
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.enumerateAll 'Unique species'
-  completePlanetSurvey.papyrusScripts.questScript -[calls]-> completePlanetSurvey.sfsePlugin.papyrusNs.greenEverywhere 'Per spawned handle'
-  completePlanetSurvey.sfsePlugin.papyrusNs.greenEverywhere -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.greenPair 'Per host planet'
-  completePlanetSurvey.sfsePlugin.papyrusNs.enumerateAll -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.speciesInversion
-  completePlanetSurvey.sfsePlugin.engineNs.greenPair -[writes]-> starfield.completion.typeTree 'Green tree (explicit planet)'
-  completePlanetSurvey.sfsePlugin.engineNs.greenPair -[writes]-> starfield.completion.countComplete 'Count (explicit planet)'
-
-  // ── ESM enumeration ──
-  completePlanetSurvey.sfsePlugin.engineNs.esmSpecies -[reads]-> completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse
-  completePlanetSurvey.sfsePlugin.engineNs.speciesInversion -[reads]-> completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse
-  completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse -[reads]-> starfield.starfieldEsm 'PNDT/PPBD, zlib'
+  // ── The green write ──
+  completePlanetSurvey.sfsePlugin.engineNs.esmSpecies -[reads]-> completePlanetSurvey.sfsePlugin.esmReaderNs.speciesMarkers 'Derived marker set'
+  completePlanetSurvey.sfsePlugin.engineNs.esmSpecies -[writes]-> starfield.knowledgeDb.surveyMap 'slot+0x08 marker catalogue'
+  completePlanetSurvey.sfsePlugin.engineNs.esmSpecies -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.incrementStat 'Newly-full species'
+  completePlanetSurvey.sfsePlugin.engineNs.incrementStat -[writes]-> starfield.statsSystem.statTable 'Flora/Fauna/Unique counters'
+  starfield.statsSystem.statApi -[writes]-> starfield.statsSystem.statTable 'Same store as ModPCMiscStat'
 
   // ── Knowledge DB + shared writes ──
-  completePlanetSurvey.sfsePlugin.engineNs.completeState -[writes]-> starfield.knowledgeDb.surveyMap 'Attr bits + scan flags'
-  completePlanetSurvey.sfsePlugin.papyrusNs.markResources -[calls]-> completePlanetSurvey.sfsePlugin.engineNs.completeState
+  completePlanetSurvey.sfsePlugin.engineNs.completeState -[calls]-> starfield.aggregator.surveyAggregator 'Mark every tracked form'
+  completePlanetSurvey.sfsePlugin.engineNs.completeState -[calls]-> starfield.completion.scanFlags 'Resource scan flags'
+  completePlanetSurvey.sfsePlugin.engineNs.completeState -[writes]-> starfield.knowledgeDb.surveyMap 'Attribute bits'
+  completePlanetSurvey.sfsePlugin.engineNs.completeState -[fires]-> starfield.scanPath.surveyCheckNotify 'Survey-complete check'
+  starfield.completion.setTraitKnown -[writes]-> starfield.knowledgeDb.surveyMap 'Trait-known bits'
+  starfield.completion.scanFlags -[writes]-> starfield.knowledgeDb.surveyMap 'Scan flags + percent'
   starfield.knowledgeDb.getManager -[reads]-> starfield.knowledgeDb.surveyMap 'manager+0x8B0'
-  starfield.completion.typeTree -[reads]-> starfield.knowledgeDb.catalog 'Resolve canonical key'
-  starfield.completion.typeTree -[writes]-> starfield.knowledgeDb.surveyMap 'Scanned-species green tree'
+
+  // ── ESM parsing ──
+  completePlanetSurvey.sfsePlugin.esmReaderNs.esmParse -[reads]-> starfield.starfieldEsm 'PNDT/PPBD, zlib'
+  completePlanetSurvey.sfsePlugin.esmReaderNs.speciesMarkers -[reads]-> starfield.starfieldEsm 'FLST/OMOD/PERK CTDA chains'
 
   // ── Instant Scan + toggle wiring ──
   completePlanetSurvey.sfsePlugin.engineNs.instantScan -[writes]-> starfield.gameSettings.handScannerGmst 'On load'
