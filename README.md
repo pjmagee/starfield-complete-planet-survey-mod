@@ -68,6 +68,9 @@ teleporting, no fast-travel. Species lists for never-visited worlds come from pa
 PNDT / Per Biome Data records at startup. The on-surface scanner outlines and trait pillars are the
 game's own per-instance state, so they resolve when an area loads rather than being painted in place.
 
+An interactive architecture diagram (rendered from [`docs/*.c4`](docs/) by CI) is published at
+<https://pjmagee.github.io/starfield-complete-planet-survey-mod/>.
+
 The reverse-engineering behind this (engine offsets, Address Library IDs, Ghidra decompiles, and every
 approach that was tried) lives in [`re/`](re/). The details that matter for a given piece of code are
 documented in comments right next to it.
@@ -80,6 +83,7 @@ src/EsmReader.cpp, include/EsmReader.h    Starfield.esm PNDT/PPBD reader (galaxy
 Data/CompletePlanetSurvey.esm             CK-authored Settings toggle
 Data/Scripts/Source/User/*.psc            Papyrus sources (the console commands)
 Data/Scripts/*.pex                        compiled scripts
+test/                                     offline marker-validation harness (build_validate.bat)
 docs/                                     usage and design notes
 re/                                       reverse-engineering trail (Ghidra output, save parsing, probes)
 extern/CommonLibSF/                       SFSE / CommonLibSF (GPL-3.0)
@@ -99,6 +103,14 @@ build.bat                                  :: compile via xmake (releasedbg)
 
 Needs xmake, MSVC (VS Build Tools), and Python 3. xmake fetches the rest (spdlog) on first build, the
 same as CI.
+
+Validate the ESM species-marker derivation offline (no game launch needed):
+
+```bat
+test\build_validate.bat   :: compiles src/EsmReader.cpp standalone, checks 17 ground-truth species
+```
+
+It reads `Starfield.esm` from the Steam default; set `CPS_ESM_PATH` if your install is elsewhere.
 
 Recompile Papyrus and deploy locally:
 

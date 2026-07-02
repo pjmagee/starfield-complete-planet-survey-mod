@@ -1,1 +1,0 @@
-Skip the survey grind. Scan one flora or fauna to instantly complete the current planet — traits, flora, fauna, and resources — or run a single console command to complete the entire galaxy at once, with flora and fauna shown as scanned (green) on every planet, even ones you have never visited. Requires SFSE + Address Library.
