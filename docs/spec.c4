@@ -1,5 +1,6 @@
 // Complete Planet Survey — LikeC4 specification
-// Defines element kinds, relationship kinds, tags and visual styling
+// Element kinds, relationship kinds and styling. Kept deliberately small:
+// the diagrams are high-level (components + reads/writes), not a function map.
 
 specification {
 
@@ -10,7 +11,7 @@ specification {
     }
   }
 
-  element game {
+  element system {
     style {
       shape rectangle
       color slate
@@ -24,72 +25,22 @@ specification {
     }
   }
 
-  element plugin {
-    style {
-      shape rectangle
-      color amber
-    }
-  }
-
   element component {
     style {
       shape rectangle
-    }
-  }
-
-  element namespace {
-    style {
-      shape rectangle
       color sky
     }
   }
 
-  element function {
-    style {
-      shape rectangle
-      color secondary
-    }
-  }
-
-  element data {
+  element store {
     style {
       shape storage
       color muted
     }
   }
 
-  element script {
-    style {
-      shape rectangle
-      color green
-    }
-  }
-
-  element record {
-    style {
-      shape storage
-      color sky
-    }
-  }
-
-  element file {
-    style {
-      shape rectangle
-      color muted
-    }
-  }
-
-  // Relationship kinds
-  relationship async
-  relationship hooks
-  relationship calls
+  // Relationship kinds — the only verbs the diagrams use
   relationship reads
   relationship writes
-  relationship fires
-
-  // Tags
-  tag ghidra
-  tag papyrus
-  tag sfse
-  tag esm
+  relationship uses
 }
