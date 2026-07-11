@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -29,7 +29,7 @@ jobs:
           xmake-version: latest
 
       - name: Cache XMake packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/AppData/Local/.xmake
           key: xmake-${{ runner.os }}-${{ hashFiles('xmake.lua', 'extern/CommonLibSF/xmake.lua') }}
@@ -52,14 +52,14 @@ jobs:
           "ZIP_NAME=Complete-Planet-Survey-$version.zip"     | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: complete-planet-survey
           path: Complete-Planet-Survey-*.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: Complete-Planet-Survey-*.zip
           generate_release_notes: true
