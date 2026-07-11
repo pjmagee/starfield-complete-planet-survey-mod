@@ -41,6 +41,48 @@ verified.
 
 *No unreleased changes.*
 
+## [1.4.0] — 2026-07-11
+
+Same target as v1.3.0 — **Starfield 1.16.244.0 / SFSE 0.2.21** (CommonLibSF `998b6cd`, unchanged); a
+drop-in upgrade, no game or SFSE change required. The ESM gains a **new** Settings toggle; existing
+toggle and record FormIDs are unchanged, so existing saves are unaffected.
+
+Adds an opt-in way to complete a world's survey straight from the **galaxy map**: scan a planet or moon
+on the star map and its entire survey completes for that body, with the info panel updating in place.
+
+### Added
+
+- **Orbital Scanner: galaxy-map scan → complete that world** (opt-in, default **off**). With the new
+  **Orbital Scanner** toggle on, scanning a planet or moon on the star map completes its **entire**
+  survey for that specific body — the same outcome as running `CompletePlanet "all"` while standing on
+  it — resources, traits, and flora/fauna, all ref-free (no landing). Off by default, so the vanilla
+  scan is unchanged unless you enable it.
+- **New Settings → Gameplay toggle: "Orbital Scanner"** (GPOF `0x0100080D`). It is *added* to the
+  ESM's existing option group; the prior hand-scanner toggle (`0x0100080C`) and all other record
+  FormIDs are unchanged, so this remains a drop-in update.
+- **The star-map info panel refreshes to 100% in place** after an Orbital Scanner scan completes — the
+  survey %, resources and traits update without needing to deselect and reselect the planet.
+
+### Changed
+
+- **Both Settings toggles renamed for consistency** (display names/descriptions only — FormIDs and your
+  saved on/off values are unchanged). "Auto-Complete Survey on Scan" → **"Hand Scanner"**; the new
+  star-map toggle is **"Orbital Scanner"**. They now read as a matching pair: Hand Scanner (on-surface
+  scan) and Orbital Scanner (star-map scan).
+
+### Internal (no player-facing change)
+
+- Extracted the per-planet completion core (`_CompletePlanetForm`) shared by the on-surface
+  `CompletePlanet` command and the new galaxy-map path.
+- Native detection of the star-map scan via a crash-safe call-site hook on the engine's survey-notify
+  (`ID_52173` → `ID_97853`, filtered to the *ScanLevelChanged* reason — the space scan), and an
+  in-place panel repaint by re-issuing the engine's own panel-populate call (`ID_93988(controller,
+  planetId)`, captured from `ID_94011`) once completion finishes, validated against the live UI menu
+  list so a closed menu is never touched. Two new natives (`GetGalaxyScanPlanetFormId`,
+  `QueueStarMapRefresh`); trampoline size raised 64 → 128 for the added hooks. Any new native is
+  registered in the per-session re-bind path (survives a Main-Menu → load).
+- Reverse-engineering dumps for the star-map scan/refresh path added under `re/ghidra/output/`.
+
 ## [1.3.0] — 2026-07-01
 
 Built/tested against **Starfield 1.16.244.0 / SFSE 0.2.21** (same target as v1.2.0 — a drop-in
@@ -345,7 +387,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.0.8...v1.1.0
