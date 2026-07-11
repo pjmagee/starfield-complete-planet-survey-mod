@@ -1,0 +1,2256 @@
+STR @ 144b03628 : "StarmapResourceMap"
+    <- 14000c1d7 DATA in ID_636@14000c1d0 [ID_636]
+    <- 1429056ef DATA in ID_140114@142905570 [ID_140114]
+
+STR @ 144b03640 : "Data/Materials/Layered/LayeredMaterials/HoudiniPlanets/EffectMaterials/StarmapResourceOverlayEffect.mat"
+    <- 14000c207 DATA in ID_637@14000c200 [ID_637]
+
+STR @ 144b036b0 : "Data/Materials/Layered/LayeredMaterials/HoudiniPlanets/EffectMaterials/StarmapScanlineEffect.mat"
+    <- 14000c237 DATA in ID_638@14000c230 [ID_638]
+
+STR @ 144b03728 : "StarmapBodyEffectsRoot"
+    <- 14000c1a7 DATA in ID_635@14000c1a0 [ID_635]
+
+STR @ 144b1e328 : "UIMenuStarmapMenuClose"
+    <- 1416becd5 DATA in ID_94698@1416becb0 [ID_94698]
+    <- 1416bc1c6 DATA in ID_94681@1416bc0c0 [ID_94681]
+    <- 1416bbf65 DATA in ID_94679@1416bbf50 [ID_94679]
+    <- 1416bbefb DATA in ID_94678@1416bbe60 [ID_94678]
+    <- 1416bb546 DATA in ID_94667@1416bb530 [ID_94667]
+    <- 1416bb4cb DATA in ID_94666@1416bb430 [ID_94666]
+    <- 1416ed6ca DATA in ID_95133@1416ed5b0 [ID_95133]
+    <- 1404e1335 DATA in ID_44015@1404e12b0 [ID_44015]
+
+STR @ 144b202b0 : "fStarMapInspectCameraDistanceScaleZoomMinMoon:StarMap"
+    <- 14002531c DATA in ID_1925@140025310 [ID_1925]
+
+STR @ 144b202e8 : "fStarMapInspectCameraDistanceScaleZoomMax:StarMap"
+    <- 14002534c DATA in ID_1926@140025340 [ID_1926]
+
+STR @ 144b20320 : "fStarMapInspectCameraDistanceScaleDefault:StarMap"
+    <- 14002537c DATA in ID_1927@140025370 [ID_1927]
+
+STR @ 144b20358 : "fStarMapInspectCameraDistanceScaleMoonDefault:StarMap"
+    <- 1400253ac DATA in ID_1928@1400253a0 [ID_1928]
+
+STR @ 144b20390 : "fStarMapGalaxyPanSpeed:StarMap"
+    <- 14002525c DATA in ID_1921@140025250 [ID_1921]
+
+STR @ 144b203b0 : "fStarMapGalaxyZoomSpeed:StarMap"
+    <- 14002528c DATA in ID_1922@140025280 [ID_1922]
+
+STR @ 144b203d0 : "fStarMapSystemPanSpeed:StarMap"
+    <- 1400252bc DATA in ID_1923@1400252b0 [ID_1923]
+    <- 1401a200c DATA in ID_20415@1401a2000 [ID_20415]
+
+STR @ 144b203f0 : "fStarMapInspectCameraDistanceScaleZoomMin:StarMap"
+    <- 1400252ec DATA in ID_1924@1400252e0 [ID_1924]
+
+STR @ 144b20428 : "fStarMapSystemAtmosphereHeightScale:StarMap"
+    <- 14002549c DATA in ID_1933@140025490 [ID_1933]
+
+STR @ 144b20458 : "fStarMapSystemAtmosphereSunScale:StarMap"
+    <- 1400254cc DATA in ID_1934@1400254c0 [ID_1934]
+
+STR @ 144b20488 : "fStarMapSystemUIMinPlanetSize:StarMap"
+    <- 1400254fc DATA in ID_1935@1400254f0 [ID_1935]
+
+STR @ 144b204b0 : "fStarMapSystemUIMaxPlanetSize:StarMap"
+    <- 14002552c DATA in ID_1936@140025520 [ID_1936]
+
+STR @ 144b204d8 : "fStarMapSystemAutoZoomInThresholdDefault:StarMap"
+    <- 1400253dc DATA in ID_1929@1400253d0 [ID_1929]
+
+STR @ 144b20510 : "fStarMapSystemAutoZoomInThresholdMoon:StarMap"
+    <- 14002540c DATA in ID_1930@140025400 [ID_1930]
+
+STR @ 144b20540 : "fStarMapInspectAutoZoomOutThresholdDefault:StarMap"
+    <- 14002543c DATA in ID_1931@140025430 [ID_1931]
+
+STR @ 144b20578 : "fStarMapInspectAutoZoomOutThresholdMoon:StarMap"
+    <- 14002546c DATA in ID_1932@140025460 [ID_1932]
+
+STR @ 144b205a8 : "iLevelChallengeThresholdAverage:StarMap"
+    <- 14002561a DATA in ID_1941@140025610 [ID_1941]
+
+STR @ 144b205d0 : "iLevelChallengeThresholdChallenging:StarMap"
+    <- 14002564a DATA in ID_1942@140025640 [ID_1942]
+
+STR @ 144b20600 : "iLevelChallengeThresholdDeadly:StarMap"
+    <- 14002567a DATA in ID_1943@140025670 [ID_1943]
+
+STR @ 144b20628 : "fStarMapSystemFirstBodyDistFromStarScale:StarMap"
+    <- 1400256ac DATA in ID_1944@1400256a0 [ID_1944]
+
+STR @ 144b20660 : "fStarMapSystemUIMinMoonSize:StarMap"
+    <- 14002555c DATA in ID_1937@140025550 [ID_1937]
+
+STR @ 144b20688 : "fStarMapSystemUIMaxMoonSize:StarMap"
+    <- 14002558c DATA in ID_1938@140025580 [ID_1938]
+
+STR @ 144b206b0 : "fStarMapSystemInfoPlanetScale:StarMap"
+    <- 1400255bc DATA in ID_1939@1400255b0 [ID_1939]
+
+STR @ 144b206d8 : "iLevelChallengeThresholdEasy:StarMap"
+    <- 1400255ea DATA in ID_1940@1400255e0 [ID_1940]
+
+STR @ 144b20700 : "fStarMapMobileMoonMinRenderRadius:StarMap"
+    <- 14002579c DATA in ID_1949@140025790 [ID_1949]
+
+STR @ 144b20730 : "fStarMapMobileMoonMaxRenderRadius:StarMap"
+    <- 1400257cc DATA in ID_1950@1400257c0 [ID_1950]
+
+STR @ 144b20760 : "uiStarMapHighPriorityMarkerType"
+    <- 1400257f7 DATA in ID_1951@1400257f0 [ID_1951]
+
+STR @ 144b207a8 : "fStarMapSystemBodySpacing:StarMap"
+    <- 1400256dc DATA in ID_1945@1400256d0 [ID_1945]
+
+STR @ 144b207d0 : "fStarMapMobileStarRenderRadius:StarMap"
+    <- 14002570c DATA in ID_1946@140025700 [ID_1946]
+
+STR @ 144b207f8 : "fStarMapMobilePlanetMinRenderRadius:StarMap"
+    <- 14002573c DATA in ID_1947@140025730 [ID_1947]
+
+STR @ 144b20828 : "fStarMapMobilePlanetMaxRenderRadius:StarMap"
+    <- 14002576c DATA in ID_1948@140025760 [ID_1948]
+
+STR @ 144b20858 : "fStarMapGalaxyStarScaleRange:StarMap"
+    <- 14002522c DATA in ID_1920@140025220 [ID_1920]
+
+STR @ 144b208a0 : "fSurfaceMapGamepadMaxCursorSpeed:StarMap"
+    <- 14002591c DATA in ID_1956@140025910 [ID_1956]
+
+STR @ 144b208d0 : "fSurfaceMapGamepadMinCursorSpeed:StarMap"
+    <- 14002594c DATA in ID_1957@140025940 [ID_1957]
+
+STR @ 144b20900 : "StarMapImageSpace_DO"
+    <- 14002585f DATA in ID_1953@140025850 [ID_1953]
+
+STR @ 144b20938 : "fStarMapSurfaceMapYawSpeedGamepad:StarMap"
+    <- 140025a3c DATA in ID_1962@140025a30 [ID_1962]
+
+STR @ 144b20968 : "fStarMapSurfaceMapPitchSpeedGamepad:StarMap"
+    <- 140025a6c DATA in ID_1963@140025a60 [ID_1963]
+
+STR @ 144b20998 : "fStarMapSurfaceMapPanSpeedGamepadMin:StarMap"
+    <- 14002597c DATA in ID_1958@140025970 [ID_1958]
+
+STR @ 144b209c8 : "fStarMapSurfaceMapPanSpeedMouseMultiplier:StarMap"
+    <- 1400259ac DATA in ID_1959@1400259a0 [ID_1959]
+
+STR @ 144b20a00 : "fStarMapSurfaceMapYawSpeedMouse:StarMap"
+    <- 1400259dc DATA in ID_1960@1400259d0 [ID_1960]
+
+STR @ 144b20a28 : "fStarMapSurfaceMapPitchSpeedMouse:StarMap"
+    <- 140025a0c DATA in ID_1961@140025a00 [ID_1961]
+
+STR @ 144b44b30 : "OpenMissionmenuFromStarMap"
+    <- 1401b8eb7 DATA in ID_1014528@1401b8eb0 [ID_1014528]
+    <- 140174e67 DATA in ID_1013842@140174e60 [ID_1013842]
+    <- 140174317 DATA in ID_1013785@140174310 [ID_1013785]
+    <- 1401b1e17 DATA in ID_1014494@1401b1e10 [ID_1014494]
+    <- 1400b15a7 DATA in ID_7939@1400b15a0 [ID_7939]
+    <- 1401f0c77 DATA in ID_1014597@1401f0c70 [ID_1014597]
+    <- 1401eaf97 DATA in ID_1014565@1401eaf90 [ID_1014565]
+    <- 1401a5817 DATA in ID_1014385@1401a5810 [ID_1014385]
+    <- 1401a5ec7 DATA in ID_1014420@1401a5ec0 [ID_1014420]
+    <- 1401a1677 DATA in ID_1014345@1401a1670 [ID_1014345]
+    <- 1401a0877 DATA in ID_1014326@1401a0870 [ID_1014326]
+    <- 14019fcb7 DATA in ID_1014324@14019fcb0 [ID_1014324]
+    <- 14019e287 DATA in ID_20121@14019e280 [ID_20121]
+    <- 14019d8a7 DATA in ID_1014307@14019d8a0 [ID_1014307]
+    <- 14019c4f7 DATA in ID_1014282@14019c4f0 [ID_1014282]
+    <- 14019b697 DATA in ID_1014269@14019b690 [ID_1014269]
+    <- 14019aad7 DATA in ID_1014247@14019aad0 [ID_1014247]
+    <- 140198957 DATA in ID_1014202@140198950 [ID_1014202]
+    <- 140194fb7 DATA in ID_1014196@140194fb0 [ID_1014196]
+    <- 140193307 DATA in ID_19267@140193300 [ID_19267]
+    <- 140052107 DATA in ID_4291@140052100 [ID_4291]
+    <- 140191087 DATA in ID_1014174@140191080 [ID_1014174]
+    <- 14018c7f7 DATA in ID_1014119@14018c7f0 [ID_1014119]
+
+STR @ 144bb20b0 : "Error: Starmap menu must be open to add a plot destination."
+    <- 140c7e63a DATA in ID_67044@140c7e480 [ID_67044]
+
+STR @ 144c57a88 : "fSurfaceMapInteriorIndirectLightScale:StarMap"
+    <- 14017b40c DATA in ID_17671@14017b400 [ID_17671]
+
+STR @ 144c57ab8 : "fSurfaceMapExteriorIndirectLightScale:StarMap"
+    <- 14017b3dc DATA in ID_17670@14017b3d0 [ID_17670]
+
+STR @ 144c57b30 : "fSurfaceMapInteriorCascadeDepthBiasScale3:StarMap"
+    <- 14017b2dc DATA in ID_17667@14017b2d0 [ID_17667]
+
+STR @ 144c57b68 : "fSurfaceMapInteriorCascadeDepthBiasScale2:StarMap"
+    <- 14017b2ac DATA in ID_17666@14017b2a0 [ID_17666]
+
+STR @ 144c57ba0 : "sSurfaceMapIndirectCubeMap:StarMap"
+    <- 143995085 READ in ID_209115@143995040 [ID_209115]
+    <- 143995079 PARAM in ID_209115@143995040 [ID_209115]
+    <- 14591f778 DATA in (none)
+
+STR @ 144c57bf0 : "fSurfaceMapInteriorCascadeScale3:StarMap"
+    <- 14017b21c DATA in ID_17663@14017b210 [ID_17663]
+
+STR @ 144c57c20 : "fSurfaceMapInteriorCascadeScale2:StarMap"
+    <- 14017b1ec DATA in ID_17662@14017b1e0 [ID_17662]
+
+STR @ 144c57c50 : "fSurfaceMapInteriorCascadeDepthBiasScale1:StarMap"
+    <- 14017b27c DATA in ID_17665@14017b270 [ID_17665]
+
+STR @ 144c57c88 : "fSurfaceMapInteriorCascadeDepthBiasScale0:StarMap"
+    <- 14017b24c DATA in ID_17664@14017b240 [ID_17664]
+
+STR @ 144c57cc0 : "fSurfaceMapExteriorCascadeDepthBiasScale3:StarMap"
+    <- 14017b15c DATA in ID_17659@14017b150 [ID_17659]
+
+STR @ 144c57cf8 : "fSurfaceMapExteriorCascadeDepthBiasScale2:StarMap"
+    <- 14017b12c DATA in ID_17658@14017b120 [ID_17658]
+
+STR @ 144c57d30 : "fSurfaceMapInteriorCascadeScale1:StarMap"
+    <- 14017b1bc DATA in ID_17661@14017b1b0 [ID_17661]
+
+STR @ 144c57d60 : "fSurfaceMapInteriorCascadeScale0:StarMap"
+    <- 14017b18c DATA in ID_17660@14017b180 [ID_17660]
+
+STR @ 144c57d90 : "fSurfaceMapExteriorCascadeScale3:StarMap"
+    <- 14017b09c DATA in ID_17655@14017b090 [ID_17655]
+
+STR @ 144c57dc0 : "fSurfaceMapExteriorCascadeScale2:StarMap"
+    <- 14017b06c DATA in ID_17654@14017b060 [ID_17654]
+
+STR @ 144c57df0 : "fSurfaceMapExteriorCascadeDepthBiasScale1:StarMap"
+    <- 14017b0fc DATA in ID_17657@14017b0f0 [ID_17657]
+
+STR @ 144c57e28 : "fSurfaceMapExteriorCascadeDepthBiasScale0:StarMap"
+    <- 14017b0cc DATA in ID_17656@14017b0c0 [ID_17656]
+
+STR @ 144c57e60 : "fSurfaceMapFillLightDefaultIntensity:StarMap"
+    <- 14017afdc DATA in ID_17651@14017afd0 [ID_17651]
+
+STR @ 144c57e90 : "fSurfaceMapLightPitchDeg:StarMap"
+    <- 14017afac DATA in ID_17650@14017afa0 [ID_17650]
+
+STR @ 144c57eb8 : "fSurfaceMapExteriorCascadeScale1:StarMap"
+    <- 14017b03c DATA in ID_17653@14017b030 [ID_17653]
+
+STR @ 144c57ee8 : "fSurfaceMapExteriorCascadeScale0:StarMap"
+    <- 14017b00c DATA in ID_17652@14017b000 [ID_17652]
+
+STR @ 144c57f70 : "fSurfaceMapLightYawDeg:StarMap"
+    <- 14017af7c DATA in ID_17649@14017af70 [ID_17649]
+
+STR @ 144c84a28 : "OpeningStarmapFromMissions"
+    <- 1415dd402 DATA in ID_91428@1415dd3b0 [ID_91428]
+
+STR @ 144c96200 : "bStarMapGalaxySystemAccumulateBackground:StarMap"
+    <- 14019b027 DATA in ID_19854@14019b020 [ID_19854]
+
+STR @ 144c96250 : "fStarMapGalaxyStarfieldBackgroundRotationRoll:StarMap"
+    <- 14019afc8 DATA in ID_19852@14019afc0 [ID_19852]
+
+STR @ 144c96288 : "uStarMapGalaxySystemPointRenderMethod:StarMap"
+    <- 14019aff7 DATA in ID_19853@14019aff0 [ID_19853]
+
+STR @ 144c962b8 : "fStarMapGalaxyStarfieldBackgroundRotationYaw:StarMap"
+    <- 14019af6c DATA in ID_19850@14019af60 [ID_19850]
+
+STR @ 144c962f0 : "fStarMapGalaxyStarfieldBackgroundRotationPitch:StarMap"
+    <- 14019af98 DATA in ID_19851@14019af90 [ID_19851]
+
+STR @ 144c96480 : "UIMenuStarmapScannerClose"
+    <- 14168c985 DATA in ID_94007@14168c5e0 [ID_94007]
+
+STR @ 144c964a0 : "UIMenuStarmapInspectExit"
+    <- 1416dd195 DATA in ID_94992@1416dd180 [ID_94992]
+    <- 14168dd4d DATA in ID_94013@14168dd30 [ID_94013]
+
+STR @ 144c964c0 : "UIMenuStarmapScanPlanet"
+    <- 14168c785 DATA in ID_94007@14168c5e0 [ID_94007]
+    <- 14168c79a READ in ID_94007@14168c5e0 [ID_94007]
+    <- 14168c796 PARAM in ID_94007@14168c5e0 [ID_94007]
+
+STR @ 144c964d8 : "UIMenuStarmapScannerOpen"
+    <- 14168c78c DATA in ID_94007@14168c5e0 [ID_94007]
+    <- 14168c79a READ in ID_94007@14168c5e0 [ID_94007]
+
+STR @ 144c964f8 : "UIMenuStarmapLandingMarkerAdd"
+    <- 14168a71a DATA in ID_93994@141689a60 [ID_93994]
+
+STR @ 144c965d8 : "StarmapInspectBodyInfoProvider"
+    <- 1416824e1 PARAM in ID_93949@141682170 [ID_93949]
+    <- 144a569f0 DATA in (none)
+
+STR @ 144c965f8 : "fStarMapInspectMinZoomRotationMultiplierGamepad:StarMap"
+    <- 14019bbac DATA in ID_19916@14019bba0 [ID_19916]
+
+STR @ 144c96630 : "fCursorRotMultiplierPlanet:Starmap"
+    <- 14019bb4c DATA in ID_19914@14019bb40 [ID_19914]
+
+STR @ 144c96658 : "fCursorRotMultOffsetPlanet:Starmap"
+    <- 14019bb7c DATA in ID_19915@14019bb70 [ID_19915]
+
+STR @ 144c96680 : "fCursorRotMultiplierMoon:Starmap"
+    <- 14019baec DATA in ID_19912@14019bae0 [ID_19912]
+
+STR @ 144c966a8 : "fCursorRotMultOffsetMoon:Starmap"
+    <- 14019bb1c DATA in ID_19913@14019bb10 [ID_19913]
+
+STR @ 144c966d0 : "StarMapMenu_SelectedLandingSite"
+    <- 14168f80e DATA in ID_94027@14168f7e0 [ID_94027]
+
+STR @ 144c966f0 : "StarMapMenu_SelectedLandingSiteFailed"
+    <- 14168f5ae DATA in ID_94024@14168f580 [ID_94024]
+
+STR @ 144c96718 : "StarMapMenu_MarkerGroupEntryClicked"
+    <- 14168fd4e DATA in ID_94033@14168fd20 [ID_94033]
+
+STR @ 144c96740 : "StarMapMenu_MarkerGroupEntryHoverChanged"
+    <- 14168faae DATA in ID_94030@14168fa80 [ID_94030]
+
+STR @ 144c96770 : "StarMapMenu_LandingInputInProgress"
+    <- 14169028e DATA in ID_94039@141690260 [ID_94039]
+
+STR @ 144c96798 : "StarMapMenu_MarkerGroupContainerVisibilityChanged"
+    <- 14168ffee DATA in ID_94036@14168ffc0 [ID_94036]
+
+STR @ 144c967d0 : "fStarMapOrbitLinesTransitionTime:StarMap"
+    <- 14019be7c DATA in ID_19931@14019be70 [ID_19931]
+
+STR @ 144c96810 : "fResourceVeinHoverDelay:StarMap"
+    <- 14019be1c DATA in ID_19929@14019be10 [ID_19929]
+
+STR @ 144c96830 : "bAlwaysAllowScanning:StarMap"
+    <- 14019be47 DATA in ID_19930@14019be40 [ID_19930]
+
+STR @ 144c96850 : "fResourceVeinOpenDuration:StarMap"
+    <- 14019bdbc DATA in ID_19927@14019bdb0 [ID_19927]
+
+STR @ 144c96878 : "fResourceVeinCloseDuration:StarMap"
+    <- 14019bdec DATA in ID_19928@14019bde0 [ID_19928]
+
+STR @ 144c968a0 : "bStarMapInspectDefaultSystemViewOnZoomExit:StarMap"
+    <- 14019bd57 DATA in ID_19925@14019bd50 [ID_19925]
+
+STR @ 144c968d8 : "bResourceVeinForceLoad:StarMap"
+    <- 14019bd87 DATA in ID_19926@14019bd80 [ID_19926]
+
+STR @ 144c968f8 : "bStarMapInspectZoomToPointEnabled:StarMap"
+    <- 14019bcf7 DATA in ID_19923@14019bcf0 [ID_19923]
+
+STR @ 144c96928 : "bStarMapInspectExitOnZoomToOther:StarMap"
+    <- 14019bd27 DATA in ID_19924@14019bd20 [ID_19924]
+
+STR @ 144c96958 : "iStarMapInspectPOIGroupOutpostMax"
+    <- 14019bc9a DATA in ID_19921@14019bc90 [ID_19921]
+
+STR @ 144c96980 : "fStarMapInspectCameraDistanceScaleTransition:StarMap"
+    <- 14019bccc DATA in ID_19922@14019bcc0 [ID_19922]
+
+STR @ 144c969b8 : "fStarMapInspectSnapToRadius:StarMap"
+    <- 14019bc3c DATA in ID_19919@14019bc30 [ID_19919]
+
+STR @ 144c969e0 : "fStarMapInspectPOIGroupingDistance"
+    <- 14019bc6c DATA in ID_19920@14019bc60 [ID_19920]
+
+STR @ 144c96a08 : "fStarMapInspectMaxZoomRotationMultiplierGamepad:StarMap"
+    <- 14019bbdc DATA in ID_19917@14019bbd0 [ID_19917]
+
+STR @ 144c96a40 : "fStarMapInspectPoiHighlightRadius:StarMap"
+    <- 14019bc0c DATA in ID_19918@14019bc00 [ID_19918]
+
+STR @ 144c96b88 : "StarMapMenuPlanetInspectData"
+    <- 1416824c7 DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96bb8 : "StarMapMenuBodyPOIGroups"
+    <- 141682493 DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96bd8 : "StarMapMenuFocusBodyData"
+    <- 1416824ad DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96bf8 : "StarMapMenuBodyPOIDefs"
+    <- 14168245f DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96c10 : "StarMapMenuBodyPOIPositions"
+    <- 141682479 DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96cc8 : "UIMenuStarmapLandingMarkerRemove"
+    <- 141688e5f DATA in ID_93991@141688570 [ID_93991]
+
+STR @ 144c96d30 : "UIMenuStarmapInspectEnter"
+    <- 1416ed81b DATA in ID_95136@1416ed7d0 [ID_95136]
+    <- 141685165 DATA in ID_93966@141685140 [ID_93966]
+
+STR @ 144c96d50 : "UIMenuStarmapLevel6ZoomOut"
+    <- 141686e12 DATA in ID_93982@141686bc0 [ID_93982]
+
+STR @ 144c96d88 : "UIMenuStarmapShowMeStop"
+    <- 14169a71d DATA in ID_94228@14169a6f0 [ID_94228]
+
+STR @ 144c991c8 : "StarMapMenu_QuickSelectChange"
+    <- 1416a477e DATA in ID_94319@1416a4750 [ID_94319]
+
+STR @ 144c991e8 : "fStarMapGalaxyGamepadRotSpeed:StarMap"
+    <- 14019c85c DATA in ID_19989@14019c850 [ID_19989]
+
+STR @ 144c99210 : "fStarMapGalaxyRotationMaxYaw:StarMap"
+    <- 14019c88c DATA in ID_19990@14019c880 [ID_19990]
+
+STR @ 144c99238 : "fStarMapGalaxyPanFlickVelocityDecay:StarMap"
+    <- 14019c7fc DATA in ID_19987@14019c7f0 [ID_19987]
+
+STR @ 144c99268 : "bStarMapGalaxyEnableRotation:StarMap"
+    <- 14019c827 DATA in ID_19988@14019c820 [ID_19988]
+
+STR @ 144c99290 : "fStarMapGalaxyFromSystemFadeTime:StarMap"
+    <- 14019c79c DATA in ID_19985@14019c790 [ID_19985]
+
+STR @ 144c992c0 : "fStarMapGalaxyScrollZoomAmount:StarMap"
+    <- 14019c7cc DATA in ID_19986@14019c7c0 [ID_19986]
+
+STR @ 144c992e8 : "fStarMapGalaxyCursorHighlightRadius:StarMap"
+    <- 14019c73c DATA in ID_19983@14019c730 [ID_19983]
+
+STR @ 144c99318 : "fStarMapGalaxyCursorSelectionRadius:StarMap"
+    <- 14019c76c DATA in ID_19984@14019c760 [ID_19984]
+
+STR @ 144c99348 : "fStarMapGalaxyBinarySystemMinDistance:StarMap"
+    <- 14019c6dc DATA in ID_19981@14019c6d0 [ID_19981]
+
+STR @ 144c99378 : "fStarMapGalaxyStarOutOfRangeAlpha:StarMap"
+    <- 14019c70c DATA in ID_19982@14019c700 [ID_19982]
+
+STR @ 144c993a8 : "fStarMapGalaxyMarkerDistanceFromHomeScaleMin:StarMap"
+    <- 14019c67c DATA in ID_19979@14019c670 [ID_19979]
+
+STR @ 144c993e0 : "fStarMapGalaxyMarkerDistanceFromHomeScaleMax:StarMap"
+    <- 14019c6ac DATA in ID_19980@14019c6a0 [ID_19980]
+
+STR @ 144c99418 : "fStarMapGalaxyMarkerScaleMin:StarMap"
+    <- 14019c61c DATA in ID_19977@14019c610 [ID_19977]
+
+STR @ 144c99440 : "fStarMapGalaxyMarkerScaleMax:StarMap"
+    <- 14019c64c DATA in ID_19978@14019c640 [ID_19978]
+
+STR @ 144c99470 : "sStarMapGalaxyHomeSystem:StarMap"
+    <- 1439b16e5 READ in ID_211618@1439b16a0 [ID_211618]
+    <- 1439b16d9 PARAM in ID_211618@1439b16a0 [ID_211618]
+    <- 145920258 DATA in (none)
+
+STR @ 144c994b8 : "fStarMapGalaxyStarfieldSpaceGlowBackgroundScale:StarMap"
+    <- 14019cb1c DATA in ID_20003@14019cb10 [ID_20003]
+
+STR @ 144c994f0 : "fStarMapGalaxyStarfieldTransitionBlackDurationAsPercent:StarMap"
+    <- 14019cb4c DATA in ID_20004@14019cb40 [ID_20004]
+
+STR @ 144c99530 : "fStarMapGalaxyStarfieldBackgroundScale:StarMap"
+    <- 14019cab8 DATA in ID_20001@14019cab0 [ID_20001]
+
+STR @ 144c99560 : "fStarMapGalaxyStarfieldStarBrightnessScale:StarMap"
+    <- 14019caec DATA in ID_20002@14019cae0 [ID_20002]
+
+STR @ 144c99598 : "fStarMapGalaxyDiscoveredColorBrightness:StarMap"
+    <- 14019ca5c DATA in ID_19999@14019ca50 [ID_19999]
+
+STR @ 144c995c8 : "bStarMapGalaxyLinearizeDiscoveredColor:StarMap"
+    <- 14019ca87 DATA in ID_20000@14019ca80 [ID_20000]
+
+STR @ 144c995f8 : "aStarMapGalaxyUndiscoveredInRangeColor:StarMap"
+    <- 14019c9db DATA in ID_19997@14019c9d0 [ID_19997]
+
+STR @ 144c99628 : "aStarMapGalaxyUndiscoveredNotInRangeColor:StarMap"
+    <- 14019ca1b DATA in ID_19998@14019ca10 [ID_19998]
+
+STR @ 144c99660 : "fStarMapGalaxyRotateMinDecay:StarMap"
+    <- 14019c97c DATA in ID_19995@14019c970 [ID_19995]
+
+STR @ 144c99688 : "bStarMapGalaxyAlwaysShowStarColor:StarMap"
+    <- 14019c9a7 DATA in ID_19996@14019c9a0 [ID_19996]
+
+STR @ 144c996b8 : "fStarMapGalaxyRotMouseVertScreenPercent:StarMap"
+    <- 14019c91c DATA in ID_19993@14019c910 [ID_19993]
+
+STR @ 144c996e8 : "fStarMapGalaxyRotateDecayPercent:StarMap"
+    <- 14019c94c DATA in ID_19994@14019c940 [ID_19994]
+
+STR @ 144c99718 : "fStarMapGalaxyRotationMaxPitch:StarMap"
+    <- 14019c8bc DATA in ID_19991@14019c8b0 [ID_19991]
+
+STR @ 144c99740 : "fStarMapGalaxyRotationHorizScreenPercent:StarMap"
+    <- 14019c8ec DATA in ID_19992@14019c8e0 [ID_19992]
+
+STR @ 144c998a0 : "UIMenuStarmapSelect"
+    <- 1416b094c DATA in ID_94505@1416b0690 [ID_94505]
+    <- 1416a2d9c DATA in ID_94306@1416a2d60 [ID_94306]
+
+STR @ 144c99900 : "StarMapGalaxyFadeEvent"
+    <- 14169bdb0 DATA in ID_1016525@14169ba50 [ID_1016525]
+
+STR @ 144c99970 : "StarMapMenuQuickSelectData"
+    <- 14169bd62 DATA in ID_1016525@14169ba50 [ID_1016525]
+
+STR @ 144c999b0 : "fStarMapGalaxyCameraYaw:StarMap"
+    <- 14019cb7c DATA in ID_20005@14019cb70 [ID_20005]
+
+STR @ 144c999d0 : "fStarMapGalaxyPanVelocity:StarMap"
+    <- 14019ce4c DATA in ID_20020@14019ce40 [ID_20020]
+
+STR @ 144c999f8 : "fStarMapGalaxyLookAtBoundsMinY:StarMap"
+    <- 14019ce78 DATA in ID_20021@14019ce70 [ID_20021]
+
+STR @ 144c99a20 : "fStarMapGalaxyFOVZoomMin:StarMap"
+    <- 14019cdec DATA in ID_20018@14019cde0 [ID_20018]
+
+STR @ 144c99a48 : "fStarMapGalaxyFOVZoomMax:StarMap"
+    <- 14019ce1c DATA in ID_20019@14019ce10 [ID_20019]
+
+STR @ 144c99a70 : "bStarMapGalaxyUseFOVZoom:StarMap"
+    <- 14019cd87 DATA in ID_20016@14019cd80 [ID_20016]
+
+STR @ 144c99a98 : "fStarMapGalaxyCameraDefaultFOV:StarMap"
+    <- 14019cdbc DATA in ID_20017@14019cdb0 [ID_20017]
+
+STR @ 144c99ac0 : "fStarMapGalaxyDefaultRadius:StarMap"
+    <- 14019cd2c DATA in ID_20014@14019cd20 [ID_20014]
+
+STR @ 144c99ae8 : "fStarMapGalaxyMaxRadius:StarMap"
+    <- 14019cd5c DATA in ID_20015@14019cd50 [ID_20015]
+
+STR @ 144c99b08 : "fStarMapGalaxyZoomSoftMinScale:StarMap"
+    <- 14019cccc DATA in ID_20012@14019ccc0 [ID_20012]
+
+STR @ 144c99b30 : "fStarMapGalaxyMinRadius:StarMap"
+    <- 14019ccfc DATA in ID_20013@14019ccf0 [ID_20013]
+
+STR @ 144c99b50 : "fStarMapGalaxyToSystemPanTime:StarMap"
+    <- 14019cc6c DATA in ID_20010@14019cc60 [ID_20010]
+
+STR @ 144c99b78 : "fStarMapGalaxyZoomMinScale:StarMap"
+    <- 14019cc9c DATA in ID_20011@14019cc90 [ID_20011]
+
+STR @ 144c99ba0 : "fStarMapGalaxyFromSystemZoomTime:StarMap"
+    <- 14019cc0c DATA in ID_20008@14019cc00 [ID_20008]
+
+STR @ 144c99bd0 : "fStarMapGalaxyToSystemZoomFadeTime:StarMap"
+    <- 14019cc3c DATA in ID_20009@14019cc30 [ID_20009]
+
+STR @ 144c99c00 : "fStarMapGalaxyCameraPitch:StarMap"
+    <- 14019cbac DATA in ID_20006@14019cba0 [ID_20006]
+
+STR @ 144c99c28 : "fStarMapGalaxyCameraRoll:StarMap"
+    <- 14019cbd8 DATA in ID_20007@14019cbd0 [ID_20007]
+
+STR @ 144c99c50 : "fStarMapSystemInspectPitchRange:StarMap"
+    <- 14019d14c DATA in ID_20036@14019d140 [ID_20036]
+
+STR @ 144c99c78 : "fStarMapSystemMinCameraPitch:StarMap"
+    <- 14019d17c DATA in ID_20037@14019d170 [ID_20037]
+
+STR @ 144c99ca0 : "fStarMapSystemZoomSpeedMouse:StarMap"
+    <- 14019d0ec DATA in ID_20034@14019d0e0 [ID_20034]
+
+STR @ 144c99cc8 : "fStarMapSystemZoomSoftMaxScale:StarMap"
+    <- 14019d11c DATA in ID_20035@14019d110 [ID_20035]
+
+STR @ 144c99cf0 : "fStarMapSystemTransitionTime:StarMap"
+    <- 14019d08c DATA in ID_20032@14019d080 [ID_20032]
+
+STR @ 144c99d18 : "fStarMapSystemZoomSpeedGamepad:StarMap"
+    <- 14019d0bc DATA in ID_20033@14019d0b0 [ID_20033]
+
+STR @ 144c99d40 : "fStarMapGalaxyLookAtBoundsZoomedInMaxZ:StarMap"
+    <- 14019d02c DATA in ID_20030@14019d020 [ID_20030]
+
+STR @ 144c99d70 : "fStarMapSystemCameraPitchDegs:StarMap"
+    <- 14019d05c DATA in ID_20031@14019d050 [ID_20031]
+
+STR @ 144c99d98 : "fStarMapGalaxyLookAtBoundsZoomedInMaxX:StarMap"
+    <- 14019cfcc DATA in ID_20028@14019cfc0 [ID_20028]
+
+STR @ 144c99dc8 : "fStarMapGalaxyLookAtBoundsZoomedInMinZ:StarMap"
+    <- 14019cffc DATA in ID_20029@14019cff0 [ID_20029]
+
+STR @ 144c99df8 : "fStarMapGalaxyLookAtBoundsZoomedOutMaxZ:StarMap"
+    <- 14019cf6c DATA in ID_20026@14019cf60 [ID_20026]
+
+STR @ 144c99e28 : "fStarMapGalaxyLookAtBoundsZoomedInMinX:StarMap"
+    <- 14019cf9c DATA in ID_20027@14019cf90 [ID_20027]
+
+STR @ 144c99e58 : "fStarMapGalaxyLookAtBoundsZoomedOutMaxX:StarMap"
+    <- 14019cf0c DATA in ID_20024@14019cf00 [ID_20024]
+
+STR @ 144c99e88 : "fStarMapGalaxyLookAtBoundsZoomedOutMinZ:StarMap"
+    <- 14019cf3c DATA in ID_20025@14019cf30 [ID_20025]
+
+STR @ 144c99eb8 : "fStarMapGalaxyLookAtBoundsMaxY:StarMap"
+    <- 14019cea8 DATA in ID_20022@14019cea0 [ID_20022]
+
+STR @ 144c99ee0 : "fStarMapGalaxyLookAtBoundsZoomedOutMinX:StarMap"
+    <- 14019cedc DATA in ID_20023@14019ced0 [ID_20023]
+
+STR @ 144c99f10 : "fStarMapInspectZoomSpeed:StarMap"
+    <- 14019d26c DATA in ID_20042@14019d260 [ID_20042]
+
+STR @ 144c99f38 : "fStarMapInspectTransitionTime:StarMap"
+    <- 14019d20c DATA in ID_20040@14019d200 [ID_20040]
+
+STR @ 144c99f60 : "fStarMapSystemZoomMaxScale:StarMap"
+    <- 14019d23c DATA in ID_20041@14019d230 [ID_20041]
+
+STR @ 144c99f88 : "fStarMapInspectCameraPitchDegs:StarMap"
+    <- 14019d1ac DATA in ID_20038@14019d1a0 [ID_20038]
+
+STR @ 144c99fb0 : "bStarMapInspectCameraKeepCurrentYaw:StarMap"
+    <- 14019d1d7 DATA in ID_20039@14019d1d0 [ID_20039]
+
+STR @ 144c9a040 : "GalaxyStarMapMenu"
+    <- 14253f277 DATA in ID_130397@14253f230 [ID_130397]
+    <- 1416acab2 DATA in ID_94475@1416aca60 [ID_94475]
+
+STR @ 144c9a120 : "fStarMapOffscreenMarkerDistanceMult"
+    <- 14019d9dc DATA in ID_20081@14019d9d0 [ID_20081]
+
+STR @ 144c9a158 : "bStarMapRerouteOnSelect:StarMap"
+    <- 14019d977 DATA in ID_20079@14019d970 [ID_20079]
+
+STR @ 144c9a178 : "fStarMapOffscreenMarkerPadding"
+    <- 14019d9ac DATA in ID_20080@14019d9a0 [ID_20080]
+
+STR @ 144c9a198 : "StarMapMenu_Galaxy_FocusSystem"
+    <- 1416b14ae DATA in ID_94513@1416b1480 [ID_94513]
+
+STR @ 144c9a1b8 : "bShowGalaxyQuestMarkersInSystemView:StarMap"
+    <- 14019d947 DATA in ID_20078@14019d940 [ID_20078]
+
+STR @ 144c9a1e8 : "StarMapMenu_OnGalaxyViewInitialized"
+    <- 1416b174e DATA in ID_94516@1416b1720 [ID_94516]
+
+STR @ 144c9a350 : "StarMapOffscreenMarkersData"
+    <- 1416ae731 DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a370 : "StarMapMenuSystemBodyInfoData"
+    <- 1416ae74b DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a390 : "StarMapMenuMarkersData"
+    <- 1416ae6fd DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a3a8 : "StarMapMenuMarkerPositions"
+    <- 1416ae717 DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a3e0 : "StarMapMenuData"
+    <- 1416ae6e7 DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a4b0 : "UIMenuStarmapShowMeStart"
+    <- 1416b03bf DATA in ID_94502@1416b0310 [ID_94502]
+
+STR @ 144c9b358 : "bStarMapEnableFullScreenFilmGrain:StarMap"
+    <- 14019e877 DATA in ID_20151@14019e870 [ID_20151]
+
+STR @ 144c9b388 : "bStarMapDisableInputOnTransition:StarMap"
+    <- 14019e8a7 DATA in ID_20152@14019e8a0 [ID_20152]
+
+STR @ 144c9b3b8 : "StarMapMenu_ScanPlanet"
+    <- 1416c218e DATA in ID_94718@1416c2160 [ID_94718]
+
+STR @ 144c9b3d0 : "bStarMapEnableFullScreenScanlines:StarMap"
+    <- 14019e847 DATA in ID_20150@14019e840 [ID_20150]
+
+STR @ 144c9b400 : "StarMapMenu_OnOutpostEntrySelected"
+    <- 1416c26ce DATA in ID_94724@1416c26a0 [ID_94724]
+
+STR @ 144c9b428 : "StarMapMenu_ShowRealCursor"
+    <- 1416c242e DATA in ID_94721@1416c2400 [ID_94721]
+
+STR @ 144c9b448 : "StarMapMenu_OnCancel"
+    <- 1416c2c0e DATA in ID_94730@1416c2be0 [ID_94730]
+
+STR @ 144c9b460 : "StarMapMenu_ReadyToClose"
+    <- 1416c296e DATA in ID_94727@1416c2940 [ID_94727]
+
+STR @ 144c9b480 : "StarMapMenu_OnHintButtonClicked"
+    <- 1416c314e DATA in ID_94736@1416c3120 [ID_94736]
+
+STR @ 144c9b4a0 : "StarMapMenu_OnExitStarMap"
+    <- 1416c2eae DATA in ID_94733@1416c2e80 [ID_94733]
+
+STR @ 144c9b4c0 : "StarMapMenu_OnClearRoute"
+    <- 1416c368e DATA in ID_94742@1416c3660 [ID_94742]
+
+STR @ 144c9b4e0 : "StarMapMenu_ExecuteRoute"
+    <- 1416c33ee DATA in ID_94739@1416c33c0 [ID_94739]
+
+STR @ 144c9b500 : "bShowStarMapLetterBoxed:StarMap"
+    <- 14019e677 DATA in ID_20139@14019e670 [ID_20139]
+
+STR @ 144c9b520 : "UIMenuStarmapCourseExecute"
+    <- 1416bde55 DATA in ID_94696@1416bdc80 [ID_94696]
+
+STR @ 144c9b540 : "UIMenuStarmapCoursePointFail"
+    <- 1416bd607 DATA in ID_94690@1416bd450 [ID_94690]
+
+STR @ 144c9b560 : "UIMenuStarmapCoursePointRemoveAll"
+    <- 1416bdade DATA in ID_94693@1416bda70 [ID_94693]
+
+STR @ 144c9b618 : "UIMenuStarmapCoursePointAdd"
+    <- 1416bd3b8 DATA in ID_94689@1416bcbb0 [ID_94689]
+
+STR @ 144c9b650 : "bHideConsoleAsyncShowBug:StarMap"
+    <- 14019e937 DATA in ID_20155@14019e930 [ID_20155]
+
+STR @ 144c9b688 : "fStarMapSystemCameraFOV:StarMap"
+    <- 14019e8dc DATA in ID_20153@14019e8d0 [ID_20153]
+
+STR @ 144c9b6a8 : "bStarMapInstantEyeAdapt:StarMap"
+    <- 14019e907 DATA in ID_20154@14019e900 [ID_20154]
+
+STR @ 144c9c0a0 : "fStarMapSystemFlickerRate:StarMap"
+    <- 14019ed3c DATA in ID_20176@14019ed30 [ID_20176]
+
+STR @ 144c9c0c8 : "fStarMapSystemFlickerLength:StarMap"
+    <- 14019ed0c DATA in ID_20175@14019ed00 [ID_20175]
+
+STR @ 144c9c0f0 : "iStarmapSystemFlickerCount:StarMap"
+    <- 14019ecda DATA in ID_20174@14019ecd0 [ID_20174]
+
+STR @ 144c9c118 : "fStarMapSystemCullRadiusMultiplier:StarMap"
+    <- 14019ec8c DATA in ID_20172@14019ec80 [ID_20172]
+
+STR @ 144c9c148 : "fStarMapSystemOrbitLineTiltFactor:StarMap"
+    <- 14019ec5c DATA in ID_20171@14019ec50 [ID_20171]
+
+STR @ 144c9c178 : "fStarMapSystemTimeScale:StarMap"
+    <- 14019ec2c DATA in ID_20170@14019ec20 [ID_20170]
+
+STR @ 144c9c198 : "fStarMapMobileStarLightDefaultRadius:StarMap"
+    <- 14019ebdc DATA in ID_20168@14019ebd0 [ID_20168]
+
+STR @ 144c9c1c8 : "fStarMapMobileStarLightDefaultIntensity:StarMap"
+    <- 14019ebac DATA in ID_20167@14019eba0 [ID_20167]
+
+STR @ 144c9c1f8 : "aStarMapMobileStarLightDefaultColor:StarMap"
+    <- 14019eb6b DATA in ID_20166@14019eb60 [ID_20166]
+
+STR @ 144c9c228 : "fStarMapMobileFillLightDefaultIntensity:StarMap"
+    <- 14019eb3c DATA in ID_20165@14019eb30 [ID_20165]
+
+STR @ 144c9c258 : "aStarMapMobileFillLightDefaultColor:StarMap"
+    <- 14019eafb DATA in ID_20164@14019eaf0 [ID_20164]
+
+STR @ 144c9c288 : "fStarMapGravityWavesDistanceBetweenRings:StarMap"
+    <- 14019f05c DATA in ID_20192@14019f050 [ID_20192]
+
+STR @ 144c9c2c0 : "aStarMapGravityWavesColor:StarMap"
+    <- 14019f01b DATA in ID_20191@14019f010 [ID_20191]
+
+STR @ 144c9c2e8 : "uStarMapGravityWavesNumRings:StarMap"
+    <- 14019efea DATA in ID_20190@14019efe0 [ID_20190]
+
+STR @ 144c9c310 : "fStarMapGravityWavesNoiseSpeed:StarMap"
+    <- 14019efbc DATA in ID_20189@14019efb0 [ID_20189]
+
+STR @ 144c9c338 : "fStarMapGravityWavesNoiseScale:StarMap"
+    <- 14019ef8c DATA in ID_20188@14019ef80 [ID_20188]
+
+STR @ 144c9c360 : "fStarMapGravityWavesLineThickness:StarMap"
+    <- 14019ef5c DATA in ID_20187@14019ef50 [ID_20187]
+
+STR @ 144c9c390 : "aStarMapOrbitsColor:StarMap"
+    <- 14019ef1b DATA in ID_20186@14019ef10 [ID_20186]
+
+STR @ 144c9c3b0 : "fStarMapOrbitsFadeInTime:StarMap"
+    <- 14019eeec DATA in ID_20185@14019eee0 [ID_20185]
+
+STR @ 144c9c3d8 : "fStarMapOrbitsFadeOutTime:StarMap"
+    <- 14019eebc DATA in ID_20184@14019eeb0 [ID_20184]
+
+STR @ 144c9c400 : "fStarMapOrbitsThickness:StarMap"
+    <- 14019ee8c DATA in ID_20183@14019ee80 [ID_20183]
+
+STR @ 144c9c420 : "uStarMapOrbitsNumSegmentsSmallCircle:StarMap"
+    <- 14019ee5a DATA in ID_20182@14019ee50 [ID_20182]
+
+STR @ 144c9c450 : "uStarMapOrbitsNumSegmentsBigCircle:StarMap"
+    <- 14019ee2a DATA in ID_20181@14019ee20 [ID_20181]
+
+STR @ 144c9c480 : "bStarMapOrbitsUpdatePlanetsDataEveryFrame:StarMap"
+    <- 14019edf7 DATA in ID_20180@14019edf0 [ID_20180]
+
+STR @ 144c9c4b8 : "bStarMapSystemOrbitLinesDisable:StarMap"
+    <- 14019edc7 DATA in ID_20179@14019edc0 [ID_20179]
+
+STR @ 144c9c4e0 : "bStarMapEnableBodiesScanlines:StarMap"
+    <- 14019ed97 DATA in ID_20178@14019ed90 [ID_20178]
+
+STR @ 144c9c508 : "fStarmapSystemFlickerInitialDelay:StarMap"
+    <- 14019ed6c DATA in ID_20177@14019ed60 [ID_20177]
+
+STR @ 144c9c538 : "aStarMapClearColor:StarMap"
+    <- 14019f40b DATA in ID_20207@14019f400 [ID_20207]
+
+STR @ 144c9c558 : "sBodyModelFilename:StarMap"
+    <- 1439b5505 READ in ID_211865@1439b54c0 [ID_211865]
+    <- 1439b54f9 PARAM in ID_211865@1439b54c0 [ID_211865]
+    <- 1459203c8 DATA in (none)
+
+STR @ 144c9c5b0 : "sRingModelFilename:StarMap"
+    <- 1439b54a5 READ in ID_211864@1439b5460 [ID_211864]
+    <- 1439b5499 PARAM in ID_211864@1439b5460 [ID_211864]
+    <- 1459203a8 DATA in (none)
+
+STR @ 144c9c5d0 : "fStarMapGravityWavesTurbulenceSpeed_Y:StarMap"
+    <- 14019f29c DATA in ID_20204@14019f290 [ID_20204]
+
+STR @ 144c9c600 : "fStarMapGravityWavesTurbulenceSpeed_X:StarMap"
+    <- 14019f26c DATA in ID_20203@14019f260 [ID_20203]
+
+STR @ 144c9c630 : "fStarMapGravityWavesTurbulenceEffectScalar:StarMap"
+    <- 14019f23c DATA in ID_20202@14019f230 [ID_20202]
+
+STR @ 144c9c668 : "fStarMapGravityWavesTurbulenceMapScalar:StarMap"
+    <- 14019f20c DATA in ID_20201@14019f200 [ID_20201]
+
+STR @ 144c9c698 : "fStarMapGravityWavesFadeStart:StarMap"
+    <- 14019f1dc DATA in ID_20200@14019f1d0 [ID_20200]
+
+STR @ 144c9c6c0 : "fStarMapGravityWavesAlphaStart:StarMap"
+    <- 14019f1ac DATA in ID_20199@14019f1a0 [ID_20199]
+
+STR @ 144c9c6e8 : "bStarMapGravityWavesIgnoreStar:StarMap"
+    <- 14019f177 DATA in ID_20198@14019f170 [ID_20198]
+
+STR @ 144c9c710 : "fStarMapGravityWavesRotateSpeed:StarMap"
+    <- 14019f14c DATA in ID_20197@14019f140 [ID_20197]
+
+STR @ 144c9c738 : "fStarMapGravityWavesWidthScalar:StarMap"
+    <- 14019f11c DATA in ID_20196@14019f110 [ID_20196]
+
+STR @ 144c9c760 : "fStarMapGravityWavesDepthScalar:StarMap"
+    <- 14019f0ec DATA in ID_20195@14019f0e0 [ID_20195]
+
+STR @ 144c9c788 : "uStarMapGravityWavesNumSegmentsIncrease:StarMap"
+    <- 14019f0ba DATA in ID_20194@14019f0b0 [ID_20194]
+
+STR @ 144c9c7b8 : "uStarMapGravityWavesNumSegmentsStart:StarMap"
+    <- 14019f08a DATA in ID_20193@14019f080 [ID_20193]
+
+STR @ 144c9c7e8 : "StarmapSystemMobile"
+    <- 1416cbe6d DATA in ID_94846@1416cb760 [ID_94846]
+
+STR @ 144c9c800 : "fStarMapSystemMobileStarfieldTransitionBlackDurationAsPercent:StarMap"
+    <- 14019f4dc DATA in ID_20211@14019f4d0 [ID_20211]
+
+STR @ 144c9c848 : "fStarMapSystemMobileStarfieldSpaceGlowBackgroundScale:StarMap"
+    <- 14019f4ac DATA in ID_20210@14019f4a0 [ID_20210]
+
+STR @ 144c9c888 : "fStarMapSystemMobileStarfieldStarBrightnessScale:StarMap"
+    <- 14019f47c DATA in ID_20209@14019f470 [ID_20209]
+
+STR @ 144c9c8c8 : "fStarMapSystemMobileStarfieldBackgroundScale:StarMap"
+    <- 14019f44c DATA in ID_20208@14019f440 [ID_20208]
+
+STR @ 144c9c9e0 : "fStarMapGalaxyStaticMapCameraFOV:StarMap"
+    <- 1401a011c DATA in ID_19969@1401a0110 [ID_19969]
+
+STR @ 144c9ca10 : "bStarMapThrottleDuplicateErrors:StarMap"
+    <- 1401a00e7 DATA in ID_20269@1401a00e0 [ID_20269]
+
+STR @ 144c9ca38 : "bAllowInspectForUndiscoveredBodies:StarMap"
+    <- 1401a00b7 DATA in ID_20268@1401a00b0 [ID_20268]
+
+STR @ 144c9cad0 : "fStaticStarMapCameraFrustumSize:StarMap"
+    <- 1401a026c DATA in ID_19976@1401a0260 [ID_19976]
+
+STR @ 144c9caf8 : "fStaticStarMapCameraRoll:StarMap"
+    <- 1401a023c DATA in ID_19975@1401a0230 [ID_19975]
+
+STR @ 144c9cb20 : "fStaticStarMapCameraPitch:StarMap"
+    <- 1401a020c DATA in ID_19974@1401a0200 [ID_19974]
+
+STR @ 144c9cb48 : "fStaticStarMapCameraYaw:StarMap"
+    <- 1401a01dc DATA in ID_19973@1401a01d0 [ID_19973]
+
+STR @ 144c9cb68 : "fStaticStarMapCameraZ:StarMap"
+    <- 1401a01a8 DATA in ID_19972@1401a01a0 [ID_19972]
+
+STR @ 144c9cb88 : "fStaticStarMapCameraY:StarMap"
+    <- 1401a017c DATA in ID_19971@1401a0170 [ID_19971]
+
+STR @ 144c9cba8 : "fStaticStarMapCameraX:StarMap"
+    <- 1401a014c DATA in ID_19970@1401a0140 [ID_19970]
+
+STR @ 144c9d018 : "fGamepadOnHoldDownZoomDelay:StarMap"
+    <- 1401a0938 DATA in ID_20305@1401a0930 [ID_20305]
+
+STR @ 144c9dd68 : "bStarMapEnableCantPlotIcon:StarMap"
+    <- 1401a1d37 DATA in ID_20400@1401a1d30 [ID_20400]
+
+STR @ 144c9dd90 : "bAllowFastTravelToOrbitals:StarMap"
+    <- 1401a1d07 DATA in ID_20399@1401a1d00 [ID_20399]
+
+STR @ 144c9ddb8 : "bStarMapEnableLifeIcon:StarMap"
+    <- 1401a1cd7 DATA in ID_20398@1401a1cd0 [ID_20398]
+
+STR @ 144c9ddd8 : "StarmapSystemBodyInfoProvider"
+    <- 1416e65b6 PARAM in ID_95105@1416e6240 [ID_95105]
+    <- 144a56aa0 DATA in (none)
+
+STR @ 144c9de10 : "fStarMapSystemZoomPercentMin:StarMap"
+    <- 1401a203c DATA in ID_20416@1401a2030 [ID_20416]
+
+STR @ 144c9de38 : "fStarMapSystemRotationSpeed:StarMap"
+    <- 1401a1fdc DATA in ID_20414@1401a1fd0 [ID_20414]
+
+STR @ 144c9de60 : "iStarMapMaxMouseMoveDeltaSquaredForClick:StarMap"
+    <- 1401a1faa DATA in ID_20413@1401a1fa0 [ID_20413]
+
+STR @ 144c9de98 : "uStarMapRotatePointMouse:StarMap"
+    <- 1401a1f7a DATA in ID_20412@1401a1f70 [ID_20412]
+
+STR @ 144c9dec0 : "uStarMapRotatePoint:StarMap"
+    <- 1401a1f4a DATA in ID_20411@1401a1f40 [ID_20411]
+
+STR @ 144c9dee0 : "fStarMapSystemCancelLookAtDistanceThreshold:StarMap"
+    <- 1401a1f1c DATA in ID_20410@1401a1f10 [ID_20410]
+
+STR @ 144c9df18 : "fStarMapSystemCancelZoomThreshold:StarMap"
+    <- 1401a1eec DATA in ID_20409@1401a1ee0 [ID_20409]
+
+STR @ 144c9df48 : "fStarMapInspectAtmosphereSunScale:StarMap"
+    <- 1401a1ebc DATA in ID_20408@1401a1eb0 [ID_20408]
+
+STR @ 144c9df78 : "fStarMapInspectAtmosphereHeightScale:StarMap"
+    <- 1401a1e8c DATA in ID_20407@1401a1e80 [ID_20407]
+
+STR @ 144c9dfa8 : "fGravityWavesFadeTransitionTime:StarMap"
+    <- 1401a1e5c DATA in ID_20406@1401a1e50 [ID_20406]
+
+STR @ 144c9dfd0 : "bStarMapSystemHideCursorOnPan:StarMap"
+    <- 1401a1e27 DATA in ID_20405@1401a1e20 [ID_20405]
+
+STR @ 144c9dff8 : "bStarMapSystemHideCursorOnRotate:StarMap"
+    <- 1401a1df7 DATA in ID_20404@1401a1df0 [ID_20404]
+
+STR @ 144c9e028 : "iStarMapSystemHoldAndMoveTolerance:StarMap"
+    <- 1401a1dca DATA in ID_20403@1401a1dc0 [ID_20403]
+
+STR @ 144c9e058 : "fStarMapSystemCursorHighlightRadius:StarMap"
+    <- 1401a1d9c DATA in ID_20402@1401a1d90 [ID_20402]
+
+STR @ 144c9e088 : "bStarMapEnableUndiscoveredPOIIcon:StarMap"
+    <- 1401a1d67 DATA in ID_20401@1401a1d60 [ID_20401]
+
+STR @ 144c9e0b8 : "UIMenuStarmapLevel3ZoomOut"
+    <- 1416edc52 DATA in ID_95138@1416edc30 [ID_95138]
+
+STR @ 144c9e0d8 : "UIMenuStarmapLevel2ZoomIn"
+    <- 1416e7062 DATA in ID_95109@1416e6cd0 [ID_95109]
+    <- 1416e7298 DATA in ID_95109@1416e6cd0 [ID_95109]
+
+STR @ 144c9e128 : "StarMapMenuSystemNameHeaderData"
+    <- 1416e65e6 DATA in ID_95105@1416e6240 [ID_95105]
+
+STR @ 144c9e148 : "StarMapMenuSystemScanData"
+    <- 1416e65d0 DATA in ID_95105@1416e6240 [ID_95105]
+
+STR @ 144d1b7f8 : "OnStarMapTargetSelectEvent"
+    <- 1401eb057 DATA in ID_24843@1401eb050 [ID_24843]
+
+STR @ 144d1b8b0 : "%s%s is registered for StarMap target events"
+    <- 141f8d3cb DATA in ID_115998@141f8d370 [ID_115998]
+
+STR @ 144d2be98 : "ShowGalaxyStarMapMenuAndPlotToLocation"
+    <- 142016f47 DATA in ID_117477@142013bc0 [ID_117477]
+
+STR @ 144d2bef0 : "ShowGalaxyStarMapMenu"
+    <- 142016ef5 DATA in ID_117477@142013bc0 [ID_117477]
+
+STR @ 144d2f0c0 : "UnregisterForStarMapTargetSelectEvent"
+    <- 142039fb0 DATA in ID_117813@142038060 [ID_117813]
+    <- 142039fd6 DATA in ID_117813@142038060 [ID_117813]
+
+STR @ 144d2f370 : "RegisterForStarMapTargetSelectEvent"
+    <- 142038edf DATA in ID_117813@142038060 [ID_117813]
+    <- 142038f05 DATA in ID_117813@142038060 [ID_117813]
+
+STR @ 144d38de8 : "SetMarkerVisibleOnStarMap"
+    <- 14208df31 DATA in ID_118497@1420881f0 [ID_118497]
+
+STR @ 144d5e040 : "!SetRouteDestination_StarMap"
+    <- 1422e5d8f DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422e5d96 DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422e5d9b DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422e5da2 DATA in ID_124107@1422de050 [ID_124107]
+
+STR @ 144d5e1f8 : "!OpenMissionMenu_StarMap"
+    <- 1422e93be DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422e93c5 DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422e93ca DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422e93d1 DATA in ID_124107@1422de050 [ID_124107]
+
+STR @ 144d5e218 : "ReturnToStarMap"
+    <- 1422e93d8 DATA in ID_124107@1422de050 [ID_124107]
+
+STR @ 144d5e478 : "!PanUp_StarMap"
+    <- 1422eae64 DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422eae6b DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422eae70 DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422eae77 DATA in ID_124107@1422de050 [ID_124107]
+
+STR @ 144d5e488 : "!PanDown_StarMap"
+    <- 1422eaece DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422eaed5 DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422eaeda DATA in ID_124107@1422de050 [ID_124107]
+    <- 1422eaee1 DATA in ID_124107@1422de050 [ID_124107]
+
+STR @ 144d5f168 : "MissionFromStarMap"
+    <- 144a596c0 DATA in (none)
+
+STR @ 144d5f238 : "StarMap_QuickSelect"
+    <- 144a59700 DATA in (none)
+
+STR @ 144d5f500 : "StarMap"
+    <- 144a59610 DATA in (none)
+
+STR @ 144d5f508 : "StarMap_JumpWindow"
+    <- 144a59618 DATA in (none)
+
+STR @ 144d5f520 : "StarMap_SystemInspect"
+    <- 144a59620 DATA in (none)
+
+STR @ 144d64910 : "bStarMapSystemLoadTestStar:StarMap"
+    <- 140205ee7 DATA in ID_26652@140205ee0 [ID_26652]
+
+STR @ 144d64978 : "bStarMapSystemLoadTestPlanet:StarMap"
+    <- 140205fb7 DATA in ID_26654@140205fb0 [ID_26654]
+
+STR @ 144d649e8 : "sStarMapSystemTestStarNif:StarMap"
+    <- 143a025c5 READ in ID_218659@143a02580 [ID_218659]
+    <- 143a025b9 PARAM in ID_218659@143a02580 [ID_218659]
+    <- 145928af0 DATA in (none)
+
+STR @ 144d64a80 : "sStarMapSystemTestPlanetNif:StarMap"
+    <- 143a02685 READ in ID_218661@143a02640 [ID_218661]
+    <- 143a02679 PARAM in ID_218661@143a02640 [ID_218661]
+    <- 145928b10 DATA in (none)
+
+STR @ 144d7d980 : "BSMaterial::StarmapBodyEffectType"
+    <- 140223e98 DATA in ID_27318@140223e80 [ID_27318]
+    <- 140223e9f DATA in ID_27318@140223e80 [ID_27318]
+
+STR @ 144d7e9d8 : "BSMaterial::StarmapBodyEffectComponent"
+    <- 142521113 DATA in ID_129857@142520c80 [ID_129857]
+    <- 142515b34 DATA in ID_129833@142515b10 [ID_129833]
+    <- 142515b3b DATA in ID_129833@142515b10 [ID_129833]
+
+STR @ 144dacfe8 : "StarmapBodyEffect"
+    <- 14290e00f DATA in ID_140156@14290d8b0 [ID_140156]
+
+STR @ 144dbc090 : "StarmapBodyEffectBuffer"
+    <- 1429edf2b DATA in ID_142622@1429edf10 [ID_142622]
+    <- 1429edf32 DATA in ID_142622@1429edf10 [ID_142622]
+
+STR @ 144dbc370 : "bStarMapGravityWavesEnableNoise:StarMap"
+    <- 14026c4a7 DATA in ID_29252@14026c4a0 [ID_29252]
+
+STR @ 144dc4428 : "StarmapGravityWaves"
+    <- 1458dedb8 DATA in (none)
+
+STR @ 144dc4440 : "StarmapOrbits"
+    <- 1458deb18 DATA in (none)
+
+STR @ 144e93808 : "StarmapBodyEffects-MO_FORWARD-SCANLINES (0x0000000002000A17)"
+    (no direct xrefs)
+
+STR @ 144e93850 : "StarmapBodyEffects-MO_FORWARD-RESOURCEVEINS (0x0000000004000A17)"
+    (no direct xrefs)
+
+STR @ 144e93898 : "StarmapBodyEffects"
+    <- 1458dedd8 DATA in (none)
+
+STR @ 144e93b28 : "StarmapGravityWaves- (0x000000000001FE18)"
+    (no direct xrefs)
+
+STR @ 144e93b60 : "StarmapGravityWaves-STARMAP_GRAVITY_WAVES_NOISE_ENABLED (0x000000000201FE18)"
+    (no direct xrefs)
+
+STR @ 144e93bb0 : "StarmapOrbits- (0x000000000001FE19)"
+    (no direct xrefs)
+
+STR @ 145995320 : ".?AVSetRouteDestinationMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 1459966c8 : ".?AVSetBodyFocusForQuestMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145996700 : ".?AVSetCourseToReferenceMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 1459970e0 : ".?AVSetCursorActiveMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145997118 : ".?AVSetCourseToQuestMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 1459978e8 : ".?AVFocusStarMapOnBodyMsg@@"
+    (no direct xrefs)
+
+STR @ 1459979a8 : ".?AVSetPreviewRouteDestinationMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 1459979e8 : ".?AVSetGameCursorMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145997a18 : ".?AVSetCursorStateMsg@StarMap@@"
+    (no direct xrefs)
+
+STR @ 1459fb330 : ".?AV?$TCmd@V<lambda_b72b1df58fc0c5af825b1a5c710fbe6f>@@UCacheHandles@Commands@StarMap@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 1459fb3b0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_b72b1df58fc0c5af825b1a5c710fbe6f>@@UCacheHandles@Commands@StarMap@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145a27a10 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VPlanetTraitKnownEvent@StarMap@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145a27a80 : ".?AU?$EventSource@VPlanetTraitKnownEvent@StarMap@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145a281e0 : ".?AV?$BSTEventSource@VPlanetTraitKnownEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145a7e720 : ".?AV?$UIMessageData@VSetRouteDestinationMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145ada060 : ".?AV?$UIMessageData@VSetBodyFocusForQuestMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145adc2a0 : ".?AV?$UIMessageData@VSetCourseToReferenceMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145add160 : ".?AV?$ArrayNestedUIValue@UBodyInfoToUI@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145add1a8 : ".?AUPlanetInfoToUI@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145add1d8 : ".?AUBodyInfoToUI@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145add210 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UBodyInfoToUI@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145add270 : ".?AV?$TUIDataShuttleContainerMap@UBodyInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145add2c0 : ".?AV?$NestedUIValue@UBodyInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145add300 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UBodyInfoToUI@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145add360 : ".?AV?$NestedUIValue@UPlanetInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145add3a0 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UPlanetInfoToUI@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145add400 : ".?AV?$ArrayNestedUIValue@UPlanetInfoToUI@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145add450 : ".?AUSystemBodyInfoToUI@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145add490 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UPlanetInfoToUI@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145add500 : ".?AV?$TUIDataShuttleContainerMap@UPlanetInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145add550 : ".?AV?$TUIDataToFlash@USystemBodyInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145add670 : ".?AV?$TUIDataShuttleContainerMap@USystemBodyInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145addd10 : ".?AV?$TUIDataShuttleContainerMap@UResourceInfoFlashObject@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145addd70 : ".?AV?$NestedUIValue@UResourceInfoFlashObject@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145adddc0 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UResourceInfoFlashObject@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145adde20 : ".?AV?$ArrayNestedUIValue@UResourceInfoFlashObject@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145adde80 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UResourceInfoFlashObject@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145aeb960 : ".?AVSurfaceMap3DScene@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aeb990 : ".?AUTerrainScene@SurfaceMap3DScene@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aeb9d0 : ".?AUScene@SurfaceMap3DScene@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aeba08 : ".?AVStarMap3DScene@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aebd60 : ".?AVMaterialApplicator@SurfaceMapMaterialController@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aebdb0 : ".?AVDefaultMaterialApplicator@SurfaceMapMaterialController@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aebe10 : ".?AVSpecializedMaterialApplicator@SurfaceMapMaterialController@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145aec830 : ".?AV?$FunctorNode@UResources@BSProcGen@@V<lambda_8e58eb822869a8467554ffaec1659de8>@@V?$vector@URefModel@SurfaceMapModelLoader@StarMap@@V?$BSTHeapSTLAllocator@URefModel@SurfaceMapModelLoader@StarMap@@$01@@@std@@@SimpleServerDetails@Server@BSResource@@"
+    (no direct xrefs)
+
+STR @ 145aed360 : ".?AV?$FunctorNode@UResources@BSProcGen@@V<lambda_59cc21d935f728beb39d39db0a176724>@@UAutoLifetime@SurfaceMapMaterialController@StarMap@@UAutoProcessingControl@?1??RequestModels@SurfaceMapModelLoader@6@SA?AV?$BSTSmartPointer@VSurfaceMapModelLoader@StarMap@@UBSTSmartPointerIntrusiveRefCount@@@@XZ@@SimpleServerDetails@Server@BSResource@@"
+    (no direct xrefs)
+
+STR @ 145aed4d0 : ".?AV?$FunctorNode@UResources@BSProcGen@@V<lambda_8fa910cbafb46de5b1212b9daf842171>@@UAutoLifetime@SurfaceMapMaterialController@StarMap@@UAutoProcessingControl@?1??RequestModels@SurfaceMapModelLoader@6@SA?AV?$BSTSmartPointer@VSurfaceMapModelLoader@StarMap@@UBSTSmartPointerIntrusiveRefCount@@@@XZ@@SimpleServerDetails@Server@BSResource@@"
+    (no direct xrefs)
+
+STR @ 145af7490 : ".?AV?$NestedUIValue@USystemBodyInfoToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b13850 : ".?AV?$TUIDataShuttleContainerMap@UBodyInfoDataFlashObject@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b140a0 : ".?AV?$NestedUIValue@UBodyInfoDataFlashObject@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b2e980 : ".?AV?$UIMessageData@VSetCourseToQuestMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b2ea30 : ".?AV?$UIMessageData@VSetCursorActiveMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b636e8 : ".?AVGalaxy3DScene@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b63dc0 : ".?AV?$TypeErasedFuncImpl@V<lambda_c1f0116c390157847e877cd861fde102>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b63e60 : ".?AV?$TypeErasedFuncImpl@V<lambda_cac117a2ac663b225e9ccf722f18bd83>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b63f00 : ".?AV?$TypeErasedFuncImpl@V<lambda_caa836b6135f541d2747d1ef51e63017>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b64478 : ".?AVICommand@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b644a0 : ".?AVDelayCommand@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b644d0 : ".?AV?$ITypeErasedFunc@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b64540 : ".?AVConfirmFastTravelCallback@Util@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b64580 : ".?AVConfirmGravJumpPlotCallback@Util@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b645c0 : ".?AV?$TUIDataToFlash@UBodyPOIMarkersDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b64610 : ".?AV?$TUIDataToFlash@UBodyPOIPositions@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b64660 : ".?AV?$TUIDataShuttleContainerMap@UBodyPOIPositions@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b646b0 : ".?AV?$TUIDataToFlash@UBodyPOIMarkerGroupsDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b64700 : ".?AV?$TUIDataShuttleContainerMap@UBodyPOIMarkerGroupsDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b64760 : ".?AV?$TUIDataToFlash@UFocusedBodyData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b647b0 : ".?AV?$TUIDataShuttleContainerMap@UFocusedBodyData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b65000 : ".?AU?$EventSource@VStarMapMenu_MarkerGroupEntryHoverChanged@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65060 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_MarkerGroupEntryHoverChanged@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b650e0 : ".?AU?$EventSource@VStarMapMenu_SelectedLandingSiteFailed@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65140 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_SelectedLandingSiteFailed@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b651c0 : ".?AU?$EventSource@VStarMapMenu_ShowRealCursor@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65220 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ShowRealCursor@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65290 : ".?AU?$EventSource@VStarMapMenu_SelectedLandingSite@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b652f0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_SelectedLandingSite@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65360 : ".?AU?$EventSource@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b653d0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65460 : ".?AU?$EventSource@VStarMapMenu_MarkerGroupEntryClicked@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b654c0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_MarkerGroupEntryClicked@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b655f0 : ".?AU?$EventSource@VStarMapMenu_ScanPlanet@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65640 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ScanPlanet@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b656b0 : ".?AU?$EventSource@VStarMapMenu_LandingInputInProgress@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65710 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_LandingInputInProgress@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65790 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65860 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSite@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b658d0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSite@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65990 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSiteFailed@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65a00 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSiteFailed@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65ad0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_LandingInputInProgress@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65b40 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_LandingInputInProgress@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65c10 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65c90 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65d70 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryClicked@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65de0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryClicked@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65eb0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65f20 : ".?AV?$BSTEventSink@VStarMapMenu_ShowRealCursor@@@@"
+    (no direct xrefs)
+
+STR @ 145b65f70 : ".?AV?$BSTEventSource@VStarMapMenu_ShowRealCursor@@@@"
+    (no direct xrefs)
+
+STR @ 145b65fb8 : ".?AVIStarMapState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b65ff0 : ".?AV?$BSTEventSource@UChangeStateEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66040 : ".?AV?$BSTEventSource@VResetAllowInputEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66090 : ".?AV?$BSTEventSource@VStartTransitionEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b660e0 : ".?AV?$BSTEventSink@VStarMapMenu_SelectedLandingSiteFailed@@@@"
+    (no direct xrefs)
+
+STR @ 145b66130 : ".?AV?$BSTEventSource@VStarMapMenu_LandingInputInProgress@@@@"
+    (no direct xrefs)
+
+STR @ 145b66180 : ".?AV?$BSTEventSource@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b661e0 : ".?AV?$BSTEventSource@VStarMapMenu_MarkerGroupEntryClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b66230 : ".?AV?$BSTEventSource@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66290 : ".?AV?$BSTEventSource@VStarMapMenu_SelectedLandingSite@@@@"
+    (no direct xrefs)
+
+STR @ 145b662e0 : ".?AV?$BSTEventSource@VStarMapMenu_SelectedLandingSiteFailed@@@@"
+    (no direct xrefs)
+
+STR @ 145b66330 : ".?AVBodyInspectStateEventShuttle@BodyInspectState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b66380 : ".?AV?$TUIDataShuttleContainerMap@UBodyPOIMarkersDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b663d0 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UBodyPOIMarkersDef@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b66438 : ".?AVBodyInspectState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b66470 : ".?AV?$BSTEventSink@VStarMapMenu_LandingInputInProgress@@@@"
+    (no direct xrefs)
+
+STR @ 145b664c0 : ".?AV?$BSTEventSink@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66520 : ".?AV?$BSTEventSink@VStarMapMenu_MarkerGroupEntryClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b66570 : ".?AV?$BSTEventSink@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b665d0 : ".?AV?$BSTEventSink@VStarMapMenu_SelectedLandingSite@@@@"
+    (no direct xrefs)
+
+STR @ 145b66620 : ".?AV?$ArrayNestedUIValue@UBodyPOIPos@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b66670 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UBodyPOIPos@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b666c8 : ".?AV?$NestedUIValue@UBodyPOIPos@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66710 : ".?AV?$TUIDataShuttleContainerMap@UBodyPOIPos@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66760 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UBodyPOIPos@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b667c0 : ".?AV?$ArrayNestedUIValue@UBodyPOIMarkersDef@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b66810 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UBodyPOIMarkersDef@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b66870 : ".?AV?$NestedUIValue@UBodyPOIMarkersDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b668c0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSite@@@@"
+    (no direct xrefs)
+
+STR @ 145b66910 : ".?AVStarMapMenu_SelectedLandingSiteFailed@@"
+    (no direct xrefs)
+
+STR @ 145b66950 : ".?AV?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSiteFailed@@@@"
+    (no direct xrefs)
+
+STR @ 145b669b0 : ".?AV?$ArrayNestedUIValue@UBodyPOIDef@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b66a00 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UBodyPOIDef@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b66a58 : ".?AV?$NestedUIValue@UBodyPOIDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66aa0 : ".?AV?$TUIDataShuttleContainerMap@UBodyPOIDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66af0 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UBodyPOIDef@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b66b50 : ".?AV?$TUIEventDispatcher@VStarMapMenu_LandingInputInProgress@@@@"
+    (no direct xrefs)
+
+STR @ 145b66bb0 : ".?AVStarMapMenu_MarkerGroupContainerVisibilityChanged@@"
+    (no direct xrefs)
+
+STR @ 145b66c00 : ".?AV?$TUIEventDispatcher@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66c60 : ".?AVStarMapMenu_MarkerGroupEntryClicked@@"
+    (no direct xrefs)
+
+STR @ 145b66ca0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b66cf8 : ".?AVStarMapMenu_MarkerGroupEntryHoverChanged@@"
+    (no direct xrefs)
+
+STR @ 145b66d40 : ".?AV?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66d98 : ".?AVStarMapMenu_SelectedLandingSite@@"
+    (no direct xrefs)
+
+STR @ 145b66dd0 : ".?AV?$TUIDataToFlash@UBodyInfoDataFlashObject@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66e20 : ".?AV?$TUIDataToFlash@UPlanetInspectToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66e70 : ".?AV?$TUIDataShuttleContainerMap@UPlanetInspectToUI@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b66ec0 : ".?AVStarMapMenu_LandingInputInProgress@@"
+    (no direct xrefs)
+
+STR @ 145b66f00 : ".?AV?$BSTEventSink@VStarMapMenu_ScanPlanet@@@@"
+    (no direct xrefs)
+
+STR @ 145b66f40 : ".?AV?$BSTEventSource@VStarMapMenu_ScanPlanet@@@@"
+    (no direct xrefs)
+
+STR @ 145b66f90 : ".?AV?$BSTEventSink@VPlanetTraitKnownEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b67a20 : ".?AV?$TypeErasedFuncImpl@V<lambda_f5d9c6be902abf31e1095fbe7bd905dc>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67ac0 : ".?AV?$TypeErasedFuncImpl@V<lambda_3c4960fcccbe99d415b9f4cd28713921>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67b60 : ".?AV?$TypeErasedFuncImpl@V<lambda_168542c63ee2f2cfc98c9049baf075c6>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67c00 : ".?AV?$UIMessageData@VSetPreviewRouteDestinationMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b67c50 : ".?AV?$TypeErasedFuncImpl@V<lambda_faeabeb21b2347891ffeeda7ee25e214>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67cf0 : ".?AV?$TypeErasedFuncImpl@V<lambda_be99175c1a3fb92882a59897d02d0742>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67d90 : ".?AV?$TypeErasedFuncImpl@V<lambda_747c38f3ba876e4b6378dc03220757a4>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67e30 : ".?AV?$TUIDataShuttleContainerMap@UGalaxyFadeData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b67e80 : ".?AVGalaxyStateEventShuttle@GalaxyState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b67ed0 : ".?AV?$TUIDataToFlash@UQuickSystemSelectData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b67f20 : ".?AV?$TUIDataShuttleContainerMap@UQuickSystemSelectData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b67f80 : ".?AV?$TUIDataToFlash@UGalaxyMarkerDefContainer@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b67fd0 : ".?AV?$TUIDataShuttleContainerMap@UGalaxyMarkerDefContainer@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68030 : ".?AV?$TUIDataToFlash@UGalaxyMarkerDataContainer@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68080 : ".?AV?$TUIDataShuttleContainerMap@UGalaxyMarkerDataContainer@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b680e0 : ".?AV?$TUIDataToFlash@UGalaxyFadeData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68130 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UGalaxyMarkerData@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b68190 : ".?AV?$NestedUIValue@UGalaxyMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b681e0 : ".?AV?$TUIDataShuttleContainerMap@UGalaxyMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68230 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UGalaxyMarkerData@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b68298 : ".?AVGalaxyState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b682d0 : ".?AV?$BSTEventSink@VStarMapMenu_QuickSelectChange@@@@"
+    (no direct xrefs)
+
+STR @ 145b68320 : ".?AV?$BSTEventSource@USystemBodyInfoUpdate@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68370 : ".?AV?$BSTEventSource@VStarMapMenu_QuickSelectChange@@@@"
+    (no direct xrefs)
+
+STR @ 145b683b8 : ".?AVStarMapMenu_QuickSelectChange@@"
+    (no direct xrefs)
+
+STR @ 145b683f0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_QuickSelectChange@@@@"
+    (no direct xrefs)
+
+STR @ 145b68440 : ".?AV?$ArrayNestedUIValue@UGalaxyMarkerDef@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b68490 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UGalaxyMarkerDef@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b684f0 : ".?AV?$NestedUIValue@UGalaxyMarkerDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68540 : ".?AV?$TUIDataShuttleContainerMap@UGalaxyMarkerDef@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b68590 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UGalaxyMarkerDef@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b68600 : ".?AV?$ArrayNestedUIValue@UGalaxyMarkerData@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b689d0 : ".?AU?$EventSource@VStarMapMenu_QuickSelectChange@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b68a30 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_QuickSelectChange@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b68b10 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_QuickSelectChange@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b68b80 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_QuickSelectChange@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b68c40 : ".?AV?$TypeErasedFuncImpl@V<lambda_4eb0a4f4448320bec700fc5ba4fa5da9>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b68ce0 : ".?AV?$TypeErasedFuncImpl@V<lambda_b0daad66d9ea9cc2f9bc1e8091c642a6>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b69620 : ".?AU?$EventSource@VStarMapMenu_Galaxy_FocusSystem@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b69680 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_Galaxy_FocusSystem@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b696f0 : ".?AU?$EventSource@VStarMapMenu_OnGalaxyViewInitialized@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b69750 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnGalaxyViewInitialized@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b697d0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnGalaxyViewInitialized@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b698a0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_Galaxy_FocusSystem@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b69910 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_Galaxy_FocusSystem@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b699d0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnGalaxyViewInitialized@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b69a40 : ".?AV?$TUIDataShuttleContainerMap@UStarMapMenuMarkersData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69aa0 : ".?AV?$TUIDataToFlash@UStarMapOffscreenQuestMarkersData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69b00 : ".?AV?$TUIDataShuttleContainerMap@UStarMapOffscreenQuestMarkersData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69b60 : ".?AV?$TUIDataToFlash@UMenuMarkerCoordsData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69bb0 : ".?AV?$TUIDataShuttleContainerMap@UMenuMarkerCoordsData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69c10 : ".?AV?$TUIDataShuttleContainerMap@UStarMapMenuMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69c70 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UStarMapMenuMarkerData@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b69ce0 : ".?AV?$BSTEventSource@VStarMapMenu_OnGalaxyViewInitialized@@@@"
+    (no direct xrefs)
+
+STR @ 145b69d30 : ".?AV?$BSTEventSource@VStarMapMenu_Galaxy_FocusSystem@@@@"
+    (no direct xrefs)
+
+STR @ 145b69d80 : ".?AVStarMapMenuEventShuttle@StarMapMenuDataModel@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b69dd0 : ".?AV?$TUIDataToFlash@UStarMapMenuData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69e20 : ".?AV?$TUIDataShuttleContainerMap@UStarMapMenuData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69e70 : ".?AV?$TUIDataToFlash@UStarMapMenuMarkersData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69ec0 : ".?AV?$ArrayNestedUIValue@UStarMapOffscreenQuestMarkerData@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b69f20 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UStarMapOffscreenQuestMarkerData@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b69f90 : ".?AV?$NestedUIValue@UStarMapOffscreenQuestMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69ff0 : ".?AV?$TUIDataShuttleContainerMap@UStarMapOffscreenQuestMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a050 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UStarMapOffscreenQuestMarkerData@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a0d0 : ".?AV?$ArrayNestedUIValue@UStarMapMenuMarkerData@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6a120 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UStarMapMenuMarkerData@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6a180 : ".?AV?$NestedUIValue@UStarMapMenuMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a1c8 : ".?AVStarMapMenu_OnGalaxyViewInitialized@@"
+    (no direct xrefs)
+
+STR @ 145b6a210 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnGalaxyViewInitialized@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a268 : ".?AVStarMapMenu_Galaxy_FocusSystem@@"
+    (no direct xrefs)
+
+STR @ 145b6a2a0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_Galaxy_FocusSystem@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a2f0 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UMenuMarkerCoords@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a358 : ".?AVStarMapMenuDataModel@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6a390 : ".?AV?$BSTEventSink@VStarMapMenu_OnGalaxyViewInitialized@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a3e0 : ".?AV?$BSTEventSink@VStarMapMenu_Galaxy_FocusSystem@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a430 : ".?AV?$ArrayNestedUIValue@UMenuMarkerCoords@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6a480 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UMenuMarkerCoords@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6a4e0 : ".?AV?$NestedUIValue@UMenuMarkerCoords@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a530 : ".?AV?$TUIDataShuttleContainerMap@UMenuMarkerCoords@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ada0 : ".?AV?$UIMessageData@VSetGameCursorMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6adf0 : ".?AV?$UIMessageData@VSetCursorStateMsg@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6aef0 : ".?AU?$EventSource@VStarMapMenu_OnExitStarMap@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6af40 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnExitStarMap@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6afb0 : ".?AU?$EventSource@VStarMapMenu_OnOutpostEntrySelected@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b010 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnOutpostEntrySelected@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b090 : ".?AU?$EventSource@VStarMapMenu_OnCancel@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b0e0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnCancel@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b150 : ".?AU?$EventSource@VStarMapMenu_ReadyToClose@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b1a0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ReadyToClose@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b210 : ".?AU?$EventSource@VStarMapMenu_OnClearRoute@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b260 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnClearRoute@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b2d0 : ".?AU?$EventSource@VStarMapMenu_ExecuteRoute@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b320 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ExecuteRoute@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b390 : ".?AU?$EventSource@VStarMapMenu_OnHintButtonClicked@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b3f0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnHintButtonClicked@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b460 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ShowRealCursor@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b4c0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ShowRealCursor@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b580 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ScanPlanet@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b5e0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ScanPlanet@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b750 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnExitStarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b7b0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnExitStarMap@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b870 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnCancel@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b8d0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnCancel@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b990 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ReadyToClose@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b9f0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ReadyToClose@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bab0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnOutpostEntrySelected@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bb20 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnOutpostEntrySelected@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bbf0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnClearRoute@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bc50 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnClearRoute@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bd10 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ExecuteRoute@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bd70 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ExecuteRoute@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6be30 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnHintButtonClicked@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bea0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnHintButtonClicked@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c0c0 : ".?AV?$_Ref_count_obj_alloc3@VButtonHintBarWidget@StarMap@@V?$BSTHeapSTLAllocator@VButtonHintBarWidget@StarMap@@$01@@@std@@"
+    (no direct xrefs)
+
+STR @ 145b6c150 : ".?AV?$_Ebco_base@V?$BSTHeapSTLAllocator@VButtonHintBarWidget@StarMap@@$01@@$00@std@@"
+    (no direct xrefs)
+
+STR @ 145b6c1c0 : ".?AV?$BSTHeapSTLAllocator@VButtonHintBarWidget@StarMap@@$01@@"
+    (no direct xrefs)
+
+STR @ 145b6c590 : ".?AVStarMapMenu_ShowRealCursor@@"
+    (no direct xrefs)
+
+STR @ 145b6c5d0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ShowRealCursor@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c620 : ".?AV?$BSTEventSink@USystemBodyInfoUpdate@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c668 : ".?AVStarMapMenu_ScanPlanet@@"
+    (no direct xrefs)
+
+STR @ 145b6c6a0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ScanPlanet@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c6f0 : ".?AV?$BSTEventSink@UChangeStateEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c740 : ".?AV?$BSTEventSink@VResetAllowInputEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c790 : ".?AV?$BSTEventSink@VStartTransitionEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c7e0 : ".?AV?$BSTEventSource@VStarMapMenu_OnHintButtonClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c830 : ".?AV?$BSTEventSource@VStarMapMenu_OnExitStarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c878 : ".?AV?$BSTEventSource@VStarMapMenu_OnCancel@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c8c0 : ".?AV?$BSTEventSource@VStarMapMenu_ReadyToClose@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c910 : ".?AV?$BSTEventSource@VStarMapMenu_OnOutpostEntrySelected@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c960 : ".?AVStarMapMenuEventShuttle@StarMapMenu@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6c9a8 : ".?AVStarMapMenu_OnCancel@@"
+    (no direct xrefs)
+
+STR @ 145b6c9e0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnCancel@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ca28 : ".?AVStarMapMenu_ReadyToClose@@"
+    (no direct xrefs)
+
+STR @ 145b6ca60 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ReadyToClose@@@@"
+    (no direct xrefs)
+
+STR @ 145b6caa8 : ".?AVStarMapMenu_OnOutpostEntrySelected@@"
+    (no direct xrefs)
+
+STR @ 145b6caf0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnOutpostEntrySelected@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cb50 : ".?AV?$BSTEventSource@VStarMapMenu_OnClearRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cba0 : ".?AV?$BSTEventSource@VStarMapMenu_ExecuteRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cbe8 : ".?AVStarMapMenu_OnClearRoute@@"
+    (no direct xrefs)
+
+STR @ 145b6cc20 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnClearRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cc68 : ".?AVStarMapMenu_ExecuteRoute@@"
+    (no direct xrefs)
+
+STR @ 145b6cca0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ExecuteRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cce8 : ".?AVStarMapMenu_OnHintButtonClicked@@"
+    (no direct xrefs)
+
+STR @ 145b6cd20 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnHintButtonClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cd70 : ".?AVStarMapMenu_OnExitStarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6cda0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnExitStarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cdf0 : ".?AV?$BSTEventSink@VStarMapMenu_ExecuteRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ce40 : ".?AV?$BSTEventSink@VStarMapMenu_OnHintButtonClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ce90 : ".?AV?$BSTEventSink@VStarMapMenu_OnExitStarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ced8 : ".?AV?$BSTEventSink@VStarMapMenu_OnCancel@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cf20 : ".?AV?$BSTEventSink@VStarMapMenu_ReadyToClose@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cf70 : ".?AV?$BSTEventSink@VStarMapMenu_OnOutpostEntrySelected@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cfc0 : ".?AVStarMapMenu@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6cff0 : ".?AV?$BSTEventSink@VStarMapMenu_OnClearRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6d040 : ".?AV?$BSTEventSink@UOutpostCargoTransferEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6d1d0 : ".?AV?$TypeErasedFuncImpl@V<lambda_ec1b0c82f9203ad475b303783f529265>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6d2e0 : ".?AVStarMapSystemMobile@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6d318 : ".?AV?$LerpCommand@M@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6d348 : ".?AV?$LerpCommand@VNiPoint3A@@@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6dce0 : ".?AV?$TUIDataShuttleContainerMap@USurfaceMarkerStaticData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6dd40 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@USurfaceMarkerStaticData@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ddb0 : ".?AV?$ArrayNestedUIValue@USurfaceMarkerStaticData@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6de10 : ".?AV?$ArrayUIValue@V?$NestedUIValue@USurfaceMarkerStaticData@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6de70 : ".?AV?$NestedUIValue@USurfaceMarkerStaticData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6e530 : ".?AV?$TUIDataToFlash@USurfaceMapInfo@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6e580 : ".?AV?$TUIDataShuttleContainerMap@USurfaceMapInfo@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6e5d0 : ".?AV?$TUIDataToFlash@USurfaceMarkerList@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6e620 : ".?AV?$TUIDataShuttleContainerMap@USurfaceMarkerList@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6e6c0 : ".?AVConfirmCustomMarkerActionCallback@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6e700 : ".?AVSurfaceMapState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6e870 : ".?AVSurfaceMapStateEventShuttle@SurfaceMapState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6eaa0 : ".?AV?$TCmd@V<lambda_0695db2533231ffe0695a0cb59f4b6fb>@@UClearCache@Commands@StarMap@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6eb20 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_0695db2533231ffe0695a0cb59f4b6fb>@@UClearCache@Commands@StarMap@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6ebc0 : ".?AV?$TSubscriberTable@UCacheHandles@Commands@StarMap@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6ec20 : ".?AV?$TSubscriberTable@UClearCache@Commands@StarMap@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6ec80 : ".?AV?$TServiceTraits@VSurfaceMapUIPlanetModule@StarMap@@V?$ReferenceGetterDefaultPointer@PEAVSurfaceMapUIPlanetModule@StarMap@@@Detail@BSService@@UClearCache@Commands@2@UCacheHandles@72@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6ed60 : ".?AV?$OpEventSource@$00V?$TServiceTraits@VSurfaceMapUIPlanetModule@StarMap@@V?$ReferenceGetterDefaultPointer@PEAVSurfaceMapUIPlanetModule@StarMap@@@Detail@BSService@@UClearCache@Commands@2@UCacheHandles@72@@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6ee70 : ".?AV?$OpSubscriberReference@$0A@V?$TServiceTraits@VSurfaceMapUIPlanetModule@StarMap@@V?$ReferenceGetterDefaultPointer@PEAVSurfaceMapUIPlanetModule@StarMap@@@Detail@BSService@@UClearCache@Commands@2@UCacheHandles@72@@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6ef80 : ".?AV?$TService@V?$TServiceTraits@VSurfaceMapUIPlanetModule@StarMap@@V?$ReferenceGetterDefaultPointer@PEAVSurfaceMapUIPlanetModule@StarMap@@@Detail@BSService@@UClearCache@Commands@2@UCacheHandles@72@@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145b6f080 : ".?AVSurfaceMapUIPlanetModule@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6f0c0 : ".?AVSystemStateEventShuttle@SystemState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6f110 : ".?AV?$TUIDataToFlash@UOutpostSelect_DS@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6f160 : ".?AV?$TUIDataShuttleContainerMap@UOutpostSelect_DS@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6f1b0 : ".?AV?$TUIDataToFlash@USystemNameHeader_DS@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6f200 : ".?AV?$TUIDataShuttleContainerMap@USystemNameHeader_DS@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6f260 : ".?AV?$ArrayNestedUIValue@UOutpost_DS@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6f2b0 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UOutpost_DS@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6f310 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UOutpost_DS@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6f370 : ".?AVSystemState@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6f3a0 : ".?AV?$BSTEventSource@UOutpostCargoTransferEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6f9b0 : ".?AV?$TypeErasedFuncImpl@V<lambda_71d841fb197c7041bcb77a2b3b69a139>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fa50 : ".?AV?$TypeErasedFuncImpl@V<lambda_a9ee1960111e67e2f89ebb8b34add4bb>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6faf0 : ".?AV?$TypeErasedFuncImpl@V<lambda_74cd4d224d53307276ac8977203a6c6e>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fb90 : ".?AV?$TypeErasedFuncImpl@V<lambda_1bcd8c71751abceb7cc1f3acdcabeaa2>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fc30 : ".?AV?$TypeErasedFuncImpl@V<lambda_3b020607b93e694bc94c093b9212e455>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fcd0 : ".?AV?$TypeErasedFuncImpl@V<lambda_238e1f0463189e6ad3c31ba3eca78e5c>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6feb0 : ".?AV?$TypeErasedFuncImpl@V<lambda_a3aed24d809488de0f19c5537ae368db>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b9c260 : ".?AV?$BSTEventSource@VSelectBodyEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b9c2b0 : ".?AU?$BSTSingletonSDM@VSelectBodyEventHelper@StarMap@@UBSTSingletonSDMOpStaticBuffer@@@@"
+    (no direct xrefs)
+
+STR @ 145b9ca70 : ".?AU?$BSTSingletonSDMBase@U?$BSTSDMTraits@VSelectBodyEventHelper@StarMap@@U?$BSTSingletonSDMOpStaticBuffer@VSelectBodyEventHelper@StarMap@@@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b9cb18 : ".?AVSelectBodyEventHelper@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b9cb50 : ".?AU?$BSTSingletonSDMOpStaticBuffer@VSelectBodyEventHelper@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b9cbb0 : ".?AU?$BSTSDMTraits@VSelectBodyEventHelper@StarMap@@U?$BSTSingletonSDMOpStaticBuffer@VSelectBodyEventHelper@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145c5fdd0 : ".?AV?$BSTEventSink@VSelectBodyEvent@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145cc4c50 : ".?AV?$CreateAndDeleteCommand@V<lambda_1c8817c58a3143f088a97afdae98e127>@@AEBV?$TaggedID@ULayeredMaterialTag@Tag@BSMaterial@@@BSMaterial@@AEBUStarmapBodyEffectComponent@3@AEAG@Detail@BSComponentDB2@@"
+    (no direct xrefs)
+
+STR @ 145cc8130 : ".?AV?$TCommandBase@V?$CreateAndDeleteCommand@V<lambda_1c8817c58a3143f088a97afdae98e127>@@AEBV?$TaggedID@ULayeredMaterialTag@Tag@BSMaterial@@@BSMaterial@@AEBUStarmapBodyEffectComponent@3@AEAG@Detail@BSComponentDB2@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145cc82b0 : ".?AV?$TObjectWrapper@V?$StoredComponent@$00UStarmapBodyEffectComponent@BSMaterial@@@Detail@BSComponentDB2@@@BSTVSOTree_detail@@"
+    (no direct xrefs)
+
+STR @ 145cccf80 : ".?AV?$TObjectWrapper@V?$Edge@$00UStarmapBodyEffectComponent@BSMaterial@@@Detail@BSComponentDB2@@@BSTVSOTree_detail@@"
+    (no direct xrefs)
+
+STR @ 145ccf2f0 : ".?AV?$ComponentFactoryImpl@UStarmapBodyEffectComponent@BSMaterial@@@Detail@BSComponentDB2@@"
+    (no direct xrefs)
+
+STR @ 145d32a00 : ".?AV?$TService@V?$TServiceTraits@VStarmapOrbitsEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapOrbitsEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32b00 : ".?AVStarmapOrbitsRenderPass@CreationRendererPrivate@@"
+    (no direct xrefs)
+
+STR @ 145d32b50 : ".?AV?$TCmd@V<lambda_c6503eb812b8427606f871faf942c47c>@@USetStarmapOrbitsEnabled@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32be0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_c6503eb812b8427606f871faf942c47c>@@USetStarmapOrbitsEnabled@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32c90 : ".?AV?$TCmd@V<lambda_d1e07d92f394208ecac492d6b1b9afa9>@@USetStarmapOrbitsInit@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32d20 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_d1e07d92f394208ecac492d6b1b9afa9>@@USetStarmapOrbitsInit@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32dd0 : ".?AV?$TCmd@V<lambda_1b2eff87bafecc7bbc43ce302fdee705>@@USetStarmapOrbitsColor@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32e60 : ".?AVStarmapOrbitsEventHandler@CreationRendererPrivate@@"
+    (no direct xrefs)
+
+STR @ 145d32eb0 : ".?AV?$TServiceTraits@VStarmapOrbitsEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapOrbitsEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d32f90 : ".?AV?$OpEventSource@$0A@V?$TServiceTraits@VStarmapOrbitsEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapOrbitsEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d330a0 : ".?AV?$OpSubscriberReference@$0A@V?$TServiceTraits@VStarmapOrbitsEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapOrbitsEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d331b0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_1b2eff87bafecc7bbc43ce302fdee705>@@USetStarmapOrbitsColor@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33260 : ".?AV?$TCmd@V<lambda_476315acb3f625a547472d7af175470a>@@USetStarmapOrbitsThickness@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d332f0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_476315acb3f625a547472d7af175470a>@@USetStarmapOrbitsThickness@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d333a0 : ".?AV?$TCmd@V<lambda_f6fc3afd2e5a487a8c78ccd15ad62e96>@@USetStarmapOrbitsDrawData@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33430 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_f6fc3afd2e5a487a8c78ccd15ad62e96>@@USetStarmapOrbitsDrawData@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d334e0 : ".?AV?$TCmd@V<lambda_c792a704049764f07f8d192380f1f235>@@USetStarmapOrbitsInstancesData@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33580 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_c792a704049764f07f8d192380f1f235>@@USetStarmapOrbitsInstancesData@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33630 : ".?AV?$TCmd@V<lambda_47ce1dd467148b48f07cea494666a7d0>@@USetStarmapOrbitsEnabled@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d336c0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_47ce1dd467148b48f07cea494666a7d0>@@USetStarmapOrbitsEnabled@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33770 : ".?AVStarmapGravityWavesRenderPass@CreationRendererPrivate@@"
+    (no direct xrefs)
+
+STR @ 145d337c0 : ".?AV?$TCmd@V<lambda_477fdce2aa7e8a35a27ff9ceea46765f>@@USetStarmapGravityWavesInit@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33850 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_477fdce2aa7e8a35a27ff9ceea46765f>@@USetStarmapGravityWavesInit@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33900 : ".?AV?$TCmd@V<lambda_c39c109d508a9f3cdd7a9dd7ae1c7ee7>@@USetStarmapGravityWavesColor@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d339a0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_c39c109d508a9f3cdd7a9dd7ae1c7ee7>@@USetStarmapGravityWavesColor@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33a50 : ".?AV?$TCmd@V<lambda_086fbda4eebb50c6f4df48f1f6fe6d27>@@USetStarmapGravityWavesParentGeometry@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33af0 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_086fbda4eebb50c6f4df48f1f6fe6d27>@@USetStarmapGravityWavesParentGeometry@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33bb0 : ".?AV?$TCmd@V<lambda_44ada94071a02a2b474443a2e6e2115e>@@USetStarmapGravityWavesPlanetData@CreationRendererPrivate@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33c50 : ".?AV?$TCommandBase@V?$TCmd@V<lambda_44ada94071a02a2b474443a2e6e2115e>@@USetStarmapGravityWavesPlanetData@CreationRendererPrivate@@@Detail@BSService@@@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33d10 : ".?AVStarmapGravityWavesEventHandler@CreationRendererPrivate@@"
+    (no direct xrefs)
+
+STR @ 145d33d60 : ".?AV?$TServiceTraits@VStarmapGravityWavesEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapGravityWavesEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33e50 : ".?AV?$OpEventSource@$0A@V?$TServiceTraits@VStarmapGravityWavesEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapGravityWavesEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d33f60 : ".?AV?$OpSubscriberReference@$0A@V?$TServiceTraits@VStarmapGravityWavesEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapGravityWavesEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+STR @ 145d34080 : ".?AV?$TService@V?$TServiceTraits@VStarmapGravityWavesEventHandler@CreationRendererPrivate@@V?$ReferenceGetterDefaultPointer@PEAVStarmapGravityWavesEventHandler@CreationRendererPrivate@@@Detail@BSService@@$$V@Detail@BSService@@@Detail@BSService@@"
+    (no direct xrefs)
+
+# total string hits: 728

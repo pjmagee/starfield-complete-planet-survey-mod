@@ -766,6 +766,115 @@ namespace Engine
     // to dismiss and its rendering pipeline to quiesce.
     inline int g_completeSurveyCountdown {0};
 
+    // === Galaxy-map ("star map") scan → complete-that-planet ===
+    // Set by the star-map scan hook (Hook::StarMapScanHook) when the player scans a body on the
+    // galaxy map. g_galaxyScanPlanetFormId holds that body's PNDT FormID; g_pendingGalaxyScan
+    // flags a dispatch. The poller picks it up and calls Papyrus _GalaxyMapScanComplete, which
+    // reads the id via GetGalaxyScanPlanetFormId and completes that planet (if the toggle is on).
+    // Unlike the on-surface path this is fully ref-free (no PlaceAtMe), so it does NOT wait for a
+    // menu to close — the star map updates live — just a short grace out of the hook's call frame.
+    inline std::atomic<bool>          g_pendingGalaxyScan {false};
+    inline std::atomic<std::uint32_t> g_galaxyScanPlanetFormId {0};
+    inline int                        g_galaxyScanCountdown {0};
+
+    // === StarMap info-panel repaint after a galaxy-map completion ===
+    // The star map caches the selected-planet panel (SURVEY %/RESOURCES/TRAITS) when it repaints
+    // right after the scan — which is BEFORE our ~0.5s-later completion — so it only re-reads on a
+    // manual deselect/reselect. ID_93988 is the engine's own "repopulate that panel from the
+    // knowledge DB" routine (StarMapMenu*). We capture the live StarMap menu pointer from the scan
+    // handler's own ID_93988 call (StarMapRefreshCaptureHook) and re-invoke ID_93988 on it once our
+    // completion has finished, so the panel repaints to 100% in place.
+    //   g_starMapMenu        — the panel CONTROLLER (param_1 of ID_94011→ID_93988) seen at the last
+    //                          natural refresh. NOT the IMenu — see RefreshStarMapPanelIfOpen.
+    //   g_starMapPanelPlanet — the planet id (2nd arg of ID_93988) shown in that panel.
+    //   g_pendingStarMapRefresh — set by _GalaxyMapScanComplete when done; poller repaints next frame.
+    inline std::atomic<void*>         g_starMapMenu {nullptr};
+    inline std::atomic<std::uint32_t> g_starMapPanelPlanet {0};
+    inline std::atomic<bool>          g_pendingStarMapRefresh {false};
+
+    // Clear all our process-global "pending" state. Called on the exit-to-menu boundary: these flags
+    // and captured pointers are process-resident (they outlive a game session), so a scan captured
+    // just before quitting to the Main Menu must NOT dispatch a completion into the NEXT game — that
+    // would write a stale planet's survey state into the new session. Also drops the captured StarMap
+    // menu pointer (a prior session's menu is freed). Countdowns are poller-owned and self-reset once
+    // their flags are false. (Does NOT touch the engine's own knowledge DB — that's the game's to
+    // reset; we only clear OUR queue.)
+    inline void ResetPendingCompletionState()
+    {
+        g_pendingCompleteSurvey.store(false, std::memory_order_release);
+        g_pendingGalaxyScan.store(false, std::memory_order_release);
+        g_galaxyScanPlanetFormId.store(0, std::memory_order_release);
+        g_pendingStarMapRefresh.store(false, std::memory_order_release);
+        g_starMapMenu.store(nullptr, std::memory_order_release);
+        g_starMapPanelPlanet.store(0, std::memory_order_release);
+    }
+
+    // ID_93988: repopulate the StarMap selected-planet info panel from the knowledge DB. It takes TWO
+    // args — the panel CONTROLLER and the PLANET ID (proven by ID_93960 calling `ID_93988(controller,
+    // planetId)`, and internally `ID_94888(buf, planetId)`→`ID_94906(db, buf)` reads the DB for that
+    // planet). Passing the wrong planetId (or omitting it) populates the panel for a garbage planet →
+    // it renders EMPTY. (RE 2026-07-11: re/ghidra/output/starmap-{refresh,select-refresh}-decomp.)
+    using fn_refresh_starmap_t = void (*)(void* controller, std::uint32_t planetId);
+    inline REL::Relocation<fn_refresh_starmap_t> RefreshStarMapPanelData {REL::ID(93988)};
+
+    // Repaint the StarMap selected-planet panel (ID_93988) after our completion, so it shows 100% in
+    // place. ID_93988's arg is the star map's internal panel CONTROLLER (param_1 of ID_94011), NOT the
+    // IMenu — so we must call it on the pointer StarMapRefreshCaptureHook stashed (the exact object
+    // the game itself passes), never on a menu found by name (an IMenu has a different layout — doing
+    // that reads controller offsets off the wrong object and corrupts memory → crash). The captured
+    // controller lives exactly as long as the star-map IMenu is open, so we GATE on that: only repaint
+    // if a live menu whose menuName contains "starmap" is present in RE::UI's menuArray/menuStack. If
+    // the map has closed, the controller may be freed → skip. Fault-guarded (the poller caller is NOT
+    // a GuardedNative). MUST run on the main thread. Returns true if it repainted.
+    bool RefreshStarMapPanelIfOpen()
+    {
+        try
+        {
+            void* const         controller = g_starMapMenu.exchange(nullptr, std::memory_order_acq_rel);
+            const std::uint32_t planetId   = g_starMapPanelPlanet.load(std::memory_order_acquire);
+            if (!controller || !planetId)
+                return false;  // capture hook never fired (scan routed via ID_94004) — nothing to repaint
+            auto* ui = RE::UI::GetSingleton();
+            if (!ui)
+                return false;
+
+            // Liveness gate: is the star-map menu still open? (Only touch the controller if so.)
+            bool starMapOpen = false;
+            auto check       = [&](const auto& container) {
+                for (std::uint32_t i = 0; i < container.size() && !starMapOpen; ++i)
+                {
+                    auto* m = container[i].get();
+                    if (!m)
+                        continue;
+                    const char* nm = m->menuName.c_str();
+                    if (!nm)
+                        continue;
+                    std::string low = nm;
+                    for (auto& ch : low)
+                        if (ch >= 'A' && ch <= 'Z')
+                            ch = static_cast<char>(ch + 32);
+                    if (low.find("starmap") != std::string::npos)
+                        starMapOpen = true;
+                }
+            };
+            check(ui->menuArray);
+            if (!starMapOpen)
+                check(ui->menuStack);
+            if (!starMapOpen)
+                return false;  // star map closed — controller may be gone; do not deref it
+
+            // ID_93988(controller, planetId): the exact call the game makes to populate this panel.
+            RefreshStarMapPanelData(controller, planetId);
+            spdlog::info("RefreshStarMapPanel: repainted panel for planetId=0x{:08X}", planetId);
+            return true;
+        }
+        catch (...)
+        {
+            spdlog::error("RefreshStarMapPanelIfOpen: caught fault — skipping panel repaint");
+            return false;
+        }
+    }
+
     // Latched true when a bound native catches a fault (a C++ exception, or — because src/ is
     // built /EHa — an access violation), almost always a wrong/garbage offset deref. Once set,
     // the guarded natives short-circuit to safe defaults so the feature disables cleanly instead
@@ -1036,6 +1145,22 @@ namespace Papyrus
     {
         Engine::g_pendingCompleteSurvey.store(false, std::memory_order_release);
         spdlog::info("CancelPendingAutoComplete: cleared pending auto-complete (manual command wins)");
+    }
+
+    // Return the FormID of the planet/moon the player last scanned on the star map (captured by the
+    // galaxy-map scan hook). Papyrus _GalaxyMapScanComplete reads this to know which body to complete.
+    // Returns 0 when nothing is pending or the scanned target wasn't a planet.
+    std::int32_t GetGalaxyScanPlanetFormId(std::monostate)
+    {
+        return static_cast<std::int32_t>(Engine::g_galaxyScanPlanetFormId.load(std::memory_order_acquire));
+    }
+
+    // Queue a StarMap info-panel repaint. _GalaxyMapScanComplete calls this once it has completed the
+    // scanned planet; the poller does the actual ID_93988 repaint next frame on the MAIN thread (UI
+    // calls must not run on the Papyrus VM thread) so the panel shows 100% without a manual reselect.
+    void QueueStarMapRefresh(std::monostate)
+    {
+        Engine::g_pendingStarMapRefresh.store(true, std::memory_order_release);
     }
 
     // Ensure a planet's knowledge entry exists (ref-free) so subsequent ref-free writes — resource
@@ -1319,6 +1444,12 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "CancelPendingAutoComplete"sv, CPS_GUARDED(CancelPendingAutoComplete), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetGalaxyScanPlanetFormId"sv, CPS_GUARDED(GetGalaxyScanPlanetFormId), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "QueueStarMapRefresh"sv, CPS_GUARDED(QueueStarMapRefresh), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "CompleteAllPlanetsSurveyData"sv, CPS_GUARDED(CompleteAllPlanetsSurveyData),
             std::optional<bool> {true}, false);
 
@@ -1337,6 +1468,7 @@ namespace Papyrus
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
+                     "GetGalaxyScanPlanetFormId, QueueStarMapRefresh, "
                      "CompleteAllPlanetsSurveyData, GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet");
     }
 
@@ -1389,6 +1521,76 @@ namespace Hook
         static inline fn_t func = nullptr;
     };
 
+    // Star-map ("galaxy map") planet scan → complete-that-planet.
+    //
+    // Every survey mutation in the game converges on ID_97853 (survey check/notify). Pressing SCAN
+    // on the star map / in-space scanner runs ID_94004 / ID_94011, which call ID_52173(planetId,
+    // scanLevel, 0) — the "scan level increased" survey writer. ID_52173 stamps SurveyChangeReason
+    // == 0xc (ScanLevelChanged) when its char arg is 0 (0xf only on the debug arg==1 path), sets
+    // ctx+0x00 = planetId, then calls ID_97853(&ctx). The ctx is {u32 planetId@0x00, f32 pct@0x04,
+    // u8 SurveyChangeReason@0x08, u8 flag@0x09}; planetId == *(u32)(planetForm+0x54) == PNDT FormID
+    // (Game.GetForm resolves it). So hooking the ID_97853 CALL SITE inside ID_52173 and filtering
+    // reason==0xc catches exactly a deliberate space scan and gives us the scanned body's id.
+    // (Verified offline in the local Ghidra project 2026-07-11: xrefs → ID_94004/ID_94011 call
+    // ID_52173; ID_52173 decomp shows reason 0xc + planetId@ctx+0. NOT ID_52153/InitialScan — that
+    // one is driven only by ID_52152/ID_102651, never the star-map Scan. See
+    // re/ghidra/output/starmap-scan-{decomp,xrefs}-2026-07-11.txt.)
+    constexpr std::size_t  kSurveyCtxReasonOffset       = 0x08;  // SurveyChangeReason byte in the ID_97853 ctx
+    constexpr std::uint8_t kSurveyReasonScanLevelChanged = 0xc;  // SurveyChangeReason::ScanLevelChanged (the space scan)
+    // ID_52173 → ID_97853 call is at outer+0x144 — inside the default 0x400 window, but name it.
+    constexpr std::size_t  kStarMapScanSearchWindow      = 0x200;
+
+    // Intercept the survey-notify (ID_97853) inside the scan-level writer (ID_52173) — the engine's
+    // "player scanned a planet from space" path (the star-map Scan button / in-space scanner). On a
+    // ScanLevelChanged we capture the scanned body's planet id from the ctx and flag a deferred
+    // galaxy-map completion (dispatched by the poller → Papyrus _GalaxyMapScanComplete, which honours
+    // the "Enable Galaxy Map Scan" toggle). The thunk only touches the ctx pointer + two atomics —
+    // no engine derefs beyond ctx — so it's safe on the UI/engine thread that drives the scan.
+    struct StarMapScanHook
+    {
+        using fn_t = void (*)(void*);  // ID_97853: void(u32* ctx)
+
+        static void thunk(void* ctx)
+        {
+            func(ctx);  // call original SurveyCheckNotify (ID_97853) first
+            if (!ctx)
+                return;
+            const auto* c        = reinterpret_cast<const std::uint8_t*>(ctx);
+            const auto  planetId = *reinterpret_cast<const std::uint32_t*>(c);
+            const auto  reason   = *(c + kSurveyCtxReasonOffset);
+            spdlog::debug("StarMapScanHook: reason={} planetId=0x{:08X}", reason, planetId);
+            if (reason == kSurveyReasonScanLevelChanged && planetId != 0)
+            {
+                Engine::g_galaxyScanPlanetFormId.store(planetId, std::memory_order_release);
+                Engine::g_pendingGalaxyScan.store(true, std::memory_order_release);
+                // INFO (not debug): a scan-level change is an infrequent, deliberate player action,
+                // and this line confirms the galaxy-map hook fired in a release build. Not per-frame spam.
+                spdlog::info("StarMapScanHook: captured space scan (ScanLevelChanged) planetId=0x{:08X} — galaxy-map completion queued", planetId);
+            }
+        }
+
+        static inline fn_t func = nullptr;
+    };
+
+    // Capture the live StarMap panel state whenever the info panel naturally repaints — i.e. the scan
+    // handler ID_94011's own call to ID_93988(controller, planetId) (the panel-populate routine). We
+    // stash BOTH args (the panel controller and the displayed planet id) so RefreshStarMapPanelIfOpen
+    // can re-issue the identical call after our deferred completion, repainting the panel to 100% in
+    // place. Pure capture + pass-through — touches only the args, so it's safe on the UI thread.
+    struct StarMapRefreshCaptureHook
+    {
+        using fn_t = void (*)(void*, std::uint32_t);  // ID_93988(controller, planetId)
+
+        static void thunk(void* controller, std::uint32_t planetId)
+        {
+            Engine::g_starMapMenu.store(controller, std::memory_order_release);
+            Engine::g_starMapPanelPlanet.store(planetId, std::memory_order_release);
+            func(controller, planetId);  // call original panel-populate (ID_93988)
+        }
+
+        static inline fn_t func = nullptr;
+    };
+
     // 1 KiB is larger than ID_52157's body; bigger than any real function we'd
     // ever want to hook a single CALL within.
     constexpr std::size_t kScanHookSearchWindow = 0x400;
@@ -1432,6 +1634,49 @@ namespace Hook
             REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
 
         spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)", call_site);
+    }
+
+    // Install the star-map scan hook: patch the ID_97853 CALL inside ID_52173 (the scan-level
+    // writer that ID_94004/ID_94011 drive when you press Scan on the star map) so scanning a planet
+    // from the galaxy map triggers our completion. Separate call site from ScanHook's (which lives in
+    // ID_52157, the on-surface path), so the two coexist.
+    void InstallStarMapScanHook()
+    {
+        REL::Relocation<std::uintptr_t> outer {REL::ID(52173)};  // scan-level survey writer (space scan)
+        REL::Relocation<std::uintptr_t> inner {REL::ID(97853)};  // survey check/notify
+
+        const auto call_site = FindCallSite(outer.address(), inner.address(), kStarMapScanSearchWindow);
+        if (!call_site)
+        {
+            spdlog::error("StarMapScanHook: CALL to ID_97853 not found inside ID_52173 — galaxy-map scan hook skipped");
+            return;
+        }
+
+        StarMapScanHook::func = reinterpret_cast<StarMapScanHook::fn_t>(
+            REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapScanHook::thunk)));
+
+        spdlog::info("StarMapScanHook: installed at call-site 0x{:016X} (ID_52173 → ID_97853)", call_site);
+    }
+
+    // Install the panel-refresh capture hook: patch ID_94011's CALL to ID_93988 so we stash the live
+    // StarMap menu pointer on every natural repaint. Lets us re-invoke ID_93988 after our completion
+    // (via RefreshStarMapPanelIfOpen) to repaint the info panel to 100% without a manual reselect.
+    void InstallStarMapRefreshHook()
+    {
+        REL::Relocation<std::uintptr_t> outer {REL::ID(94011)};  // star-map scan handler
+        REL::Relocation<std::uintptr_t> inner {REL::ID(93988)};  // selected-planet panel populate
+
+        const auto call_site = FindCallSite(outer.address(), inner.address(), kScanHookSearchWindow);
+        if (!call_site)
+        {
+            spdlog::error("StarMapRefreshCaptureHook: CALL to ID_93988 not found inside ID_94011 — panel refresh disabled");
+            return;
+        }
+
+        StarMapRefreshCaptureHook::func = reinterpret_cast<StarMapRefreshCaptureHook::fn_t>(
+            REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapRefreshCaptureHook::thunk)));
+
+        spdlog::info("StarMapRefreshCaptureHook: installed at call-site 0x{:016X} (ID_94011 → ID_93988)", call_site);
     }
 
     // Per-frame poll: waits for the pending CompleteSurvey flag + scanner menu closed,
@@ -1490,6 +1735,37 @@ namespace Hook
             else {
                 Engine::g_completeSurveyCountdown = 0;
             }
+
+            // === Pending galaxy-map scan dispatch ===
+            // Star-map scan hook sets this when the player scans a body on the galaxy map. The
+            // completion is fully ref-free, so we do NOT gate on the menu closing (the star map
+            // updates live) — just a short frame grace to leave the hook's call frame, then dispatch
+            // Papyrus _GalaxyMapScanComplete (which honours the "Enable Galaxy Map Scan" toggle).
+            if (Engine::g_pendingGalaxyScan.load(std::memory_order_acquire)) {
+                if (Engine::g_galaxyScanCountdown == 0) {
+                    Engine::g_galaxyScanCountdown = kScannerDismissGraceFrames;
+                }
+                else if (--Engine::g_galaxyScanCountdown <= 0) {
+                    if (Engine::g_pendingGalaxyScan.exchange(false, std::memory_order_acq_rel)) {
+                        DispatchPapyrusStatic("_GalaxyMapScanComplete");
+                        spdlog::info("Poller: dispatched _GalaxyMapScanComplete (planetFormId=0x{:08X})",
+                                     Engine::g_galaxyScanPlanetFormId.load(std::memory_order_acquire));
+                    }
+                }
+            }
+            else {
+                Engine::g_galaxyScanCountdown = 0;
+            }
+
+            // === Pending StarMap panel repaint ===
+            // _GalaxyMapScanComplete sets this (via QueueStarMapRefresh) once it has completed a
+            // galaxy-map-scanned planet. We do the ID_93988 repaint HERE — on the main thread, where
+            // UI calls are safe — so the open info panel jumps to 100% without a manual reselect. The
+            // captured menu is validated against the live menuArray first (never derefs a closed menu).
+            if (Engine::g_pendingStarMapRefresh.exchange(false, std::memory_order_acq_rel)) {
+                if (Engine::RefreshStarMapPanelIfOpen())
+                    spdlog::info("Poller: repainted StarMap panel after galaxy-map completion");
+            }
         });
         spdlog::info("InstallScanSweepPoller: per-frame poller registered");
     }
@@ -1544,9 +1820,14 @@ namespace Hook
 
             // Rising edge: the Main Menu just opened => the previous game session
             // ended (its formless script types, and our natives, were unloaded).
-            // Arm a re-bind for the next time we reach gameplay.
+            // Arm a re-bind for the next time we reach gameplay, and drop any queued
+            // scan/refresh so it can't fire a completion into the NEXT game session.
             if (mainMenuOpen && !s_prevMainMenuOpen)
+            {
                 s_armed = true;
+                Engine::ResetPendingCompletionState();
+                spdlog::info("Session boundary (Main Menu): cleared pending completion/refresh state");
+            }
             s_prevMainMenuOpen = mainMenuOpen;
 
             if (!s_armed)
@@ -1578,6 +1859,8 @@ namespace
         {
             Papyrus::Register();
             Hook::Install();
+            Hook::InstallStarMapScanHook();     // galaxy-map planet scan → complete-that-planet
+            Hook::InstallStarMapRefreshHook();  // capture the StarMap menu for the post-completion repaint
             Hook::InstallScanSweepPoller();
             Hook::InstallSessionReRegisterPoller();  // re-bind natives after main-menu -> load (formless scripts)
             Engine::ApplyInstantScanGameSettings();
@@ -1588,7 +1871,9 @@ namespace
 
 SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
 {
-    SFSE::Init(a_sfse, {.trampoline = true, .trampolineSize = 64});
+    // trampolineSize covers BOTH call-site hooks (ScanHook + StarMapScanHook); each write_call<5>
+    // consumes ~14 bytes of trampoline. 128 leaves ample headroom.
+    SFSE::Init(a_sfse, {.trampoline = true, .trampolineSize = 128});
     // Pin a timestamped log format (date + ms) so phase durations read straight from the log,
     // e.g. "[2026-06-21 14:31:50.598] [tid] [I] …". CommonLibSF already timestamps by default;
     // this makes the format explicit and adds the date for cross-session clarity.

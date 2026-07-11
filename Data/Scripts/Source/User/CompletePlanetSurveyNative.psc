@@ -42,6 +42,17 @@ Function QueueCompleteSurvey() global native
 ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
 Function CancelPendingAutoComplete() global native
 
+; The form id of the planet/moon the player last scanned on the STAR MAP, captured by the galaxy-map
+; scan hook. The poller dispatches _GalaxyMapScanComplete, which reads this to know which body to
+; complete. Returns 0 if nothing is pending / the scanned target wasn't a planet.
+int Function GetGalaxyScanPlanetFormId() global native
+
+; Queue a repaint of the star-map selected-planet info panel. Called by _GalaxyMapScanComplete after
+; it completes a galaxy-map-scanned body; the poller does the actual repaint next frame on the main
+; thread (re-invokes the engine's own panel populate on the live StarMap menu), so the panel shows
+; 100% in place without a manual deselect/reselect. No-op if the star map isn't open.
+Function QueueStarMapRefresh() global native
+
 ; Sweep the barren worlds and record them for the finalize pass. abWriteResources: TRUE writes each
 ; world's attribute bits + resource scan flags (the resources/all path); FALSE only enumerates them, so a
 ; traits-only run can mark trait-known without writing resources. Returns the number of planets swept.
