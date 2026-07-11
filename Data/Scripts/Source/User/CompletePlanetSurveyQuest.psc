@@ -55,9 +55,6 @@ Function CompletePlanet(string asCategories) global
     ; A manual command wins over a queued auto-complete-on-scan: cancel any pending
     ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") so an explicit category isn't overridden.
     CompletePlanetSurveyNative.CancelPendingAutoComplete()
-    bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
-    bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
-    bool doSpecies   = _WantsSpecies(asCategories)
 
     Actor playerRef = Game.GetPlayer()
     If playerRef.IsInInterior()
@@ -70,7 +67,30 @@ Function CompletePlanet(string asCategories) global
         Return
     EndIf
 
-    Form planetForm = currentPlanet as Form
+    ; abDiscover=false: we're standing on this world, so its knowledge entry already exists and the
+    ; async re-discover (ID_102650) would evict freshly written species markers (green -> blue).
+    float surveyAfter = _CompletePlanetForm(currentPlanet, asCategories, false)
+    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "% (" + asCategories + ")")
+EndFunction
+
+; Complete ONE planet (by Planet object) for the given categories — the shared core of BOTH the
+; on-surface CompletePlanet (current planet) and the galaxy-map scan hook (the scanned body). All
+; ref-free (no spawn, no teleport), so it works on a remote/never-visited world by form id.
+; abDiscover: ensure the planet's knowledge entry exists first (ref-free engine discover) — REQUIRED
+; for a never-visited / remotely-scanned body so the resource + species writes land; pass FALSE for
+; the planet you're standing on (its entry exists, and the async re-discover can evict fresh markers).
+; Returns the planet's survey percent (0..1) after completion.
+float Function _CompletePlanetForm(Planet akPlanet, string asCategories, bool abDiscover) global
+    bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
+    bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
+    bool doSpecies   = _WantsSpecies(asCategories)
+    Form planetForm  = akPlanet as Form
+
+    ; Resources + species need the knowledge entry to exist (ResolvePlanetSubobj is a pure lookup) —
+    ; discover it ref-free first so those writes land on a never-visited world. Traits are self-sufficient.
+    If abDiscover && (doResources || doSpecies)
+        CompletePlanetSurveyNative.DiscoverPlanetEntry(planetForm)
+    EndIf
 
     ; Resources before species (so a following green wins — matches the proven completion order).
     int resourceCount = 0
@@ -82,17 +102,17 @@ Function CompletePlanet(string asCategories) global
     If doTraits
         ; Trait-known DATA only (survey %, TRAITS panel, galaxy map). Ref-free — the in-world "0/N SCANNED"
         ; pillars resolve on arrival/re-entry via the game's own CheckForScanTargetUpdate (the trait is known).
-        traitCount = MarkTraits(currentPlanet, currentPlanet.GetKeywordTypeList(44))
+        traitCount = MarkTraits(akPlanet, akPlanet.GetKeywordTypeList(44))
     EndIf
     If doSpecies
         ; Ref-free green: +0x21 scan flag + the +0x08 ESM-derived marker catalogue. No spawning, no
         ; scanner churn. _SpeciesKind keeps "fauna" = creatures only and "flora" = plants only.
         speciesCount = _GreenPlanet(planetForm, _SpeciesKind(asCategories))
     EndIf
-    float surveyAfter = currentPlanet.GetSurveyPercent()
-    CompletePlanetSurveyNative.DebugLog("CompletePlanet[" + asCategories + "]: traits=" + traitCount + " resources=" + resourceCount + " species=" + speciesCount + " survey=" + (surveyAfter * 100) as int + "%")
+    float surveyAfter = akPlanet.GetSurveyPercent()
+    CompletePlanetSurveyNative.DebugLog("_CompletePlanetForm[" + asCategories + "]: traits=" + traitCount + " resources=" + resourceCount + " species=" + speciesCount + " survey=" + (surveyAfter * 100) as int + "%")
     _ReconcilePlanetsScanned()   ; surveying this world implies it was scanned -> keep Planets Scanned >= Fully Surveyed
-    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "% (" + asCategories + ")")
+    Return surveyAfter
 EndFunction
 
 ; Complete the survey for every UNINHABITED planet/moon in the galaxy (no flora/fauna) in one pass —
@@ -361,6 +381,49 @@ Function CompleteSurveyIfEnabled() global
     EndIf
 
     CompletePlanetSurveyNative.QueueCompleteSurvey()
+EndFunction
+
+; Called by the C++ galaxy-map scan hook (via the per-frame poller) after the player scans a
+; planet/moon on the STAR MAP. Reads the "Enable Galaxy Map Scan" toggle (GPOF 0x80D); if OFF the
+; scan behaves vanilla (this returns). If ON, it completes the scanned body's ENTIRE survey — the
+; same outcome as CompletePlanet "all", but for that specific remote planet (all ref-free, so no
+; landing needed). The target form id is captured natively at scan time. Not a player command.
+Function _GalaxyMapScanComplete() global
+    ; FormID 0x80D = GPOF CPSGalaxyMapScan (the "Orbital Scanner" Settings toggle).
+    ; Verify in xEdit if the ESM is ever regenerated — CK reassigns IDs.
+    Form gpofForm = Game.GetFormFromFile(0x80D, "CompletePlanetSurvey.esm")
+    GameplayOption gpofOption = gpofForm as GameplayOption
+    If gpofOption == None
+        CompletePlanetSurveyNative.DebugLog("_GalaxyMapScanComplete: GPOF 0x80D not found — ESM missing or FormID changed")
+        Return
+    EndIf
+    If gpofOption.GetValue() < 0.5
+        Return   ; setting off -> vanilla galaxy-map scan
+    EndIf
+
+    int fid = CompletePlanetSurveyNative.GetGalaxyScanPlanetFormId()
+    If fid == 0
+        Return   ; no body captured (scan target wasn't a planet, or already consumed)
+    EndIf
+    Planet p = Game.GetForm(fid) as Planet
+    If p == None
+        CompletePlanetSurveyNative.DebugLog("_GalaxyMapScanComplete: captured form is not a Planet")
+        Return
+    EndIf
+    If p.GetSurveyPercent() >= 1.0
+        Return   ; already fully surveyed — nothing to do
+    EndIf
+
+    ; abDiscover=true: a map-scanned body may be never-visited, so ensure its knowledge entry exists
+    ; first — UNLESS it's the planet we're physically on (then skip discover to avoid evicting fresh
+    ; markers, exactly as CompletePlanet does).
+    Bool onIt = (Game.GetPlayer().GetCurrentPlanet() == p)
+    float surveyAfter = _CompletePlanetForm(p, "all", !onIt)
+    ; Repaint the star-map info panel in place (the panel cached its data when the scan first painted,
+    ; BEFORE this completion, so without this it only updates on a manual deselect/reselect). The
+    ; poller does the actual repaint next frame on the main thread.
+    CompletePlanetSurveyNative.QueueStarMapRefresh()
+    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "% (galaxy map scan)")
 EndFunction
 
 ; Mark every trait keyword on a planet KNOWN (the engine's own off-planet path: 938333 PlayerKnowledge).

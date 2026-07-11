@@ -1,0 +1,642 @@
+STR @ 144b1e328 : "UIMenuStarmapMenuClose"
+    <- 1416becd5 DATA in ID_94698@1416becb0 [ID_94698]
+    <- 1416bc1c6 DATA in ID_94681@1416bc0c0 [ID_94681]
+    <- 1416bbf65 DATA in ID_94679@1416bbf50 [ID_94679]
+    <- 1416bbefb DATA in ID_94678@1416bbe60 [ID_94678]
+    <- 1416bb546 DATA in ID_94667@1416bb530 [ID_94667]
+    <- 1416bb4cb DATA in ID_94666@1416bb430 [ID_94666]
+    <- 1416ed6ca DATA in ID_95133@1416ed5b0 [ID_95133]
+    <- 1404e1335 DATA in ID_44015@1404e12b0 [ID_44015]
+
+STR @ 144c966d0 : "StarMapMenu_SelectedLandingSite"
+    <- 14168f80e DATA in ID_94027@14168f7e0 [ID_94027]
+
+STR @ 144c966f0 : "StarMapMenu_SelectedLandingSiteFailed"
+    <- 14168f5ae DATA in ID_94024@14168f580 [ID_94024]
+
+STR @ 144c96718 : "StarMapMenu_MarkerGroupEntryClicked"
+    <- 14168fd4e DATA in ID_94033@14168fd20 [ID_94033]
+
+STR @ 144c96740 : "StarMapMenu_MarkerGroupEntryHoverChanged"
+    <- 14168faae DATA in ID_94030@14168fa80 [ID_94030]
+
+STR @ 144c96770 : "StarMapMenu_LandingInputInProgress"
+    <- 14169028e DATA in ID_94039@141690260 [ID_94039]
+
+STR @ 144c96798 : "StarMapMenu_MarkerGroupContainerVisibilityChanged"
+    <- 14168ffee DATA in ID_94036@14168ffc0 [ID_94036]
+
+STR @ 144c96b88 : "StarMapMenuPlanetInspectData"
+    <- 1416824c7 DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96bb8 : "StarMapMenuBodyPOIGroups"
+    <- 141682493 DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96bd8 : "StarMapMenuFocusBodyData"
+    <- 1416824ad DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96bf8 : "StarMapMenuBodyPOIDefs"
+    <- 14168245f DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c96c10 : "StarMapMenuBodyPOIPositions"
+    <- 141682479 DATA in ID_93949@141682170 [ID_93949]
+
+STR @ 144c991c8 : "StarMapMenu_QuickSelectChange"
+    <- 1416a477e DATA in ID_94319@1416a4750 [ID_94319]
+
+STR @ 144c99970 : "StarMapMenuQuickSelectData"
+    <- 14169bd62 DATA in ID_1016525@14169ba50 [ID_1016525]
+
+STR @ 144c9a040 : "GalaxyStarMapMenu"
+    <- 14253f277 DATA in ID_130397@14253f230 [ID_130397]
+    <- 1416acab2 DATA in ID_94475@1416aca60 [ID_94475]
+
+STR @ 144c9a198 : "StarMapMenu_Galaxy_FocusSystem"
+    <- 1416b14ae DATA in ID_94513@1416b1480 [ID_94513]
+
+STR @ 144c9a1e8 : "StarMapMenu_OnGalaxyViewInitialized"
+    <- 1416b174e DATA in ID_94516@1416b1720 [ID_94516]
+
+STR @ 144c9a370 : "StarMapMenuSystemBodyInfoData"
+    <- 1416ae74b DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a390 : "StarMapMenuMarkersData"
+    <- 1416ae6fd DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a3a8 : "StarMapMenuMarkerPositions"
+    <- 1416ae717 DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9a3e0 : "StarMapMenuData"
+    <- 1416ae6e7 DATA in ID_94487@1416ae440 [ID_94487]
+
+STR @ 144c9b3b8 : "StarMapMenu_ScanPlanet"
+    <- 1416c218e DATA in ID_94718@1416c2160 [ID_94718]
+
+STR @ 144c9b400 : "StarMapMenu_OnOutpostEntrySelected"
+    <- 1416c26ce DATA in ID_94724@1416c26a0 [ID_94724]
+
+STR @ 144c9b428 : "StarMapMenu_ShowRealCursor"
+    <- 1416c242e DATA in ID_94721@1416c2400 [ID_94721]
+
+STR @ 144c9b448 : "StarMapMenu_OnCancel"
+    <- 1416c2c0e DATA in ID_94730@1416c2be0 [ID_94730]
+
+STR @ 144c9b460 : "StarMapMenu_ReadyToClose"
+    <- 1416c296e DATA in ID_94727@1416c2940 [ID_94727]
+
+STR @ 144c9b480 : "StarMapMenu_OnHintButtonClicked"
+    <- 1416c314e DATA in ID_94736@1416c3120 [ID_94736]
+
+STR @ 144c9b4a0 : "StarMapMenu_OnExitStarMap"
+    <- 1416c2eae DATA in ID_94733@1416c2e80 [ID_94733]
+
+STR @ 144c9b4c0 : "StarMapMenu_OnClearRoute"
+    <- 1416c368e DATA in ID_94742@1416c3660 [ID_94742]
+
+STR @ 144c9b4e0 : "StarMapMenu_ExecuteRoute"
+    <- 1416c33ee DATA in ID_94739@1416c33c0 [ID_94739]
+
+STR @ 144c9e128 : "StarMapMenuSystemNameHeaderData"
+    <- 1416e65e6 DATA in ID_95105@1416e6240 [ID_95105]
+
+STR @ 144c9e148 : "StarMapMenuSystemScanData"
+    <- 1416e65d0 DATA in ID_95105@1416e6240 [ID_95105]
+
+STR @ 144d2be98 : "ShowGalaxyStarMapMenuAndPlotToLocation"
+    <- 142016f47 DATA in ID_117477@142013bc0 [ID_117477]
+
+STR @ 144d2bef0 : "ShowGalaxyStarMapMenu"
+    <- 142016ef5 DATA in ID_117477@142013bc0 [ID_117477]
+
+STR @ 145b63dc0 : ".?AV?$TypeErasedFuncImpl@V<lambda_c1f0116c390157847e877cd861fde102>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b63e60 : ".?AV?$TypeErasedFuncImpl@V<lambda_cac117a2ac663b225e9ccf722f18bd83>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b63f00 : ".?AV?$TypeErasedFuncImpl@V<lambda_caa836b6135f541d2747d1ef51e63017>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b644d0 : ".?AV?$ITypeErasedFunc@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b65000 : ".?AU?$EventSource@VStarMapMenu_MarkerGroupEntryHoverChanged@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65060 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_MarkerGroupEntryHoverChanged@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b650e0 : ".?AU?$EventSource@VStarMapMenu_SelectedLandingSiteFailed@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65140 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_SelectedLandingSiteFailed@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b651c0 : ".?AU?$EventSource@VStarMapMenu_ShowRealCursor@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65220 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ShowRealCursor@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65290 : ".?AU?$EventSource@VStarMapMenu_SelectedLandingSite@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b652f0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_SelectedLandingSite@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65360 : ".?AU?$EventSource@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b653d0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65460 : ".?AU?$EventSource@VStarMapMenu_MarkerGroupEntryClicked@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b654c0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_MarkerGroupEntryClicked@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b655f0 : ".?AU?$EventSource@VStarMapMenu_ScanPlanet@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65640 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ScanPlanet@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b656b0 : ".?AU?$EventSource@VStarMapMenu_LandingInputInProgress@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b65710 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_LandingInputInProgress@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b65790 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65860 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSite@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b658d0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSite@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65990 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSiteFailed@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65a00 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSiteFailed@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65ad0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_LandingInputInProgress@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65b40 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_LandingInputInProgress@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65c10 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65c90 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65d70 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryClicked@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65de0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryClicked@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65eb0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b65f20 : ".?AV?$BSTEventSink@VStarMapMenu_ShowRealCursor@@@@"
+    (no direct xrefs)
+
+STR @ 145b65f70 : ".?AV?$BSTEventSource@VStarMapMenu_ShowRealCursor@@@@"
+    (no direct xrefs)
+
+STR @ 145b660e0 : ".?AV?$BSTEventSink@VStarMapMenu_SelectedLandingSiteFailed@@@@"
+    (no direct xrefs)
+
+STR @ 145b66130 : ".?AV?$BSTEventSource@VStarMapMenu_LandingInputInProgress@@@@"
+    (no direct xrefs)
+
+STR @ 145b66180 : ".?AV?$BSTEventSource@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b661e0 : ".?AV?$BSTEventSource@VStarMapMenu_MarkerGroupEntryClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b66230 : ".?AV?$BSTEventSource@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66290 : ".?AV?$BSTEventSource@VStarMapMenu_SelectedLandingSite@@@@"
+    (no direct xrefs)
+
+STR @ 145b662e0 : ".?AV?$BSTEventSource@VStarMapMenu_SelectedLandingSiteFailed@@@@"
+    (no direct xrefs)
+
+STR @ 145b66470 : ".?AV?$BSTEventSink@VStarMapMenu_LandingInputInProgress@@@@"
+    (no direct xrefs)
+
+STR @ 145b664c0 : ".?AV?$BSTEventSink@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66520 : ".?AV?$BSTEventSink@VStarMapMenu_MarkerGroupEntryClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b66570 : ".?AV?$BSTEventSink@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b665d0 : ".?AV?$BSTEventSink@VStarMapMenu_SelectedLandingSite@@@@"
+    (no direct xrefs)
+
+STR @ 145b668c0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSite@@@@"
+    (no direct xrefs)
+
+STR @ 145b66910 : ".?AVStarMapMenu_SelectedLandingSiteFailed@@"
+    (no direct xrefs)
+
+STR @ 145b66950 : ".?AV?$TUIEventDispatcher@VStarMapMenu_SelectedLandingSiteFailed@@@@"
+    (no direct xrefs)
+
+STR @ 145b66b50 : ".?AV?$TUIEventDispatcher@VStarMapMenu_LandingInputInProgress@@@@"
+    (no direct xrefs)
+
+STR @ 145b66bb0 : ".?AVStarMapMenu_MarkerGroupContainerVisibilityChanged@@"
+    (no direct xrefs)
+
+STR @ 145b66c00 : ".?AV?$TUIEventDispatcher@VStarMapMenu_MarkerGroupContainerVisibilityChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66c60 : ".?AVStarMapMenu_MarkerGroupEntryClicked@@"
+    (no direct xrefs)
+
+STR @ 145b66ca0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b66cf8 : ".?AVStarMapMenu_MarkerGroupEntryHoverChanged@@"
+    (no direct xrefs)
+
+STR @ 145b66d40 : ".?AV?$TUIEventDispatcher@VStarMapMenu_MarkerGroupEntryHoverChanged@@@@"
+    (no direct xrefs)
+
+STR @ 145b66d98 : ".?AVStarMapMenu_SelectedLandingSite@@"
+    (no direct xrefs)
+
+STR @ 145b66ec0 : ".?AVStarMapMenu_LandingInputInProgress@@"
+    (no direct xrefs)
+
+STR @ 145b66f00 : ".?AV?$BSTEventSink@VStarMapMenu_ScanPlanet@@@@"
+    (no direct xrefs)
+
+STR @ 145b66f40 : ".?AV?$BSTEventSource@VStarMapMenu_ScanPlanet@@@@"
+    (no direct xrefs)
+
+STR @ 145b67a20 : ".?AV?$TypeErasedFuncImpl@V<lambda_f5d9c6be902abf31e1095fbe7bd905dc>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67ac0 : ".?AV?$TypeErasedFuncImpl@V<lambda_3c4960fcccbe99d415b9f4cd28713921>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67b60 : ".?AV?$TypeErasedFuncImpl@V<lambda_168542c63ee2f2cfc98c9049baf075c6>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67c50 : ".?AV?$TypeErasedFuncImpl@V<lambda_faeabeb21b2347891ffeeda7ee25e214>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67cf0 : ".?AV?$TypeErasedFuncImpl@V<lambda_be99175c1a3fb92882a59897d02d0742>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b67d90 : ".?AV?$TypeErasedFuncImpl@V<lambda_747c38f3ba876e4b6378dc03220757a4>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b682d0 : ".?AV?$BSTEventSink@VStarMapMenu_QuickSelectChange@@@@"
+    (no direct xrefs)
+
+STR @ 145b68370 : ".?AV?$BSTEventSource@VStarMapMenu_QuickSelectChange@@@@"
+    (no direct xrefs)
+
+STR @ 145b683b8 : ".?AVStarMapMenu_QuickSelectChange@@"
+    (no direct xrefs)
+
+STR @ 145b683f0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_QuickSelectChange@@@@"
+    (no direct xrefs)
+
+STR @ 145b689d0 : ".?AU?$EventSource@VStarMapMenu_QuickSelectChange@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b68a30 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_QuickSelectChange@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b68b10 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_QuickSelectChange@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b68b80 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_QuickSelectChange@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b68c40 : ".?AV?$TypeErasedFuncImpl@V<lambda_4eb0a4f4448320bec700fc5ba4fa5da9>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b68ce0 : ".?AV?$TypeErasedFuncImpl@V<lambda_b0daad66d9ea9cc2f9bc1e8091c642a6>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b69620 : ".?AU?$EventSource@VStarMapMenu_Galaxy_FocusSystem@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b69680 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_Galaxy_FocusSystem@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b696f0 : ".?AU?$EventSource@VStarMapMenu_OnGalaxyViewInitialized@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b69750 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnGalaxyViewInitialized@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b697d0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnGalaxyViewInitialized@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b698a0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_Galaxy_FocusSystem@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b69910 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_Galaxy_FocusSystem@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b699d0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnGalaxyViewInitialized@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b69a40 : ".?AV?$TUIDataShuttleContainerMap@UStarMapMenuMarkersData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69c10 : ".?AV?$TUIDataShuttleContainerMap@UStarMapMenuMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69c70 : ".?AV?$TUIDataShuttleContainerArray@V?$NestedUIValue@UStarMapMenuMarkerData@StarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b69ce0 : ".?AV?$BSTEventSource@VStarMapMenu_OnGalaxyViewInitialized@@@@"
+    (no direct xrefs)
+
+STR @ 145b69d30 : ".?AV?$BSTEventSource@VStarMapMenu_Galaxy_FocusSystem@@@@"
+    (no direct xrefs)
+
+STR @ 145b69d80 : ".?AVStarMapMenuEventShuttle@StarMapMenuDataModel@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b69dd0 : ".?AV?$TUIDataToFlash@UStarMapMenuData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69e20 : ".?AV?$TUIDataShuttleContainerMap@UStarMapMenuData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b69e70 : ".?AV?$TUIDataToFlash@UStarMapMenuMarkersData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a0d0 : ".?AV?$ArrayNestedUIValue@UStarMapMenuMarkerData@StarMap@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6a120 : ".?AV?$ArrayUIValue@V?$NestedUIValue@UStarMapMenuMarkerData@StarMap@@@@$0A@@@"
+    (no direct xrefs)
+
+STR @ 145b6a180 : ".?AV?$NestedUIValue@UStarMapMenuMarkerData@StarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a1c8 : ".?AVStarMapMenu_OnGalaxyViewInitialized@@"
+    (no direct xrefs)
+
+STR @ 145b6a210 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnGalaxyViewInitialized@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a268 : ".?AVStarMapMenu_Galaxy_FocusSystem@@"
+    (no direct xrefs)
+
+STR @ 145b6a2a0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_Galaxy_FocusSystem@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a358 : ".?AVStarMapMenuDataModel@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6a390 : ".?AV?$BSTEventSink@VStarMapMenu_OnGalaxyViewInitialized@@@@"
+    (no direct xrefs)
+
+STR @ 145b6a3e0 : ".?AV?$BSTEventSink@VStarMapMenu_Galaxy_FocusSystem@@@@"
+    (no direct xrefs)
+
+STR @ 145b6aef0 : ".?AU?$EventSource@VStarMapMenu_OnExitStarMap@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6af40 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnExitStarMap@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6afb0 : ".?AU?$EventSource@VStarMapMenu_OnOutpostEntrySelected@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b010 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnOutpostEntrySelected@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b090 : ".?AU?$EventSource@VStarMapMenu_OnCancel@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b0e0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnCancel@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b150 : ".?AU?$EventSource@VStarMapMenu_ReadyToClose@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b1a0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ReadyToClose@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b210 : ".?AU?$EventSource@VStarMapMenu_OnClearRoute@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b260 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnClearRoute@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b2d0 : ".?AU?$EventSource@VStarMapMenu_ExecuteRoute@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b320 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_ExecuteRoute@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b390 : ".?AU?$EventSource@VStarMapMenu_OnHintButtonClicked@@@BSTGlobalEvent@@"
+    (no direct xrefs)
+
+STR @ 145b6b3f0 : ".?AV?$BSTSingletonImplicit@U?$EventSource@VStarMapMenu_OnHintButtonClicked@@@BSTGlobalEvent@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b460 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ShowRealCursor@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b4c0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ShowRealCursor@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b580 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ScanPlanet@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b5e0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ScanPlanet@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b750 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnExitStarMap@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b7b0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnExitStarMap@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b870 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnCancel@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b8d0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnCancel@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b990 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ReadyToClose@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6b9f0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ReadyToClose@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bab0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnOutpostEntrySelected@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bb20 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnOutpostEntrySelected@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bbf0 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnClearRoute@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bc50 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnClearRoute@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bd10 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_ExecuteRoute@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bd70 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_ExecuteRoute@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6be30 : ".?AV?$AutoRegisterEvent@V?$TUIEventDispatcher@VStarMapMenu_OnHintButtonClicked@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6bea0 : ".?AV?$AutoRegisterFactory@V?$TUIEventDispatcher@VStarMapMenu_OnHintButtonClicked@@@@V?$BSTFactoryManager@VBSFixedString@@VUIEventDispatcher@@$0CAA@VBSTSingletonImplicit@@@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c590 : ".?AVStarMapMenu_ShowRealCursor@@"
+    (no direct xrefs)
+
+STR @ 145b6c5d0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ShowRealCursor@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c668 : ".?AVStarMapMenu_ScanPlanet@@"
+    (no direct xrefs)
+
+STR @ 145b6c6a0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ScanPlanet@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c7e0 : ".?AV?$BSTEventSource@VStarMapMenu_OnHintButtonClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c830 : ".?AV?$BSTEventSource@VStarMapMenu_OnExitStarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c878 : ".?AV?$BSTEventSource@VStarMapMenu_OnCancel@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c8c0 : ".?AV?$BSTEventSource@VStarMapMenu_ReadyToClose@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c910 : ".?AV?$BSTEventSource@VStarMapMenu_OnOutpostEntrySelected@@@@"
+    (no direct xrefs)
+
+STR @ 145b6c960 : ".?AVStarMapMenuEventShuttle@StarMapMenu@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6c9a8 : ".?AVStarMapMenu_OnCancel@@"
+    (no direct xrefs)
+
+STR @ 145b6c9e0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnCancel@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ca28 : ".?AVStarMapMenu_ReadyToClose@@"
+    (no direct xrefs)
+
+STR @ 145b6ca60 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ReadyToClose@@@@"
+    (no direct xrefs)
+
+STR @ 145b6caa8 : ".?AVStarMapMenu_OnOutpostEntrySelected@@"
+    (no direct xrefs)
+
+STR @ 145b6caf0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnOutpostEntrySelected@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cb50 : ".?AV?$BSTEventSource@VStarMapMenu_OnClearRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cba0 : ".?AV?$BSTEventSource@VStarMapMenu_ExecuteRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cbe8 : ".?AVStarMapMenu_OnClearRoute@@"
+    (no direct xrefs)
+
+STR @ 145b6cc20 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnClearRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cc68 : ".?AVStarMapMenu_ExecuteRoute@@"
+    (no direct xrefs)
+
+STR @ 145b6cca0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_ExecuteRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cce8 : ".?AVStarMapMenu_OnHintButtonClicked@@"
+    (no direct xrefs)
+
+STR @ 145b6cd20 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnHintButtonClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cd70 : ".?AVStarMapMenu_OnExitStarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6cda0 : ".?AV?$TUIEventDispatcher@VStarMapMenu_OnExitStarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cdf0 : ".?AV?$BSTEventSink@VStarMapMenu_ExecuteRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ce40 : ".?AV?$BSTEventSink@VStarMapMenu_OnHintButtonClicked@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ce90 : ".?AV?$BSTEventSink@VStarMapMenu_OnExitStarMap@@@@"
+    (no direct xrefs)
+
+STR @ 145b6ced8 : ".?AV?$BSTEventSink@VStarMapMenu_OnCancel@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cf20 : ".?AV?$BSTEventSink@VStarMapMenu_ReadyToClose@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cf70 : ".?AV?$BSTEventSink@VStarMapMenu_OnOutpostEntrySelected@@@@"
+    (no direct xrefs)
+
+STR @ 145b6cfc0 : ".?AVStarMapMenu@StarMap@@"
+    (no direct xrefs)
+
+STR @ 145b6cff0 : ".?AV?$BSTEventSink@VStarMapMenu_OnClearRoute@@@@"
+    (no direct xrefs)
+
+STR @ 145b6d1d0 : ".?AV?$TypeErasedFuncImpl@V<lambda_ec1b0c82f9203ad475b303783f529265>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6f9b0 : ".?AV?$TypeErasedFuncImpl@V<lambda_71d841fb197c7041bcb77a2b3b69a139>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fa50 : ".?AV?$TypeErasedFuncImpl@V<lambda_a9ee1960111e67e2f89ebb8b34add4bb>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6faf0 : ".?AV?$TypeErasedFuncImpl@V<lambda_74cd4d224d53307276ac8977203a6c6e>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fb90 : ".?AV?$TypeErasedFuncImpl@V<lambda_1bcd8c71751abceb7cc1f3acdcabeaa2>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fc30 : ".?AV?$TypeErasedFuncImpl@V<lambda_3b020607b93e694bc94c093b9212e455>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6fcd0 : ".?AV?$TypeErasedFuncImpl@V<lambda_238e1f0463189e6ad3c31ba3eca78e5c>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+STR @ 145b6feb0 : ".?AV?$TypeErasedFuncImpl@V<lambda_a3aed24d809488de0f19c5537ae368db>@@XAEAVStarMapMenuDataModel@StarMap@@@detail@unique_function_impl@stl@@"
+    (no direct xrefs)
+
+# total string hits: 211

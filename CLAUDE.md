@@ -42,11 +42,21 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
   species lists + scan markers for never-visited worlds).
 - `Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc` — the console commands.
 - `Data/Scripts/Source/User/CompletePlanetSurveyNative.psc` — `native` decls for the C++ functions.
-- `Data/CompletePlanetSurvey.esm` — the Settings toggle, authored in Creation Kit (CK can't edit
-  a master in place).
+- `Data/CompletePlanetSurvey.esm` — the Settings toggles (Hand Scanner `0x80C`, Orbital Scanner
+  `0x80D`), authored in Creation Kit (CK can't edit a master in place). NEW GPOF toggles can instead
+  be ADDED by Python binary surgery on the master: clone an existing GPOF record, append its FormID to
+  the GPOG `GOGL` list, and fix every GRUP size + the HEDR record count (how the Orbital Scanner toggle
+  was added). Papyrus keys on the FormID, so NNAM/DNAM (name/description) are safe display-only edits.
 - `test/` — the offline marker-validation harness (above) + QA notes.
 - `re/` — reverse engineering: `re/ghidra/output/` (decompiles), `re/save/*.py` (save parsing),
-  `re/frida/` (live probes), `re/esm/` (ESM extraction).
+  `re/frida/` (live probes), `re/esm/` (ESM extraction). The AUTHORITATIVE RE source is the local
+  queryable Ghidra project `ghidra-project/Starfield.gpr` (gitignored, ~3.4 GB) — the
+  `re/ghidra/output/*.txt` dumps are point-in-time and can be STALE/incomplete (a subagent hooked the
+  wrong function off them until the live project corrected it). Query it headless:
+  `analyzeHeadless.bat ghidra-project Starfield -process Starfield.exe -noanalysis -scriptPath
+  re/ghidra/scripts -postScript DecompileIds.java <out> <ids…>` (also `XrefsToId.java`,
+  `FindStringXrefs.java`). Ghidra at `C:\Tools\ghidra_12.1.2_PUBLIC`; regenerate the project via the
+  `starfield-modding` skill if missing.
 - `docs/` — player docs (`COMPLETION-COMMANDS.md`, `how-it-works.md`, `MISC-STATS.md`), Nexus
   page sources (`MOD-DESCRIPTION.md` + the two `NEXUS-*` paste files), the LikeC4 model (`*.c4`),
   and design/review archives (`grok-review-*`, `dead-code-audit.md`, `feature-*.md`, …).
@@ -55,9 +65,10 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
 
 Completion menu — each takes a category string (`resources,traits,fauna,flora`, or `all`):
 `CompletePlanet`, `CompleteBarrenPlanets`, `CompleteLifePlanets`, `CompleteAllPlanets` (whole
-galaxy, both sweeps, one result). Completion also writes the character-sheet Statistics counters,
-and an ESM Settings toggle (Auto-Complete Survey on Scan) hooks the scan call site. See
-`docs/COMPLETION-COMMANDS.md`.
+galaxy, both sweeps, one result). Completion also writes the character-sheet Statistics counters.
+Two ESM Settings toggles auto-complete on a scan: **Hand Scanner** (`0x80C`, on-surface hand-scanner
+→ `ID_52157`→`ID_97853` hook) and **Orbital Scanner** (`0x80D`, star-map scan → `ID_52173`→`ID_97853`
+hook, ScanLevelChanged; also repaints the star-map panel in place). See `docs/COMPLETION-COMMANDS.md`.
 
 ## Gotchas (these burned us)
 
