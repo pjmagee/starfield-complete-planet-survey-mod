@@ -5,6 +5,10 @@ ScriptName CompletePlanetSurveyNative Hidden Native
 
 Function DebugLog(string asMsg) global native
 
+; ERROR-level sibling of DebugLog (spdlog::error — [E] in the SFSE log, never dropped by a level
+; cap). Use for genuine script-side failures, e.g. ResolveEsmForm's missing / wrong-type pinned form.
+Function DebugLogError(string asMsg) global native
+
 ; Mark a trait keyword as known for the planet (938333 PlayerKnowledge — the engine's own off-planet
 ; path). Drives survey %, the TRAITS panel and the galaxy map. Fires the trait progress event.
 bool Function MarkTraitKnownForPlanet(Form akPlanet, Keyword akKeyword) global native
@@ -41,6 +45,20 @@ Function QueueCompleteSurvey() global native
 ; explicit category command (e.g. CompletePlanet "traits") is not overridden by a queued
 ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
 Function CancelPendingAutoComplete() global native
+
+; Issue #12 — whether the native call-site hook that is SUPPOSED to invoke CompleteSurveyIfEnabled
+; (the Hand Scanner path, ID_52157 -> ID_97853) is actually armed this session. False means a
+; sig-scan miss (or an install-time fault) left that hook unpatched on this game build — the SFSE
+; log names it at ERROR and the player already saw a one-time notice at load; those load-time
+; signals are the ONLY ones on a real miss (an unpatched hook never dispatches the handler, so
+; flipping the toggle produces no further logging). The Settings toggle still reads/writes fine; it
+; just has nothing to drive without the hook. This query exists as defense-in-depth for any future
+; DIRECT invocation of the handler without the hook armed.
+bool Function IsHandScannerHookInstalled() global native
+
+; Same as IsHandScannerHookInstalled, for the Orbital Scanner / galaxy-map scan hook
+; (ID_52173 -> ID_97853) that drives _GalaxyMapScanComplete.
+bool Function IsOrbitalScannerHookInstalled() global native
 
 ; The form id of the planet/moon the player last scanned on the STAR MAP, captured by the galaxy-map
 ; scan hook. The poller dispatches _GalaxyMapScanComplete, which reads this to know which body to
