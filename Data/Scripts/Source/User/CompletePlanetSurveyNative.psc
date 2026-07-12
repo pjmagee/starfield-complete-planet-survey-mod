@@ -53,10 +53,23 @@ int Function GetGalaxyScanPlanetFormId() global native
 ; 100% in place without a manual deselect/reselect. No-op if the star map isn't open.
 Function QueueStarMapRefresh() global native
 
-; Sweep the barren worlds and record them for the finalize pass. abWriteResources: TRUE writes each
-; world's attribute bits + resource scan flags (the resources/all path); FALSE only enumerates them, so a
-; traits-only run can mark trait-known without writing resources. Returns the number of planets swept.
+; Phase 1 ENUMERATE (issue #9): collect every barren PNDT formId into the native work list and reset
+; sweep/straggler/fault state. Does NOT discover or write any planet — pair with SweepBarrenChunk.
+; abWriteResources is accepted for call-site compatibility (pass the same flag to each chunk).
+; Returns the barren work-list size (cursor upper bound for SweepBarrenChunk).
 int Function CompleteAllPlanetsSurveyData(bool abWriteResources) global native
+
+; Phase 1 CHUNK (issue #9): process [aiStartIndex, aiStartIndex+aiCount) of the barren work list with
+; the same per-planet semantics as the former monolithic sweep (guard → discover → write → post-check
+; → conditional event → straggler/fault accounting). Fault streak spans chunks. Returns slots advanced
+; (>=0; Papyrus: start += ret), or -1 if the consecutive-fault cap aborted (remaining already counted
+; as notAttempted — break the drive loop). abWriteResources: TRUE writes attribute bits + resource
+; flags; FALSE only records the barren world for the traits pass (no resource writes).
+int Function SweepBarrenChunk(int aiStartIndex, int aiCount, bool abWriteResources) global native
+
+; Attempted+succeeded count from the last Phase 1 (after chunks). Replaces the old
+; CompleteAllPlanetsSurveyData return value for "scanned" log lines.
+int Function GetSweepCompletedCount() global native
 
 ; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep touched, so the finalize pass
 ; can re-resolve each as a Planet (and mark its traits via GetKeywordTypeList(44) -> MarkTraitKnownForPlanet).
