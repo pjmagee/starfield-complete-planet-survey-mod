@@ -1350,6 +1350,16 @@ namespace Engine
     // so the disabled/degraded state logs exactly once per process, not once per native.
     inline std::once_flag g_disabledNoticeOnce;
 
+    // Per-HOOK install state (issue #12) — distinct from g_offsetsValid, which gates the WHOLE
+    // plugin. A sig-scan miss (FindCallSite finds no matching CALL — e.g. a game patch reordered the
+    // compiler's output) only takes out ONE feature path; everything else (console commands, the
+    // other hook, natives) keeps working. Set true ONLY by a successful Hook::Install*() trampoline
+    // write; Papyrus reads these via IsHandScannerHookInstalled/IsOrbitalScannerHookInstalled so the
+    // Settings-toggle handlers (CompleteSurveyIfEnabled / _GalaxyMapScanComplete) can no-op sanely
+    // instead of assuming the native hook that is SUPPOSED to invoke them is actually armed.
+    inline std::atomic<bool> g_handScannerHookInstalled {false};    // ScanHook       (0x80C toggle)
+    inline std::atomic<bool> g_orbitalScannerHookInstalled {false}; // StarMapScanHook (0x80D toggle)
+
     // === Load-time offset self-check (non-fatal address-library probe) ==========================
     //
     // CommonLibSF resolves a REL::ID through IDDB, which calls REX::FAIL — a MessageBox +
@@ -1521,6 +1531,25 @@ namespace Engine
             "Address Library (version library) for this runtime is installed.",
             runtime.empty() ? "unknown" : runtime, reason));
         return false;
+    }
+
+    // Sig-scan-miss notice (issue #12) — SCOPED to one hook, unlike DisableWithReason above which
+    // disables the whole plugin. FindCallSite missing its target CALL means a game/compiler build
+    // reordered the outer function's code so the byte scan no longer finds it (e.g. after a Starfield
+    // patch); everything else the plugin does (console commands, natives, the other hook) is
+    // unaffected, so we do NOT touch g_offsetsValid/g_degraded here — only the caller marks its own
+    // g_*HookInstalled flag false (the default) and the affected Settings toggle becomes an inert
+    // no-op until a future build's byte pattern matches again. Logs ONE ERROR line (already logged by
+    // the caller) plus this same non-blocking player notice, so a player who never opens the SFSE log
+    // still learns why flipping the toggle does nothing instead of assuming the mod is broken.
+    inline void NotifyHookMissing(const std::string& featureName)
+    {
+        ShowDisabledNotice(std::format(
+            "Complete Planet Survey: the {} scan-hook could not be installed on this game build "
+            "(signature scan miss).\n\n"
+            "Auto-complete-on-scan for {} is disabled until an updated build restores it. "
+            "Everything else — including the console completion commands — still works normally.",
+            featureName, featureName));
     }
 
     // SizeOfImage of the module at `base`, read from its in-memory PE headers (all guarded).
@@ -1918,6 +1947,24 @@ namespace Papyrus
     {
         Engine::g_pendingCompleteSurvey.store(false, std::memory_order_release);
         spdlog::info("CancelPendingAutoComplete: cleared pending auto-complete (manual command wins)");
+    }
+
+    // Issue #12: whether the on-surface hand-scanner call-site hook (ScanHook, ID_52157 → ID_97853)
+    // is actually armed this session. False when Hook::Install()'s sig-scan missed its target CALL (a
+    // future game build reordered the outer function) or faulted — in which case the native hook that
+    // is SUPPOSED to invoke Papyrus CompleteSurveyIfEnabled never fires at all, so this exists purely
+    // as defense-in-depth / an honest status query (e.g. a future direct invocation of
+    // CompleteSurveyIfEnabled without the hook armed) rather than something the normal play loop needs.
+    bool IsHandScannerHookInstalled(std::monostate)
+    {
+        return Engine::g_handScannerHookInstalled.load(std::memory_order_acquire);
+    }
+
+    // Same as above for the star-map ("Orbital Scanner") call-site hook (StarMapScanHook, ID_52173 →
+    // ID_97853), which drives Papyrus _GalaxyMapScanComplete.
+    bool IsOrbitalScannerHookInstalled(std::monostate)
+    {
+        return Engine::g_orbitalScannerHookInstalled.load(std::memory_order_acquire);
     }
 
     // Return the FormID of the planet/moon the player last scanned on the star map (captured by the
@@ -2396,6 +2443,12 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "CancelPendingAutoComplete"sv, CPS_GUARDED(CancelPendingAutoComplete), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "IsHandScannerHookInstalled"sv, CPS_GUARDED(IsHandScannerHookInstalled), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "IsOrbitalScannerHookInstalled"sv, CPS_GUARDED(IsOrbitalScannerHookInstalled), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "GetGalaxyScanPlanetFormId"sv, CPS_GUARDED(GetGalaxyScanPlanetFormId), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
@@ -2444,6 +2497,7 @@ namespace Papyrus
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
+                     "IsHandScannerHookInstalled, IsOrbitalScannerHookInstalled, "
                      "GetGalaxyScanPlanetFormId, QueueStarMapRefresh, "
                      "CompleteAllPlanetsSurveyData, SweepBarrenChunk, GetSweepCompletedCount, "
                      "GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet, "
@@ -2615,18 +2669,24 @@ namespace Hook
             const auto call_site = FindCallSite(outer, inner);
             if (!call_site)
             {
-                spdlog::error("ScanHook: CALL to ID_97853 not found inside ID_52157 — hook skipped");
+                // Sig-scan miss (issue #12): log + a player-visible notice, SCOPED to this one hook —
+                // g_handScannerHookInstalled stays false (its default), CompleteSurveyIfEnabled reads
+                // that and no-ops sanely instead of silently doing nothing with no signal anywhere.
+                spdlog::error("ScanHook: CALL to ID_97853 not found inside ID_52157 — hook skipped, hand-scanner auto-complete disabled");
+                Engine::NotifyHookMissing("Hand Scanner");
                 return;
             }
 
             ScanHook::func = reinterpret_cast<ScanHook::fn_t>(
                 REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
+            Engine::g_handScannerHookInstalled.store(true, std::memory_order_release);
 
             spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)", call_site);
         }
         catch (...)
         {
             spdlog::error("ScanHook: caught fault during install — hand-scanner auto-complete disabled");
+            Engine::NotifyHookMissing("Hand Scanner");
         }
     }
 
@@ -2644,24 +2704,36 @@ namespace Hook
             const auto call_site = FindCallSite(outer, inner, kStarMapScanSearchWindow);
             if (!call_site)
             {
-                spdlog::error("StarMapScanHook: CALL to ID_97853 not found inside ID_52173 — galaxy-map scan hook skipped");
+                // Sig-scan miss (issue #12): scoped notice, same shape as ScanHook's above.
+                // g_orbitalScannerHookInstalled stays false so _GalaxyMapScanComplete can no-op sanely.
+                spdlog::error("StarMapScanHook: CALL to ID_97853 not found inside ID_52173 — galaxy-map scan hook skipped, orbital-scanner auto-complete disabled");
+                Engine::NotifyHookMissing("Orbital Scanner");
                 return;
             }
 
             StarMapScanHook::func = reinterpret_cast<StarMapScanHook::fn_t>(
                 REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapScanHook::thunk)));
+            Engine::g_orbitalScannerHookInstalled.store(true, std::memory_order_release);
 
             spdlog::info("StarMapScanHook: installed at call-site 0x{:016X} (ID_52173 → ID_97853)", call_site);
         }
         catch (...)
         {
             spdlog::error("StarMapScanHook: caught fault during install — galaxy-map scan auto-complete disabled");
+            Engine::NotifyHookMissing("Orbital Scanner");
         }
     }
 
     // Install the panel-refresh capture hook: patch ID_94011's CALL to ID_93988 so we stash the live
     // StarMap menu pointer on every natural repaint. Lets us re-invoke ID_93988 after our completion
     // (via RefreshStarMapPanelIfOpen) to repaint the info panel to 100% without a manual reselect.
+    //
+    // Sig-scan-miss policy (issue #12): COSMETIC and FAIL-OPEN, unlike ScanHook/StarMapScanHook above.
+    // A miss here does not disable the Orbital Scanner feature itself — the completion still happens
+    // (StarMapScanHook is independent); only the in-place info-panel repaint is lost, and the panel
+    // still shows the correct 100% after a manual deselect/reselect or a menu reopen. So this stays
+    // log-only (ERROR, no player popup) — a player-visible notice for a missed repaint would overstate
+    // the impact and needlessly worry them about a feature that still works.
     void InstallStarMapRefreshHook()
     {
         try  // fault-guarded like Install() — log + skip, never fault the noexcept message callback
@@ -2672,7 +2744,7 @@ namespace Hook
             const auto call_site = FindCallSite(outer, inner, kScanHookSearchWindow);
             if (!call_site)
             {
-                spdlog::error("StarMapRefreshCaptureHook: CALL to ID_93988 not found inside ID_94011 — panel refresh disabled");
+                spdlog::error("StarMapRefreshCaptureHook: CALL to ID_93988 not found inside ID_94011 — panel refresh disabled (cosmetic only; completion itself is unaffected)");
                 return;
             }
 

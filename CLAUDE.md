@@ -52,6 +52,10 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
   be ADDED by Python binary surgery on the master: clone an existing GPOF record, append its FormID to
   the GPOG `GOGL` list, and fix every GRUP size + the HEDR record count (how the Orbital Scanner toggle
   was added). Papyrus keys on the FormID, so NNAM/DNAM (name/description) are safe display-only edits.
+  Full checklist: `docs/ESM-BINARY-EDIT-CHECKLIST.md`. Every pinned FormID Papyrus reads from this
+  master is centralized in one block at the top of `CompletePlanetSurveyQuest.psc`, resolved through
+  a shared `ResolveEsmForm` helper that logs a named error on a miss (fail-closed for toggles,
+  fail-open for the cosmetic intro popup — see that file's policy comment).
 - `test/` — the offline marker-validation harness (above) + QA notes.
 - `re/` — reverse engineering: `re/ghidra/output/` (decompiles), `re/save/*.py` (save parsing),
   `re/frida/` (live probes), `re/esm/` (ESM extraction). The AUTHORITATIVE RE source is the local

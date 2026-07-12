@@ -42,6 +42,18 @@ Function QueueCompleteSurvey() global native
 ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
 Function CancelPendingAutoComplete() global native
 
+; Issue #12 — whether the native call-site hook that is SUPPOSED to invoke CompleteSurveyIfEnabled
+; (the Hand Scanner path, ID_52157 -> ID_97853) is actually armed this session. False means a
+; sig-scan miss (or an install-time fault) left that hook unpatched on this game build — the SFSE
+; log names it at ERROR and the player already saw a one-time notice at load. The Settings toggle
+; still reads/writes fine; it just has nothing to drive without the hook, so this exists so the
+; toggle handler can no-op sanely rather than silently doing nothing with no signal anywhere.
+bool Function IsHandScannerHookInstalled() global native
+
+; Same as IsHandScannerHookInstalled, for the Orbital Scanner / galaxy-map scan hook
+; (ID_52173 -> ID_97853) that drives _GalaxyMapScanComplete.
+bool Function IsOrbitalScannerHookInstalled() global native
+
 ; The form id of the planet/moon the player last scanned on the STAR MAP, captured by the galaxy-map
 ; scan hook. The poller dispatches _GalaxyMapScanComplete, which reads this to know which body to
 ; complete. Returns 0 if nothing is pending / the scanned target wasn't a planet.
