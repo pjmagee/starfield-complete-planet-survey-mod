@@ -152,10 +152,37 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     ; reading time and measures pure compute. Phase 1 also logs precise ms on the C++ side.
     float tStart = Utility.GetCurrentRealTime()
 
-    ; 1) C++ sweep over the barren worlds. abWriteResources = doResources: TRUE writes each world's
-    ;    attribute bits + resource scan flags (the resources/all path); FALSE just enumerates the barren
-    ;    worlds, so the traits-only path can mark trait-known WITHOUT writing any resources.
-    int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData(doResources)
+    ; Issue #13 re-entrancy gate belongs HERE (command entry, before any yield): the chunked Phase 1
+    ; loop below widens the mid-run window across frames (Utility.Wait between chunks), so a second
+    ; CompleteBarrenPlanets/CompleteAllPlanets can interleave. Not implemented in this issue (#13).
+
+    ; 1) Phase 1 chunked across frames (issue #9). ENUMERATE all barren PNDT formIds (cheap), then
+    ;    process them in chunks of kBarrenChunkSize with a short Wait between so the ~1798-planet
+    ;    work does not hitch a single frame. Per-planet semantics (guard → discover → write →
+    ;    post-check → conditional event → straggler/fault) are unchanged; the consecutive-fault
+    ;    streak spans chunks; on abort (-1) remaining worlds are notAttempted and we break.
+    ;    Chunk size 150: ballpark 100–200 keeps a chunk under a frame if per-planet work is
+    ;    ~0.5–1 ms (discover + write + two IsPlanetFullyMarked checks), while limiting Wait hops
+    ;    to ~12 for a full barren galaxy. abWriteResources = doResources (same as before).
+    int kBarrenChunkSize = 150
+    int workCount = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData(doResources)
+    int startIdx = 0
+    While startIdx < workCount
+        int advanced = CompletePlanetSurveyNative.SweepBarrenChunk(startIdx, kBarrenChunkSize, doResources)
+        If advanced < 0
+            ; Consecutive-fault cap aborted the sweep — remaining notAttempted already recorded.
+            startIdx = workCount
+        ElseIf advanced == 0
+            startIdx = workCount
+        Else
+            startIdx += advanced
+            ; Yield so the engine can run a frame (slate cascade / UI / async entry creates).
+            If startIdx < workCount
+                Utility.Wait(0.1)
+            EndIf
+        EndIf
+    EndWhile
+    int n = CompletePlanetSurveyNative.GetSweepCompletedCount()
     float tAfterSweep = Utility.GetCurrentRealTime()
 
     ; 2) STRAGGLER-ONLY finalize with bounded retry (issue #6). Phase 1 already writes each planet's
