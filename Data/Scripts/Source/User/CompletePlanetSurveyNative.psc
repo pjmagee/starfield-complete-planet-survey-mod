@@ -83,9 +83,15 @@ int Function GetStragglerFormIdAt(int aiIndex) global native
 
 ; Post-retry failure report: counts the straggler-set planets whose survey state STILL reads
 ; incomplete after the bounded finalize passes. abLogErrors=true logs each one at ERROR (formId hex,
-; planetId, editor id when available) so failures are named, not just counted; pass false to re-read
-; the count without duplicating the ERROR lines (the combined CompleteAllPlanets popup does this).
+; planetId, editor id when available, and the failure MODE — form/id unresolved vs entry never
+; created vs partial write) so failures are named, not just counted; pass false to re-read the count
+; without duplicating the ERROR lines (the combined CompleteAllPlanets popup does this).
 int Function ReportSweepFailures(bool abLogErrors) global native
+
+; Barren worlds the last sweep never ATTEMPTED because its consecutive-fault cap aborted it early
+; (0 on a healthy run). These are in neither the straggler list nor the failure report — the result
+; popups surface this count so an aborted sweep is never silently under-reported.
+int Function GetSweepNotAttemptedCount() global native
 
 ; Enumerate the UNIQUE life-bearing planets (those with flora/fauna). Call once, then iterate
 ; 0..count-1 via GetLifePlanetFormIdAt + Game.GetForm(...) as Planet. The galaxy sweep skips living

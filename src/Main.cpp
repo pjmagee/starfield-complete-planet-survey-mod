@@ -810,10 +810,21 @@ namespace Engine
 
     // Systemic-failure detector for the sweep's PER-PLANET fault isolation (issue #6): a single
     // faulting planet is caught, logged, skipped and queued as a straggler — it must NOT abort the
-    // remaining ~1798 planets or latch the global degraded flag. But this many faults IN A ROW is
-    // the signature of a bad offset (every planet faults identically), so at the cap we latch
-    // g_degraded and abort the sweep instead of grinding through thousands of guaranteed faults.
+    // remaining ~1798 planets. But this many ATTEMPTED planets faulting IN A ROW is the signature
+    // of a bad offset (every planet faults identically), so at the cap we abort THIS SWEEP only:
+    // hard ERROR, remaining barren bodies counted as not-attempted (surfaced in the log AND the
+    // player popup), and a re-run of the command stays viable. We deliberately do NOT latch
+    // g_degraded here — that would no-op the very finalize/retry/report natives that surface the
+    // failure (the popup would lie with failedCount=0) and make recovery-by-re-run impossible.
+    // g_degraded stays reserved for uncaught faults that reach GuardedNative.
     constexpr int kMaxConsecutiveSweepFaults = 5;
+
+    // Per-planet fault lines logged at ERROR before collapsing into one end-of-sweep summary line
+    // that lists the remaining formIds (a galaxy run must not dump thousands of lines at release
+    // level — but release level is INFO, so the lines must not be DEBUG either or they'd vanish).
+    constexpr int kMaxPerPlanetFaultLines = 10;
+    // FormIds listed explicitly in that summary line before truncating with "+K more".
+    constexpr std::size_t kMaxFaultSummaryIds = 40;
 
     // Latched true when a bound native catches a fault (a C++ exception, or — because src/ is
     // built /EHa — an access violation), almost always a wrong/garbage offset deref. Once set,
@@ -836,6 +847,11 @@ namespace Engine
     // Guarded by g_sweepMtx alongside the sweep list.
     inline std::vector<std::uint32_t> g_stragglerPlanetForms;
     inline std::mutex                 g_sweepMtx;
+    // Barren planets the last sweep did NOT attempt because the consecutive-fault cap aborted it
+    // (0 on a healthy run). They are in neither the straggler list nor the failure report — this
+    // count is how the abort is surfaced to Papyrus (GetSweepNotAttemptedCount) so the popup can
+    // say "sweep aborted early — N worlds not attempted" instead of under-reporting.
+    inline std::atomic<int> g_sweepNotAttempted {0};
 
     // Returns the number of planets scan-completed (and records them for the
     // Papyrus trait pass).
@@ -844,8 +860,9 @@ namespace Engine
         const auto                 t0 = std::chrono::steady_clock::now();
         std::vector<std::uint32_t> sweptForms;
         std::vector<std::uint32_t> stragglerForms;  // formIds NOT fully written in-frame — the exact finalize set
+        std::vector<std::uint32_t> faultedForms;    // formIds whose per-planet body faulted (for the summary line)
         int                        total       = 0;
-        int                        completed   = 0;
+        int                        completed   = 0;  // attempted AND succeeded (faulted planets are not counted here)
         int                        skipped     = 0;
         int                        markedTotal   = 0;  // resource/attribute scan flags set
         int                        skippedLiving = 0;  // planets WITH flora/fauna — left for on-planet green
@@ -853,7 +870,8 @@ namespace Engine
         int                        leftForFinalize = 0;  // not fully marked post-write -> finalize pass completes them
         int                        writeNoop       = 0;  // subset of those whose write marked NOTHING (entry not ready)
         int                        faulted           = 0;  // per-planet faults caught (planet skipped, queued as straggler)
-        int                        consecutiveFaults = 0;  // systemic-failure detector (latches g_degraded at the cap)
+        int                        notAttempted      = 0;  // barren bodies never attempted because the fault cap aborted
+        int                        consecutiveFaults = 0;  // consecutive ATTEMPTS that faulted (aborts the sweep at the cap)
         bool                       aborted           = false;  // set when kMaxConsecutiveSweepFaults trips
 
         // Parse Starfield.esm up front (cached). This map tells us which planets HAVE authored
@@ -870,29 +888,37 @@ namespace Engine
             const auto planetId = ReadPlanetId(form);
             if (!planetId)
                 return;
-            if (aborted || completed >= kMaxScansPerRun)
-            {
-                ++skipped;
-                return;
-            }
             // Skip any planet that HAS authored flora/fauna. Completing it ref-free would mark its
             // flora/fauna "scanned" while the outline stays BLUE — the engine keys the green on a
             // per-(planet,species) CANONICAL id that only exists once the biome materializes the
             // creature on-planet, which we cannot write from here. That is an invalid state. Living
             // worlds are left for the on-planet CompleteSurvey command; here we ONLY complete bodies
-            // with no flora/fauna (genuinely completable ref-free to a TRUE 100%).
+            // with no flora/fauna (genuinely completable ref-free to a TRUE 100%). Checked BEFORE
+            // the abort gate (pure cached-map lookup, no engine deref) so the not-attempted count
+            // below counts only barren bodies the sweep would actually have attempted.
             if (planetSpecies.count(planetId))
             {
                 ++skippedLiving;
                 return;
             }
+            if (completed >= kMaxScansPerRun)
+            {
+                ++skipped;
+                return;
+            }
+            if (aborted)
+            {
+                ++notAttempted;  // fault-cap abort: this barren body was never attempted (surfaced below)
+                return;
+            }
             // PER-PLANET fault isolation (issue #6): one faulting planet must not abort the rest of
-            // the sweep, and must not latch the global degraded flag on its own (GuardedNative wraps
-            // the WHOLE native, so before this a single bad form killed every remaining planet AND
-            // every later native this session). A caught fault skips just that planet and queues it
-            // as a straggler — the Papyrus finalize/retry passes get another (fault-isolated) shot
-            // and report it if it never resolves. Only kMaxConsecutiveSweepFaults faults IN A ROW —
-            // the systemic bad-offset signature — latch g_degraded and abort the sweep.
+            // the sweep, and must never latch the global degraded flag on its own (GuardedNative
+            // wraps the WHOLE native, so before this a single bad form killed every remaining planet
+            // AND every later native this session). A caught fault skips just that planet and queues
+            // it as a straggler — the Papyrus finalize/retry passes get another (fault-isolated) shot
+            // and report it if it never resolves. Only kMaxConsecutiveSweepFaults ATTEMPTS faulting in
+            // a row — the systemic bad-offset signature — abort the sweep (sweep-local; NOT g_degraded,
+            // see the constant's comment).
             const auto fid = form->GetFormID();
             try
             {
@@ -905,9 +931,14 @@ namespace Engine
                     // so we never re-fire the completion event (the engine's "Planets Fully Surveyed" stat is
                     // NOT deduped — every fire increments it). Evaluated ONCE here on the PRE-write state, so
                     // writing the state below does NOT make the guard see this planet as "already complete":
-                    // a planet that passes the guard ALWAYS reaches step 3's fire decision.
+                    // a planet that passes the guard ALWAYS reaches step 3's fire decision. This successful
+                    // engine read also ends any fault streak — the streak measures consecutive FAILING
+                    // engine access, and this planet's predicate just evaluated cleanly.
                     if (IsPlanetFullyMarked(planetId))
+                    {
+                        consecutiveFaults = 0;
                         return;
+                    }
                     // ORDERING GUARANTEE (issue #8): the completion event fires LAST, only after this planet's
                     // survey state is fully written. Discover/create must still come FIRST (the writes need the
                     // entry to exist), so an abort between steps 1 and 3 can leave a planet discovered-but-
@@ -955,37 +986,54 @@ namespace Engine
                 // Degrade-and-continue: queue the planet as BOTH swept (the trait pass still covers
                 // it) and straggler (the finalize retry re-attempts the write — fault-isolated there
                 // too — and ReportSweepFailures names it if it never lands). Log volume is bounded:
-                // the first faults at ERROR, the rest at DEBUG (the aggregate line still counts all).
+                // the first kMaxPerPlanetFaultLines fault at ERROR, the rest collapse into ONE
+                // summary ERROR after the loop (release level is INFO, so DEBUG would hide them).
                 stragglerForms.push_back(fid);
                 sweptForms.push_back(fid);
-                if (faulted <= 10)
+                faultedForms.push_back(fid);
+                if (faulted <= kMaxPerPlanetFaultLines)
                     spdlog::error("CompleteAllPlanetsSurveyData: caught fault completing planetId=0x{:08X} — planet skipped, queued as straggler (fault #{} this sweep)",
-                                  planetId, faulted);
-                else
-                    spdlog::debug("CompleteAllPlanetsSurveyData: caught fault completing planetId=0x{:08X} — planet skipped, queued as straggler (fault #{} this sweep)",
                                   planetId, faulted);
                 if (consecutiveFaults >= kMaxConsecutiveSweepFaults)
                 {
                     aborted = true;
-                    g_degraded.store(true, std::memory_order_release);
-                    spdlog::error("CompleteAllPlanetsSurveyData: {} consecutive per-planet faults — systemic failure (bad offset?); latching degraded mode and aborting the sweep",
+                    spdlog::error("CompleteAllPlanetsSurveyData: {} consecutive per-planet faults — systemic failure (bad offset?); aborting THIS sweep (mod stays active; re-run the command to retry)",
                                   consecutiveFaults);
                 }
             }
         });
+
+        // Collapse the per-planet fault lines beyond the cap into one bounded summary (formIds so
+        // "which planets" is never lost, truncated past kMaxFaultSummaryIds).
+        if (faultedForms.size() > static_cast<std::size_t>(kMaxPerPlanetFaultLines))
+        {
+            std::string ids;
+            const auto  begin = static_cast<std::size_t>(kMaxPerPlanetFaultLines);
+            const auto  end   = std::min(faultedForms.size(), begin + kMaxFaultSummaryIds);
+            for (std::size_t k = begin; k < end; ++k)
+                ids += std::format("{}0x{:08X}", k == begin ? "" : ", ", faultedForms[k]);
+            if (end < faultedForms.size())
+                ids += std::format(", +{} more", faultedForms.size() - end);
+            spdlog::error("CompleteAllPlanetsSurveyData: ...and {} more faulted planets: formIds=[{}]",
+                          faultedForms.size() - begin, ids);
+        }
+        if (aborted)
+            spdlog::error("CompleteAllPlanetsSurveyData: sweep ABORTED after {} faults; {} barren planets not attempted — re-run the command to retry them",
+                          faulted, notAttempted);
 
         {
             std::lock_guard lock(g_sweepMtx);
             g_sweepPlanetForms     = std::move(sweptForms);
             g_stragglerPlanetForms = std::move(stragglerForms);
         }
+        g_sweepNotAttempted.store(notAttempted, std::memory_order_release);
 
         const auto phase1Ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                   std::chrono::steady_clock::now() - t0)
                                   .count();
-        spdlog::info("CompleteAllPlanetsSurveyData: Phase 1 swept {} PNDT forms, {} barren completed ({} fired in-frame, {} left for finalize, {} write no-op), {} living skipped (flora/fauna left for on-planet), {} resource/attribute flags set, {} per-planet faults{}, {} over cap in {} ms",
+        spdlog::info("CompleteAllPlanetsSurveyData: Phase 1 swept {} PNDT forms, {} attempted+succeeded ({} fired in-frame, {} left for finalize, {} write no-op), {} living skipped (flora/fauna left for on-planet), {} resource/attribute flags set, {} per-planet faults, {} not attempted{}, {} over cap in {} ms",
                      total, completed, firedInFrame, leftForFinalize, writeNoop, skippedLiving, markedTotal,
-                     faulted, aborted ? " (SWEEP ABORTED: consecutive-fault cap)" : "", skipped, phase1Ms);
+                     faulted, notAttempted, aborted ? " (SWEEP ABORTED: consecutive-fault cap)" : "", skipped, phase1Ms);
         return completed;
     }
 
@@ -1810,6 +1858,14 @@ namespace Papyrus
     // planet stays queued for retry/report) instead of latching the global degraded flag — the
     // bounded Papyrus passes + ReportSweepFailures are the failure path; GuardedNative stays the
     // outer boundary for everything else.
+    //
+    // On the dropped "restamp every swept planet" safety net (review question): no net is lost.
+    // The pre-#21 sweep had the SAME already-complete early-return before sweptForms.push_back, so
+    // previously-complete planets were never in the finalize list either; and for planets Phase 1
+    // completed in-frame the old restamp re-ran the identical WritePlanetSurveyState that had just
+    // succeeded (their entry provably resolved — the post-write predicate requires it), so it could
+    // never write anything new. A planet whose engine-% could disagree is exactly one failing
+    // IsPlanetFullyMarked — which is in the straggler set and still gets restamped here.
     std::int32_t FinalizeSweptPlanet(std::monostate, std::int32_t formId)
     {
         try
@@ -1824,16 +1880,31 @@ namespace Papyrus
             // its own completion event; `nowComplete` is the post-write re-check (same predicate
             // Phase 1 gates its in-frame fire on).
             const bool wasComplete = Engine::IsPlanetFullyMarked(planetId);
+            // A straggler whose Phase 1 body faulted BEFORE its ScanCompletePlanet call has NO
+            // knowledge entry at all — the restamp below would silently no-op through every retry
+            // pass (unrecoverable this run). If the entry is still missing, run the same engine
+            // discover/create Phase 1 uses (idempotent; its internal survey-notify fires at the
+            // pre-write ~0% state so it cannot complete/reward — see the Phase 1 step-1 comment).
+            // Write-before-event ordering is preserved: create -> write -> (maybe) event.
+            if (!wasComplete)
+            {
+                const auto db = Engine::GetKnowledgeDB();
+                if (!db || !Engine::ResolvePlanetSubobj(db, planetId))
+                    Engine::ScanCompletePlanet(0, planetId, 1);
+            }
             const auto marked      = Engine::WritePlanetSurveyState(planetId);
             const bool nowComplete = wasComplete || Engine::IsPlanetFullyMarked(planetId);
-            if (!wasComplete && nowComplete)
-                Engine::NotifySurveyProgress(planetId);
+            // Bookkeeping BEFORE the notify: NotifySurveyProgress is the faultable engine call, and
+            // if it threw after the state write we'd leave an already-COMPLETED planet queued as a
+            // straggler (harmless restamps, but the failure report would name a completed planet).
             if (nowComplete)
             {
                 std::lock_guard lock(Engine::g_sweepMtx);
                 auto&           v = Engine::g_stragglerPlanetForms;
                 v.erase(std::remove(v.begin(), v.end(), static_cast<std::uint32_t>(formId)), v.end());
             }
+            if (!wasComplete && nowComplete)
+                Engine::NotifySurveyProgress(planetId);
             spdlog::debug("FinalizeSweptPlanet: planetId=0x{:08X} wasComplete={} marked={} nowComplete={} fired={}",
                           planetId, wasComplete, marked, nowComplete, !wasComplete && nowComplete);
             return nowComplete ? 1 : 0;
@@ -1865,6 +1936,15 @@ namespace Papyrus
         return static_cast<std::int32_t>(Engine::g_stragglerPlanetForms[index]);
     }
 
+    // Barren planets the last sweep never attempted because the consecutive-fault cap aborted it
+    // (0 on a healthy run). Surfaced separately from the straggler/failure counts — these planets
+    // are in neither — so the popup can say "sweep aborted early: N worlds not attempted" instead
+    // of under-reporting exactly when things went worst.
+    std::int32_t GetSweepNotAttemptedCount(std::monostate)
+    {
+        return Engine::g_sweepNotAttempted.load(std::memory_order_acquire);
+    }
+
     // Post-retry failure report (issue #6): walk the RESIDUAL straggler set (everything the bounded
     // finalize passes could not resolve) and count planets whose survey state still reads incomplete.
     // abLogErrors=true logs each at ERROR — formId (hex), planetId and the editor id when the engine
@@ -1892,16 +1972,30 @@ namespace Papyrus
                 ++failures;
                 if (logErrors)
                 {
+                    // Name the failure MODE, not just the planet — the four cases point at very
+                    // different problems (missing form vs id read vs create-never-flushed vs a
+                    // partial write with the entry present).
+                    const char* reason = "knowledge entry exists but its survey state is still incomplete (partial write)";
+                    if (!form)
+                        reason = "form did not resolve (LookupByID returned null)";
+                    else if (!planetId)
+                        reason = "planet id did not resolve (planetForm+0x54 read 0)";
+                    else
+                    {
+                        const auto db = Engine::GetKnowledgeDB();
+                        if (!db || !Engine::ResolvePlanetSubobj(db, planetId))
+                            reason = "knowledge entry was never created (async create never flushed)";
+                    }
                     const char* edid = form ? form->GetFormEditorID() : nullptr;
-                    spdlog::error("Sweep straggler UNRESOLVED after retries: formId=0x{:08X} planetId=0x{:08X} name='{}' — its knowledge entry never became writable; this planet's survey stays incomplete this run (re-run the command, or scan it in-game)",
-                                  fid, planetId, (edid && *edid) ? edid : "<unknown>");
+                    spdlog::error("Sweep straggler UNRESOLVED after retries: formId=0x{:08X} planetId=0x{:08X} name='{}' — {}; this planet's survey stays incomplete this run (re-run the command, or scan it in-game)",
+                                  fid, planetId, (edid && *edid) ? edid : "<unknown>", reason);
                 }
             }
             catch (...)
             {
                 ++failures;
                 if (logErrors)
-                    spdlog::error("Sweep straggler UNRESOLVED (fault while probing): formId=0x{:08X}", fid);
+                    spdlog::error("Sweep straggler UNRESOLVED after retries: formId=0x{:08X} — faulted while probing its state", fid);
             }
         }
         return failures;
@@ -2112,12 +2206,16 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "ReportSweepFailures"sv, CPS_GUARDED(ReportSweepFailures),
             std::optional<bool> {true}, false);
 
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetSweepNotAttemptedCount"sv, CPS_GUARDED(GetSweepNotAttemptedCount),
+            std::optional<bool> {true}, false);
+
         spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
                      "GetGalaxyScanPlanetFormId, QueueStarMapRefresh, "
                      "CompleteAllPlanetsSurveyData, GetSweepPlanetCount, GetSweepPlanetFormIdAt, FinalizeSweptPlanet, "
-                     "GetStragglerCount, GetStragglerFormIdAt, ReportSweepFailures");
+                     "GetStragglerCount, GetStragglerFormIdAt, ReportSweepFailures, GetSweepNotAttemptedCount");
     }
 
 #undef CPS_GUARDED

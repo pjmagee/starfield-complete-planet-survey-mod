@@ -168,15 +168,17 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     ;    queue drain — so 1s per pass is generous), NEVER unbounded. FinalizeSweptPlanet removes a
     ;    resolved planet from the native list, so later passes only re-try what is still pending
     ;    (iterate BACKWARDS: removal keeps the remaining indices valid). Resources-path only — the
-    ;    finalize writes resources, and a traits-only run records no stragglers anyway. After the
-    ;    final pass, ReportSweepFailures(true) logs every never-resolved planet at ERROR (formId +
-    ;    name) and returns the count for the result popup below.
+    ;    finalize writes resources, so a traits-only run must never invoke it (its stragglers, if
+    ;    any, are fault-path records with nothing to finalize). After the final pass,
+    ;    ReportSweepFailures(true) logs every never-resolved planet at ERROR (formId + name +
+    ;    failure mode) and returns the count for the result popup below.
     int failedCount = 0
     If doResources
         int pass = 0
         int remaining = CompletePlanetSurveyNative.GetStragglerCount()
         While pass < 3 && remaining > 0
             Utility.Wait(1.0)   ; let the deferred entry creates flush before (re)trying
+            int beforePass = remaining
             int si = CompletePlanetSurveyNative.GetStragglerCount() - 1
             While si >= 0
                 int sfid = CompletePlanetSurveyNative.GetStragglerFormIdAt(si)
@@ -187,9 +189,14 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
             EndWhile
             remaining = CompletePlanetSurveyNative.GetStragglerCount()
             pass += 1
+            CompletePlanetSurveyNative.DebugLog("Finalize pass " + pass + "/3: stragglers " + beforePass + " -> " + remaining)
         EndWhile
         failedCount = CompletePlanetSurveyNative.ReportSweepFailures(true)
     EndIf
+    ; Sweep-abort surfacing: worlds the C++ sweep never even ATTEMPTED (its consecutive-fault cap
+    ; tripped and aborted the sweep). Separate from failedCount — those planets are in neither the
+    ; straggler list nor the failure report — so the popup below never under-reports an aborted sweep.
+    int notAttempted = CompletePlanetSurveyNative.GetSweepNotAttemptedCount()
 
     ; 3) Trait pass + completion tally across ALL swept planets (unchanged behaviour): TRAITS marks
     ;    each world's trait keywords known; the 100% count feeds the result popup. The slate is a
@@ -214,7 +221,7 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     EndWhile
     float tAfterFinalize = Utility.GetCurrentRealTime()
 
-    CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked, " + failedCount + " stragglers unresolved")
+    CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked, " + failedCount + " stragglers unresolved, " + notAttempted + " not attempted")
 
     ; NO galaxy-wide green pass here. Greening a world's flora/fauna requires the per-(planet,species)
     ; CANONICAL id the engine only produces when the biome materializes the creature on-planet — it
@@ -238,8 +245,11 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
         string resultMsg = "Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s."
         If failedCount > 0
             ; Straggler-failure surfacing (issue #6): a non-zero count is visible in the popup, not
-            ; just the log. The SFSE log names each planet (formId + name) at ERROR.
+            ; just the log. The SFSE log names each planet (formId + name + failure mode) at ERROR.
             resultMsg += "  WARNING: " + failedCount + " worlds could not be finalized — see the SFSE log for the list (re-run the command to retry)."
+        EndIf
+        If notAttempted > 0
+            resultMsg += "  WARNING: the sweep aborted early after repeated faults — " + notAttempted + " worlds were not attempted (see the SFSE log; re-run the command to retry)."
         EndIf
         Debug.MessageBox(resultMsg)
     EndIf
@@ -383,24 +393,37 @@ Function CompleteAllPlanets(string asCategories) global
     int barren = CompleteBarrenPlanets(asCategories, false)
     int life   = CompleteLifePlanets(asCategories, false)
     ; Straggler-failure surfacing (issue #6): CompleteBarrenPlanets ran with its popup suppressed, so
-    ; re-read the residual failure count for the combined popup. abLogErrors=false — the barren sweep
-    ; already logged each failed planet at ERROR; this only fetches the count (no duplicate lines).
-    ; Gated on "resources": only the resources path runs the finalize passes — a species-only run
-    ; never swept, and reading the list then would report a PREVIOUS run's stale residue.
+    ; re-read the residual failure + not-attempted counts for the combined popup. abLogErrors=false —
+    ; the barren sweep already logged each failed planet at ERROR; this only fetches the count (no
+    ; duplicate lines). Gated on the categories that actually ran the sweep — a species-only run never
+    ; swept, and reading the lists then would report a PREVIOUS run's stale residue: "resources" is
+    ; the only path that runs the finalize passes; the sweep itself (and so a fault-cap abort) runs
+    ; for resources OR traits.
     int failed = 0
+    int notAttempted = 0
     If CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
         failed = CompletePlanetSurveyNative.ReportSweepFailures(false)
+    EndIf
+    If CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
+        notAttempted = CompletePlanetSurveyNative.GetSweepNotAttemptedCount()
     EndIf
     string failNote = ""
     If failed > 0
         failNote = "  WARNING: " + failed + " worlds could not be finalized — see the SFSE log for the list (re-run the command to retry)."
     EndIf
+    If notAttempted > 0
+        failNote += "  WARNING: the sweep aborted early after repeated faults — " + notAttempted + " worlds were not attempted (see the SFSE log; re-run the command to retry)."
+    EndIf
     ; barren/life are NEWLY-completed counts (0 when everything was already done), so a re-run reads
-    ; honestly as "already surveyed" instead of always re-claiming the whole galaxy.
-    If barren + life == 0
-        Debug.MessageBox("Galaxy already fully surveyed — nothing new to catalogue (" + asCategories + ")." + failNote)
+    ; honestly as "already surveyed" instead of always re-claiming the whole galaxy. FAILURE-FIRST
+    ; precedence: any failure/abort makes the headline "finished with problems" — never the
+    ; contradictory "already fully surveyed ... WARNING: N worlds could not be finalized".
+    If failed + notAttempted > 0
+        Debug.MessageBox("Galaxy survey finished with problems.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ")." + failNote)
+    ElseIf barren + life == 0
+        Debug.MessageBox("Galaxy already fully surveyed — nothing new to catalogue (" + asCategories + ").")
     Else
-        Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ")." + failNote)
+        Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
     EndIf
 EndFunction
 
