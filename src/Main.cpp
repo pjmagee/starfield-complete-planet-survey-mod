@@ -861,14 +861,31 @@ namespace Engine
             // so "traits" never writes a single resource flag.
             if (writeState)
             {
-                // Engine discover (ID_102650): create the per-planet knowledge entry if missing + mark
-                // it discovered (async create; the Papyrus finalize pass mops up stragglers + fires the
-                // slate). Then write the ref-free survey state (attribute bits + resources). With no
-                // flora/fauna on these bodies, this reaches a genuine 100%.
-                if (IsPlanetFullyMarked(planetId))  // already completed on a prior run -> skip entirely
-                    return;                          // (no re-fire of the complete event -> no stat inflation)
+                // Idempotency guard (unchanged): skip any planet already fully completed on a PRIOR run,
+                // so we never re-fire the completion event (the engine's "Planets Fully Surveyed" stat is
+                // NOT deduped — every fire increments it). Evaluated ONCE here on the PRE-write state, so
+                // writing the state below does NOT make the guard see this planet as "already complete":
+                // a planet that passes the guard ALWAYS reaches the completion event fired at step 3.
+                if (IsPlanetFullyMarked(planetId))
+                    return;
+                // TRANSACTION ORDER (issue #8): write the survey state FIRST, fire the completion event
+                // LAST — a planet ends up either fully written+completed or left untouched.
+                //  1) ScanCompletePlanet (ID_102650) CREATES the per-planet knowledge entry (ID_52204).
+                //     REQUIRED first: ResolvePlanetSubobj is a pure lookup, so the writes at step 2 silently
+                //     no-op until the entry exists. Its internal survey-notify (ID_97853) fires here at the
+                //     PRE-write ~0% survey, so it does NOT complete/reward. The create and that internal
+                //     notify are welded inside one opaque engine call and cannot be separated (decompile:
+                //     re/ghidra/output/scan-complete.txt, ID_102651 — ID_52204 @ +0x108, ID_97853 @ +0x241).
                 ScanCompletePlanet(0, planetId, 1);
+                //  2) WRITE the ref-free survey state (attribute bits + resource scan flags) BEFORE the
+                //     completion event. With no flora/fauna on these bodies this reaches a genuine 100%.
                 markedTotal += WritePlanetSurveyState(planetId, kDefaultScanDelta);
+                //  3) FIRE the completion event LAST — now the survey reads 100%, so THIS is the fire that
+                //     drops the "<Planet> Survey Data" slate and counts the completion, in the same frame as
+                //     the write. If the entry create was async and step 2 no-op'd (entry not ready yet), the
+                //     survey is < 100% so this is a harmless no-op and the Papyrus FinalizeSweptPlanet pass
+                //     completes the straggler a few frames later (see FinalizeSweptPlanet).
+                NotifySurveyProgress(planetId);
             }
             sweptForms.push_back(form->GetFormID());
             ++completed;
@@ -1667,10 +1684,11 @@ namespace Papyrus
     }
 
     // Sweep every planet/moon in the galaxy and complete its survey ref-free (no
-    // teleport, no spawn): discover it (creating the knowledge entry), then write the
-    // attribute bits + species/resource scan flags. The Papyrus finalize pass mops up
-    // the few async-create stragglers and fires each planet's completion event (slate).
-    // Returns the number of planets processed. Console:
+    // teleport, no spawn): per planet, create the knowledge entry, write the attribute
+    // bits + species/resource scan flags, then fire the completion event LAST — in that
+    // order (issue #8), so each planet is written-then-completed in the same frame. The
+    // Papyrus finalize pass only mops up the few async-create stragglers whose in-frame
+    // write no-op'd. Returns the number of planets processed. Console:
     //   cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"
     std::int32_t CompleteAllPlanetsSurveyData(std::monostate, bool writeResources)
     {
@@ -1694,13 +1712,11 @@ namespace Papyrus
         return static_cast<std::int32_t>(Engine::g_sweepPlanetForms[index]);
     }
 
-    // Re-apply the attribute "known" bits + per-species scan flags for one swept
-    // planet (resolved from its form ID). The C++ sweep creates the knowledge entry
-    // via ID_102650 ASYNCHRONOUSLY, so a few planets' entries aren't ready when the
-    // sweep writes in the same frame (ResolvePlanetSubobj returns null -> skipped).
-    // The Papyrus pass calls this per planet across later frames, by which point the
-    // deferred creates have flushed — catching those stragglers. Idempotent.
-    // Returns 1 if the attribute bits are now set, else 0.
+    // Catch the async-create stragglers the C++ sweep couldn't finish in-frame. The sweep creates each
+    // planet's knowledge entry via ID_102650 ASYNCHRONOUSLY, so a few entries aren't ready when Phase 1
+    // writes in the same frame (ResolvePlanetSubobj returns null -> the write no-op'd). The Papyrus pass
+    // calls this per planet across later frames, by which point the deferred creates have flushed.
+    // Returns the marked-form count (0 when skipped as already complete).
     std::int32_t FinalizeSweptPlanet(std::monostate, std::int32_t formId)
     {
         auto* form = RE::TESForm::LookupByID(static_cast<std::uint32_t>(formId));
@@ -1709,16 +1725,18 @@ namespace Papyrus
         const auto planetId = Engine::ReadPlanetId(form);
         if (!planetId)
             return 0;
-        // Re-run the shared single-planet completion now the knowledge entry is ready.
-        // The sweep's ID_102650 create is async, so a few entries weren't ready during
-        // the same-frame C++ pass; this Papyrus pass runs a few frames later and catches
-        // them. It also (re-)fires the survey-complete event POST-completion — the sweep's
-        // ID_102650 fires it at discover time, before our writes finish the planet, so the
-        // slate wouldn't otherwise drop. The engine awards a planet's survey reward once,
-        // so re-firing is idempotent (one slate per planet).
-        // Only barren bodies (no flora/fauna) reach the finalize pass now — the sweep skips living
-        // worlds — so we deliberately do NOT mark any flora/fauna here. That would write the
-        // invalid "scanned but blue" state. Living worlds are greened on-planet via CompleteSurvey.
+        // Transaction ordering (issue #8): Phase 1 now writes each planet's state and fires its
+        // completion event in the SAME frame (write-before-event). If that already fully completed this
+        // planet, do NOT re-complete it here — the engine's "Planets Fully Surveyed" stat is NOT deduped,
+        // so a second completion event would inflate it. Skipping is safe: the state is already written.
+        if (Engine::IsPlanetFullyMarked(planetId))
+            return 0;
+        // Not fully marked => Phase 1's write no-op'd because this planet's async entry create hadn't
+        // flushed yet. The entry is ready now (this pass runs a few frames later), so complete it the same
+        // ordered way: write the survey state, THEN fire the completion event last (CompletePlanetSurveyState).
+        // Only barren bodies (no flora/fauna) reach the finalize pass — the sweep skips living worlds — so we
+        // deliberately do NOT mark any flora/fauna here (that would write the invalid "scanned but blue"
+        // state). Living worlds are greened on-planet via CompleteSurvey.
         const auto marked = Engine::CompletePlanetSurveyState(planetId);
         return marked;
     }
