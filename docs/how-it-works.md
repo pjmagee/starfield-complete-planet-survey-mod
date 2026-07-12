@@ -89,12 +89,17 @@ empty in memory — so we can’t ask the running game “what lives here?”
 > surface tree’s opaque tile encoding was a dead end.
 
 **The fix for #2: read the species straight from the game files.** Every planet’s
-flora/fauna roster is *authored* in `Starfield.esm` (the `PNDT` records, `PPBD`
-sub-records). The mod’s **EsmReader** opens that file once, decompresses each
-planet record (the records are zlib-compressed; we bundle a tiny inflate library
-rather than poke the engine’s), and parses out the fauna and flora form IDs. That
-gives a complete **species → planets** map with no visiting required —
-**182 biome-bearing worlds, ~1,100 unique species** in total.
+flora/fauna roster is *authored* on its plugin’s `PNDT` records (`PPBD`
+sub-records) — `Starfield.esm` for the base galaxy, `ShatteredSpace.esm` and the
+other DLC/Creations masters for their worlds. The mod’s **EsmReader** opens every
+plugin in the load order once (v1.5.0+; earlier versions read only
+`Starfield.esm`), decompresses each planet record (the records are
+zlib-compressed; we bundle a tiny inflate library rather than poke the engine’s),
+remaps each file’s local form IDs to their runtime values (later plugins override
+earlier ones, the game’s own rule), and parses out the fauna and flora form IDs.
+That gives a complete **species → planets** map with no visiting required —
+**182 biome-bearing worlds, ~1,100 unique species** in the base game, plus
+whatever your DLC and Creations add (Shattered Space brings it to 185).
 
 ---
 
@@ -198,9 +203,10 @@ the Address Library (`REL::ID(n)`). Names are the mod’s own.
 | `52158` | `PlanetProgressInner` | Per-species **count completion** (the other half of the green) |
 | `52188` | *(avoided)* | The “which planet am I on?” location resolver we deliberately bypass |
 
-Plus the **EsmReader** (project code, not an engine call): opens `Starfield.esm`,
-inflates each `PNDT` record, and parses `PPBD` sub-records into the
-species → planets map that makes the never-visited planets reachable.
+Plus the **EsmReader** (project code, not an engine call): opens every plugin in
+the load order (`Starfield.esm`, DLC, Creations), inflates each `PNDT` record,
+remaps file-local form IDs to runtime values, and parses `PPBD` sub-records into
+the species → planets map that makes the never-visited planets reachable.
 
 ---
 

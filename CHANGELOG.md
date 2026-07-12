@@ -41,6 +41,49 @@ verified.
 
 *No unreleased changes.*
 
+## [1.5.0] — 2026-07-12
+
+Same target as v1.4.0 — **Starfield 1.16.244.0 / SFSE 0.2.21** (CommonLibSF `998b6cd`, unchanged); a
+drop-in upgrade, no game or SFSE change required. **DLL-only update** — the ESM, its FormIDs and the
+Papyrus scripts are byte-for-byte unchanged, so existing saves and toggle settings are unaffected.
+
+Surveys now work on worlds added by **DLC and Creations** — Shattered Space's Va'ruun'kai (Dazra)
+first among them. Previously the mod only read `Starfield.esm`, so planets authored in any other
+master were invisible to it.
+
+### Added
+
+- **DLC / Creations planet support.** The mod's offline planet reader now parses **every plugin in
+  your load order** (base game, Shattered Space, other Bethesda content files, and third-party
+  masters alike), not just `Starfield.esm`. Each file's FormIDs are remapped to their runtime values
+  across all three plugin classes (full, medium, and small/light masters), later plugins override
+  earlier ones — exactly the game's own rules — and cross-file references (a DLC creature built from
+  base-game parts, base-game flora placed on a DLC world) resolve correctly. The load order is taken
+  from the running game itself, so it is always in sync with what's actually loaded; if that read
+  ever fails, the reader falls back to the previous `Starfield.esm`-only behaviour rather than
+  guessing.
+
+### Fixed
+
+- **Surveys on Shattered Space (and any other DLC) worlds now complete** — the reported
+  "not working on Dazra" bug. Two symptoms, one cause: on-surface `CompletePlanet` (and the Hand
+  Scanner toggle) left DLC flora/fauna blue because their species were unknown to the reader, and
+  the Orbital Scanner / galaxy-map completion couldn't finish DLC bodies either. Both paths verified
+  in-game on Va'ruun'kai.
+- **The whole-galaxy sweep no longer mis-treats DLC life worlds as barren.** Worlds like Va'ruun'kai
+  weren't in the reader's species map, so `CompleteBarrenPlanets` / `CompleteAllPlanets` "completed"
+  them ref-free — claiming a full survey while their flora/fauna were never scanned. With the
+  species map now covering all masters, living DLC worlds are correctly held for the on-planet /
+  orbital paths like base-game life worlds.
+
+### Internal (no player-facing change)
+
+- Offline validation extended to multi-master mode (`CPS_ESM_PATHS` load-order override for the
+  test harness): the 17/17 Jemison + 7/7 actor-marker ground truth passes in both single-file and
+  full-load-order modes; Va'ruun'kai derives green-marker sets for all 20 of its species, including
+  planet-trait-gated flora genetics on DLC worlds.
+- Repo tooling/docs only: GitHub Actions bumped to Node 24-native majors; CLAUDE.md reader notes.
+
 ## [1.4.0] — 2026-07-11
 
 Same target as v1.3.0 — **Starfield 1.16.244.0 / SFSE 0.2.21** (CommonLibSF `998b6cd`, unchanged); a
@@ -387,7 +430,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.1.0...v1.2.0

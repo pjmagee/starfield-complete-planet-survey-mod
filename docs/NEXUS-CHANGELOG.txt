@@ -1,3 +1,13 @@
+[b]Version 1.5.0[/b]
+
+[list]
+[*][b]DLC and Creations worlds are now supported.[/b] The mod reads every plugin in your load order, not just Starfield.esm — so Shattered Space's Va'ruun'kai (Dazra) and any other DLC or mod-added planet can now be surveyed. This fixes the reported "not working on Dazra" bug: the Hand Scanner, the Orbital Scanner and the console commands all complete DLC worlds now (verified in-game on Va'ruun'kai).
+[*][b]The galaxy-wide commands treat DLC life worlds correctly.[/b] Before, worlds like Va'ruun'kai could be mistaken for barren and marked "surveyed" while their flora and fauna were never actually scanned. They're now recognised as living worlds, same as base-game ones.
+[*][b]DLL-only update.[/b] The ESM and scripts are unchanged — your saves and toggle settings carry over as-is.
+[/list]
+
+Built and tested on Starfield 1.16.244 / SFSE 0.2.21.
+
 [b]Version 1.4.0[/b]
 
 [list]
