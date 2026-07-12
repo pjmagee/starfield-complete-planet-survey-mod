@@ -870,6 +870,47 @@ namespace Engine
     // say "sweep aborted early — N worlds not attempted" instead of under-reporting.
     inline std::atomic<int> g_sweepNotAttempted {0};
 
+    // === Issue #13: re-entrant-invocation gate ===
+    // g_sweepPlanetForms/g_stragglerPlanetForms/g_barrenWorkForms (above) and g_lifePlanetCache
+    // (defined further below, alongside EnumerateLifePlanets) are native-side vectors CONSUMED BY
+    // INDEX from Papyrus across MANY frames — the chunked barren sweep yields via Utility.Wait
+    // between chunks, and both the barren finalize pass and the life-planet finalize pass yield
+    // again. g_sweepMtx keeps each vector's own internal state consistent under concurrent access,
+    // but it does NOT stop a second console invocation (or an auto-scan firing mid-run) from
+    // CLEARING/REFILLING a vector out from under an active Papyrus loop that is still walking it by
+    // index — that reads out-of-range or stale data, a race the mutex alone cannot prevent. Fix: a
+    // single test-and-set "a completion run is active" gate that every long-running/chunked entry
+    // point acquires before touching these caches and releases on exit (TryBeginRun/EndRun below;
+    // Papyrus-side wrappers in CompletePlanetSurveyQuest.psc).
+    inline std::atomic<bool> g_runInProgress {false};
+    // steady_clock ticks (native duration count) at the last successful TryBeginRun. Used ONLY for
+    // the stuck-gate failsafe below — never surfaced to Papyrus, never used for player-facing timing.
+    inline std::atomic<std::int64_t> g_runStartTicks {0};
+
+    // STUCK-GATE FAILSAFE (issue #13): Papyrus has no try/finally, and — worse than a normal early
+    // Return, which the *Core-function pattern already handles (control always returns to the gated
+    // wrapper's next statement, so EndRun still runs) — it can die mid-run in ways that never
+    // execute ANY more of its own code at all: an uncaught VM error, a save-load mid-run, or
+    // quit-to-menu (the exact reason InstallSessionReRegisterPoller exists below — a session
+    // teardown drops the formless script's VM state outright). If any of those happen while the
+    // gate is held, a naive gate latches TRUE forever and bricks every completion command for the
+    // rest of the process — "requires a game restart" is explicitly not acceptable here. Two
+    // independent, deliberately-redundant failsafes:
+    //   1) TIME-BASED THEFT (TryBeginRun, below): a gate held longer than kStuckRunTimeoutSec is
+    //      presumed abandoned and stolen, with a WARN so a genuinely-stuck gate is still visible in
+    //      the log even though it self-heals. The bound is deliberately generous (minutes, not
+    //      seconds): a HEALTHY galaxy sweep can legitimately run for a couple of minutes (Phase 1
+    //      alone is ~12 Wait(0.1) hops over ~1798 planets, plus up to 3 finalize Wait(1.0) passes on
+    //      top) — a short timeout would steal a healthy run's gate mid-flight and let a second
+    //      invocation corrupt its cache indices, which is precisely the bug this issue exists to fix.
+    //   2) SESSION-BOUNDARY CLEAR (Engine::ResetPendingCompletionState, called on the Main-Menu-
+    //      opened rising edge): a brand-new game session cannot possibly have a run in flight — the
+    //      entire Papyrus VM state that would have been running one (including any in-progress
+    //      CompleteBarrenPlanets loop) was just torn down — so clearing the gate there is always
+    //      correct, and it fires immediately (no multi-minute wait) for the most common real-world
+    //      stuck case: quit-to-menu mid-run.
+    constexpr std::int64_t kStuckRunTimeoutSec = 300;  // 5 min — generous vs. a healthy multi-minute galaxy sweep
+
     // Cross-chunk Phase 1 accumulators (issue #9). The fault streak MUST span chunks — a systemic
     // bad-offset still trips the cap even when faults land in adjacent chunks. Papyrus drive is
     // single-threaded on the main thread; g_sweepMtx still guards vector merges.
@@ -1262,8 +1303,17 @@ namespace Engine
     // menu pointer (a prior session's menu is freed). Countdowns are poller-owned and self-reset once
     // their flags are false. (Does NOT touch the engine's own knowledge DB — that's the game's to
     // reset; we only clear OUR queue.)
+    //
+    // Issue #13 stuck-gate failsafe #2 (see the g_runInProgress comment): also unconditionally clears
+    // the re-entrancy gate here. A brand-new session cannot have a live completion run — the entire
+    // Papyrus VM state that would have been running one was just torn down by the session boundary —
+    // so this is always safe, and it is the FAST path for the most common real-world stuck-gate cause
+    // (quit-to-menu mid-run): it fires the moment the Main Menu opens, no multi-minute timeout wait.
     inline void ResetPendingCompletionState()
     {
+        if (g_runInProgress.exchange(false, std::memory_order_acq_rel))
+            spdlog::warn("Session boundary (Main Menu): a completion run's gate was still held — cleared "
+                         "(the prior session's Papyrus run was torn down mid-run, e.g. quit-to-menu)");
         g_pendingCompleteSurvey.store(false, std::memory_order_release);
         g_pendingGalaxyScan.store(false, std::memory_order_release);
         g_galaxyScanPlanetFormId.store(0, std::memory_order_release);
@@ -1966,6 +2016,63 @@ namespace Papyrus
         spdlog::info("CancelPendingAutoComplete: cleared pending auto-complete (manual command wins)");
     }
 
+    // Issue #13 — test-and-set re-entrancy gate. Every long-running/chunked completion entry point
+    // (the Papyrus wrappers around CompletePlanet/CompleteBarrenPlanets/CompleteLifePlanets/
+    // CompleteAllPlanets, and the two scan-hook auto-complete dispatch targets) must acquire this
+    // BEFORE touching the cross-frame sweep/life caches, and release it via EndRun on every exit.
+    // asRunName is for logging only — which command/path is running or was rejected — the gate
+    // itself is a single process-wide bool, not per-name reentrant (a nested acquire under the SAME
+    // logical run must go through an ungated *Core function instead — see CompleteAllPlanets calling
+    // _CompleteBarrenPlanetsCore/_CompleteLifePlanetsCore directly).
+    // Returns true = acquired (caller may proceed), false = REJECTED — another run is active and not
+    // stale; the caller must bail out WITHOUT touching any cache.
+    bool TryBeginRun(std::monostate, RE::BSFixedString runName)
+    {
+        const auto nowTicks = std::chrono::steady_clock::now().time_since_epoch().count();
+        bool       expected = false;
+        if (Engine::g_runInProgress.compare_exchange_strong(expected, true, std::memory_order_acq_rel))
+        {
+            Engine::g_runStartTicks.store(nowTicks, std::memory_order_release);
+            spdlog::info("TryBeginRun: '{}' acquired the completion-run gate", runName.c_str());
+            return true;
+        }
+
+        // Already held — stuck-gate failsafe #1 (see the g_runInProgress comment above): a gate held
+        // longer than kStuckRunTimeoutSec is presumed abandoned (a Papyrus run that died without
+        // reaching its EndRun) rather than a genuinely long-running galaxy sweep, and we steal it
+        // rather than bricking every completion command for the rest of the session.
+        const auto startTicks = Engine::g_runStartTicks.load(std::memory_order_acquire);
+        const auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(
+                                     std::chrono::steady_clock::duration(nowTicks - startTicks))
+                                     .count();
+        if (elapsedSec >= Engine::kStuckRunTimeoutSec)
+        {
+            spdlog::warn("TryBeginRun: '{}' STEALING a gate held for {}s (older than the {}s stuck-run "
+                         "bound) — presumed abandoned by a dead Papyrus run, not a healthy sweep",
+                         runName.c_str(), elapsedSec, Engine::kStuckRunTimeoutSec);
+            Engine::g_runStartTicks.store(nowTicks, std::memory_order_release);
+            return true;
+        }
+
+        spdlog::info("TryBeginRun: '{}' REJECTED — a completion run has been active for {}s",
+                     runName.c_str(), elapsedSec);
+        return false;
+    }
+
+    // Release the re-entrancy gate. MUST be CPS_GUARDED_PURE (see Register): if a native fault
+    // degrades the session mid-run, a RequiresEngine=true gate would no-op THIS call too and leave
+    // the run-in-progress flag stuck for the rest of the session — defeating the whole point of a
+    // release-on-every-exit-path design. Safe to call even when the gate is already free (logs a
+    // WARN — should never happen from our own Papyrus wrappers, but must never fault either way).
+    void EndRun(std::monostate, RE::BSFixedString runName)
+    {
+        const bool was = Engine::g_runInProgress.exchange(false, std::memory_order_acq_rel);
+        if (was)
+            spdlog::info("EndRun: '{}' released the completion-run gate", runName.c_str());
+        else
+            spdlog::warn("EndRun: '{}' called but no run was active (gate already clear)", runName.c_str());
+    }
+
     // Issue #12: whether the on-surface hand-scanner call-site hook (ScanHook, ID_52157 → ID_97853)
     // is actually armed this session. False when Hook::Install()'s sig-scan missed its target CALL (a
     // future game build reordered the outer function) or faulted — in which case the native hook that
@@ -2463,6 +2570,15 @@ namespace Papyrus
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "CancelPendingAutoComplete"sv, CPS_GUARDED(CancelPendingAutoComplete), std::optional<bool> {true}, false);
 
+        // PURE (issue #13): TryBeginRun/EndRun only touch our own atomics — no engine pointers — and
+        // EndRun in particular MUST stay callable in a DEGRADED session (see its comment) or a fault
+        // mid-run would leave the re-entrancy gate stuck for the rest of the session.
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "TryBeginRun"sv, CPS_GUARDED_PURE(TryBeginRun), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "EndRun"sv, CPS_GUARDED_PURE(EndRun), std::optional<bool> {true}, false);
+
         // PURE (issue #12 review): these only read our own atomics — no engine pointers — and they
         // report hook status, so they must answer honestly even in a DEGRADED session. CPS_GUARDED
         // would return false when g_degraded latches, which Papyrus would mis-attribute to a
@@ -2522,6 +2638,7 @@ namespace Papyrus
         spdlog::info("Bound Papyrus natives: DebugLog, DebugLogError, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
+                     "TryBeginRun, EndRun, "
                      "IsHandScannerHookInstalled, IsOrbitalScannerHookInstalled, "
                      "GetGalaxyScanPlanetFormId, QueueStarMapRefresh, "
                      "CompleteAllPlanetsSurveyData, SweepBarrenChunk, GetSweepCompletedCount, "

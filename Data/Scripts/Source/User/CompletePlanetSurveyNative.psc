@@ -46,6 +46,23 @@ Function QueueCompleteSurvey() global native
 ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
 Function CancelPendingAutoComplete() global native
 
+; Issue #13 — re-entrancy gate. The native-side caches consumed BY INDEX across many frames
+; (the chunked barren sweep, the barren/life finalize passes) are not safe under a second
+; concurrent invocation, so every long-running completion entry point must acquire this gate
+; before touching them and release it via EndRun on every exit. asRunName is for logging only
+; (which command/path acquired or was rejected). Returns true = acquired, proceed; false =
+; REJECTED — another run is active (and not stale) — the caller must bail out doing NO work.
+; A gate held longer than several minutes is presumed abandoned (a Papyrus run that died mid-run
+; without reaching EndRun — VM error, save-load, quit-to-menu) and is silently stolen with a
+; logged WARN, so a stuck gate can never require a game restart to clear.
+bool Function TryBeginRun(string asRunName) global native
+
+; Release the gate acquired by TryBeginRun. Call on EVERY exit path of a gated function (the
+; *Core-function pattern in CompletePlanetSurveyQuest.psc makes this automatic for ordinary
+; Papyrus early Returns — the gated wrapper always resumes after the Core call and calls EndRun
+; next, regardless of which internal path Core took). asRunName is for logging only.
+Function EndRun(string asRunName) global native
+
 ; Issue #12 — whether the native call-site hook that is SUPPOSED to invoke CompleteSurveyIfEnabled
 ; (the Hand Scanner path, ID_52157 -> ID_97853) is actually armed this session. False means a
 ; sig-scan miss (or an install-time fault) left that hook unpatched on this game build — the SFSE
