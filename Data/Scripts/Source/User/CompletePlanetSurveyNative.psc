@@ -63,16 +63,29 @@ int Function CompleteAllPlanetsSurveyData(bool abWriteResources) global native
 int Function GetSweepPlanetCount() global native
 int Function GetSweepPlanetFormIdAt(int aiIndex) global native
 
-; Mop-up for one swept planet (by form ID): ALWAYS re-write its survey state (attribute bits +
-; species/resource flags — an idempotent restamp), then fire the survey-complete event ONLY if the
-; planet was not already fully complete before this call (the C++ sweep fires the event itself for
-; every planet it fully wrote in-frame; re-firing would inflate the un-deduped "Planets Fully
-; Surveyed" statistic). Called from the finalize pass across later frames — by then the sweep's
-; asynchronous knowledge-entry creates have flushed, so this completes the few stragglers whose
-; entry wasn't ready during the C++ pass. Returns the number of forms marked THIS call (0 means
-; nothing was marked: the form/planet didn't resolve or the entry still isn't ready — it does NOT
-; mean the planet is incomplete).
+; Mop-up for one STRAGGLER planet (by form ID): re-write its survey state (attribute bits +
+; species/resource flags — an idempotent restamp), then fire the survey-complete event ONLY on the
+; not-complete -> complete transition this call (the C++ sweep fires the event itself for every
+; planet it fully wrote in-frame; re-firing would inflate the un-deduped "Planets Fully Surveyed"
+; statistic). Called from the bounded finalize retry passes across later frames/seconds — by then
+; the sweep's asynchronous knowledge-entry creates have flushed. Returns 1 when the planet reads
+; fully marked after this call (it is then REMOVED from the native straggler list, so later passes
+; skip it), 0 when it is still unresolved (entry not ready — retry it) or the form didn't resolve.
+; Fault-isolated per call: a caught fault returns 0 and leaves the planet queued for retry/report.
 int Function FinalizeSweptPlanet(int aiFormId) global native
+
+; The sweep's STRAGGLER set (issue #6): the exact planets Phase 1 could NOT fully write in-frame
+; (async knowledge-entry create pending, or the per-planet body faulted). Same access pattern as the
+; sweep list. FinalizeSweptPlanet removes a planet once resolved, so the list SHRINKS across retry
+; passes — iterate it BACKWARDS (count-1 .. 0) so removals keep the remaining indices valid.
+int Function GetStragglerCount() global native
+int Function GetStragglerFormIdAt(int aiIndex) global native
+
+; Post-retry failure report: counts the straggler-set planets whose survey state STILL reads
+; incomplete after the bounded finalize passes. abLogErrors=true logs each one at ERROR (formId hex,
+; planetId, editor id when available) so failures are named, not just counted; pass false to re-read
+; the count without duplicating the ERROR lines (the combined CompleteAllPlanets popup does this).
+int Function ReportSweepFailures(bool abLogErrors) global native
 
 ; Enumerate the UNIQUE life-bearing planets (those with flora/fauna). Call once, then iterate
 ; 0..count-1 via GetLifePlanetFormIdAt + Game.GetForm(...) as Planet. The galaxy sweep skips living

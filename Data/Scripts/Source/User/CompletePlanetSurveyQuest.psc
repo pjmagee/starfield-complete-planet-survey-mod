@@ -158,24 +158,49 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData(doResources)
     float tAfterSweep = Utility.GetCurrentRealTime()
 
-    ; 2) Per-planet finalize + trait pass across later frames. Phase 1 already writes each planet's state
-    ;    and — once fully written — fires its completion event in the same frame (write-before-event,
-    ;    issue #8). RESOURCES-path FinalizeSweptPlanet still RESTAMPS every swept planet's state (an
-    ;    idempotent re-write, the historical mop-up), but fires the completion event ONLY for planets
-    ;    that weren't already complete before its write — the async-create stragglers Phase 1 couldn't
-    ;    finish in-frame (no re-fire for the rest -> no stat inflation). The Survey Data slate drops ONLY
-    ;    at a true 100%. It writes resources, so it is GATED on doResources: a traits-only run must never
-    ;    touch resources. TRAITS: mark trait-known. The slate is a 100% side-effect either way, so a
-    ;    traits-only run on a resource-incomplete world correctly drops none.
+    ; 2) STRAGGLER-ONLY finalize with bounded retry (issue #6). Phase 1 already writes each planet's
+    ;    state and — once fully written — fires its completion event in the same frame (write-before-
+    ;    event, issue #8), AND records exactly which planets it could NOT fully write (the async
+    ;    ID_102650 knowledge-entry create hadn't flushed, so the write no-op'd). Only THOSE need the
+    ;    mop-up — planets completed in-frame need no finalize call at all, so the historical restamp
+    ;    of the whole sweep is gone (the perf win). Bounded: at most 3 passes with Utility.Wait(1.0)
+    ;    before each (entry creates flush within moments — far faster than the minutes-long award-
+    ;    queue drain — so 1s per pass is generous), NEVER unbounded. FinalizeSweptPlanet removes a
+    ;    resolved planet from the native list, so later passes only re-try what is still pending
+    ;    (iterate BACKWARDS: removal keeps the remaining indices valid). Resources-path only — the
+    ;    finalize writes resources, and a traits-only run records no stragglers anyway. After the
+    ;    final pass, ReportSweepFailures(true) logs every never-resolved planet at ERROR (formId +
+    ;    name) and returns the count for the result popup below.
+    int failedCount = 0
+    If doResources
+        int pass = 0
+        int remaining = CompletePlanetSurveyNative.GetStragglerCount()
+        While pass < 3 && remaining > 0
+            Utility.Wait(1.0)   ; let the deferred entry creates flush before (re)trying
+            int si = CompletePlanetSurveyNative.GetStragglerCount() - 1
+            While si >= 0
+                int sfid = CompletePlanetSurveyNative.GetStragglerFormIdAt(si)
+                If sfid != 0
+                    CompletePlanetSurveyNative.FinalizeSweptPlanet(sfid)   ; 1 = complete (self-removes), 0 = still not ready
+                EndIf
+                si -= 1
+            EndWhile
+            remaining = CompletePlanetSurveyNative.GetStragglerCount()
+            pass += 1
+        EndWhile
+        failedCount = CompletePlanetSurveyNative.ReportSweepFailures(true)
+    EndIf
+
+    ; 3) Trait pass + completion tally across ALL swept planets (unchanged behaviour): TRAITS marks
+    ;    each world's trait keywords known; the 100% count feeds the result popup. The slate is a
+    ;    100%-side-effect of the writes above, so a traits-only run on a resource-incomplete world
+    ;    correctly drops none.
     int count = CompletePlanetSurveyNative.GetSweepPlanetCount()
     int traitsMarked = 0
     int fullyComplete = 0
     int i = 0
     While i < count
         int fid = CompletePlanetSurveyNative.GetSweepPlanetFormIdAt(i)
-        If doResources
-            CompletePlanetSurveyNative.FinalizeSweptPlanet(fid)   ; resource state + slate-at-100%
-        EndIf
         Planet p = Game.GetForm(fid) as Planet
         If p != None
             If doTraits
@@ -189,7 +214,7 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     EndWhile
     float tAfterFinalize = Utility.GetCurrentRealTime()
 
-    CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked")
+    CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked, " + failedCount + " stragglers unresolved")
 
     ; NO galaxy-wide green pass here. Greening a world's flora/fauna requires the per-(planet,species)
     ; CANONICAL id the engine only produces when the biome materializes the creature on-planet — it
@@ -210,7 +235,13 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     ; runs us (it shows ONE combined result for the whole galaxy).
     _ReconcilePlanetsScanned()   ; keep Planets Scanned >= Planets Fully Surveyed after the barren sweep
     If abShowResult
-        Debug.MessageBox("Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s.")
+        string resultMsg = "Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s."
+        If failedCount > 0
+            ; Straggler-failure surfacing (issue #6): a non-zero count is visible in the popup, not
+            ; just the log. The SFSE log names each planet (formId + name) at ERROR.
+            resultMsg += "  WARNING: " + failedCount + " worlds could not be finalized — see the SFSE log for the list (re-run the command to retry)."
+        EndIf
+        Debug.MessageBox(resultMsg)
     EndIf
     Return fullyComplete
 EndFunction
@@ -351,12 +382,25 @@ Function CompleteAllPlanets(string asCategories) global
     ; so neither pops its own box — we present ONE cohesive combined result for the whole galaxy.
     int barren = CompleteBarrenPlanets(asCategories, false)
     int life   = CompleteLifePlanets(asCategories, false)
+    ; Straggler-failure surfacing (issue #6): CompleteBarrenPlanets ran with its popup suppressed, so
+    ; re-read the residual failure count for the combined popup. abLogErrors=false — the barren sweep
+    ; already logged each failed planet at ERROR; this only fetches the count (no duplicate lines).
+    ; Gated on "resources": only the resources path runs the finalize passes — a species-only run
+    ; never swept, and reading the list then would report a PREVIOUS run's stale residue.
+    int failed = 0
+    If CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
+        failed = CompletePlanetSurveyNative.ReportSweepFailures(false)
+    EndIf
+    string failNote = ""
+    If failed > 0
+        failNote = "  WARNING: " + failed + " worlds could not be finalized — see the SFSE log for the list (re-run the command to retry)."
+    EndIf
     ; barren/life are NEWLY-completed counts (0 when everything was already done), so a re-run reads
     ; honestly as "already surveyed" instead of always re-claiming the whole galaxy.
     If barren + life == 0
-        Debug.MessageBox("Galaxy already fully surveyed — nothing new to catalogue (" + asCategories + ").")
+        Debug.MessageBox("Galaxy already fully surveyed — nothing new to catalogue (" + asCategories + ")." + failNote)
     Else
-        Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
+        Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ")." + failNote)
     EndIf
 EndFunction
 
