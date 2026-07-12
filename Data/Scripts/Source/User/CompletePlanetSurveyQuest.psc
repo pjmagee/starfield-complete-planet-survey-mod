@@ -158,12 +158,15 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     int n = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData(doResources)
     float tAfterSweep = Utility.GetCurrentRealTime()
 
-    ; 2) Per-planet finalize + trait pass across later frames (the sweep's async knowledge-entry creates
-    ;    have flushed by now). RESOURCES path: FinalizeSweptPlanet re-applies the survey state and fires
-    ;    the completion event — the Survey Data slate drops ONLY at a true 100%. It writes resources, so
-    ;    it is GATED on doResources: a traits-only run must never touch resources. TRAITS: mark trait-known.
-    ;    The slate is a 100% side-effect either way, so a traits-only run on a resource-incomplete world
-    ;    correctly drops none.
+    ; 2) Per-planet finalize + trait pass across later frames. Phase 1 already writes each planet's state
+    ;    and — once fully written — fires its completion event in the same frame (write-before-event,
+    ;    issue #8). RESOURCES-path FinalizeSweptPlanet still RESTAMPS every swept planet's state (an
+    ;    idempotent re-write, the historical mop-up), but fires the completion event ONLY for planets
+    ;    that weren't already complete before its write — the async-create stragglers Phase 1 couldn't
+    ;    finish in-frame (no re-fire for the rest -> no stat inflation). The Survey Data slate drops ONLY
+    ;    at a true 100%. It writes resources, so it is GATED on doResources: a traits-only run must never
+    ;    touch resources. TRAITS: mark trait-known. The slate is a 100% side-effect either way, so a
+    ;    traits-only run on a resource-incomplete world correctly drops none.
     int count = CompletePlanetSurveyNative.GetSweepPlanetCount()
     int traitsMarked = 0
     int fullyComplete = 0
