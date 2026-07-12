@@ -1006,43 +1006,65 @@ namespace Engine
                      g_phase1.skipped, g_phase1.chunkCount, phase1Ms);
     }
 
+    // Shared barren classification (issue #16): every PNDT form with a readable planet id and NO
+    // authored flora/fauna, as one formId list. Used by BOTH the resources sweep's Phase 1 enumerate
+    // (EnumerateBarrenPlanetsForSweep, below) and the standalone Papyrus EnumerateBarrenPlanets
+    // native (the decoupled traits-only pass), so the two sets can never drift apart.
+    //
+    // Enumerates from the global form registry — TESDataHandler::formArrays[kPNDT] is empty in
+    // Starfield (galaxy forms live in the registry / galaxy DB, not the per-type arrays). The ESM
+    // species map is parsed up front (cached): a planet that HAS authored flora/fauna is skipped —
+    // barren-sweep resource writes on it would mark its flora/fauna "scanned" ref-free via the
+    // aggregator (an invalid half-state); living worlds get the dedicated life path instead.
+    std::vector<std::uint32_t> CollectBarrenPlanetForms(int& total, int& skippedLiving)
+    {
+        std::vector<std::uint32_t> work;
+        total         = 0;
+        skippedLiving = 0;
+        int faulted   = 0;
+
+        const auto& planetSpecies = Esm::GetPlanetSpecies();
+        ForEachFormOfType(RE::FormType::kPNDT, [&](RE::TESForm* form)
+        {
+            ++total;
+            // PER-FORM fault isolation (PR #26 review; same spirit as SweepBarrenChunk's per-planet
+            // catch): one bad PNDT — a garbage +0x54 read on a malformed form — must skip just that
+            // form. Without this, a single AV escapes to GuardedNative, latches the session-wide
+            // degrade and kills every later traits/system native over one form. /EHa (src is built
+            // with it) makes catch(...) trap the access violation, not just C++ exceptions.
+            try
+            {
+                if (!form)
+                    return;
+                const auto planetId = ReadPlanetId(form);
+                if (!planetId)
+                    return;
+                if (planetSpecies.count(planetId))
+                {
+                    ++skippedLiving;
+                    return;
+                }
+                work.push_back(form->GetFormID());
+            }
+            catch (...)
+            {
+                ++faulted;
+            }
+        });
+        if (faulted > 0)
+            spdlog::warn("CollectBarrenPlanetForms: {} PNDT forms faulted during classification and were skipped", faulted);
+        return work;
+    }
+
     // Cheap Phase 1 enumerate (issue #9): collect every barren PNDT formId into g_barrenWorkForms,
     // reset sweep/straggler/fault state, start the Phase 1 timer. Does NOT discover/write any planet
     // — that is SweepBarrenChunk's job across frames. Returns the barren work-list size.
     int EnumerateBarrenPlanetsForSweep()
     {
-        const auto                 t0 = std::chrono::steady_clock::now();
-        std::vector<std::uint32_t> work;
-        int                        total         = 0;
-        int                        skippedLiving = 0;
-
-        // Parse ESM species map up front (cached). Living worlds are excluded from the work list
-        // so chunk processing never has to re-check them.
-        const auto& planetSpecies = Esm::GetPlanetSpecies();
-
-        // Enumerate every planet (PNDT) form from the global form registry —
-        // TESDataHandler::formArrays[kPNDT] is empty in Starfield (galaxy forms
-        // live in the registry / galaxy DB, not the per-type arrays).
-        ForEachFormOfType(RE::FormType::kPNDT, [&](RE::TESForm* form)
-        {
-            ++total;
-            if (!form)
-                return;
-            const auto planetId = ReadPlanetId(form);
-            if (!planetId)
-                return;
-            // Skip any planet that HAS authored flora/fauna. Completing it ref-free would mark its
-            // flora/fauna "scanned" while the outline stays BLUE — the engine keys the green on a
-            // per-(planet,species) CANONICAL id that only exists once the biome materializes the
-            // creature on-planet, which we cannot write from here. That is an invalid state. Living
-            // worlds are left for CompleteLifePlanets / on-planet green.
-            if (planetSpecies.count(planetId))
-            {
-                ++skippedLiving;
-                return;
-            }
-            work.push_back(form->GetFormID());
-        });
+        const auto t0            = std::chrono::steady_clock::now();
+        int        total         = 0;
+        int        skippedLiving = 0;
+        auto       work          = CollectBarrenPlanetForms(total, skippedLiving);
 
         const int workCount = static_cast<int>(work.size());
         {
@@ -2519,6 +2541,81 @@ namespace Papyrus
         return static_cast<std::int32_t>(g_lifePlanetCache[index]);
     }
 
+    // Standalone barren enumerator (issue #16): the same Count/At pattern as the life list, backed
+    // by the SAME classification the resources sweep uses (Engine::CollectBarrenPlanetForms), so a
+    // traits-only barren run no longer has to drive CompleteAllPlanetsSurveyData + SweepBarrenChunk
+    // just to populate g_sweepPlanetForms — it enumerates here and never touches the sweep caches.
+    // Own cache + mutex: enumerating for a traits pass must not clobber an aborted sweep's failure
+    // accounting (straggler/notAttempted reads that CompleteAllPlanets does afterwards).
+    static std::vector<std::uint32_t> g_barrenListCache;
+    static std::mutex                 g_barrenListMtx;
+
+    std::int32_t EnumerateBarrenPlanets(std::monostate)
+    {
+        int  total         = 0;
+        int  skippedLiving = 0;
+        auto work          = Engine::CollectBarrenPlanetForms(total, skippedLiving);
+        std::lock_guard lock(g_barrenListMtx);
+        g_barrenListCache = std::move(work);
+        spdlog::info("EnumerateBarrenPlanets: {} barren of {} PNDT ({} living skipped)",
+                     g_barrenListCache.size(), total, skippedLiving);
+        return static_cast<std::int32_t>(g_barrenListCache.size());
+    }
+
+    std::int32_t GetBarrenPlanetAt(std::monostate, std::int32_t index)
+    {
+        std::lock_guard lock(g_barrenListMtx);
+        if (index < 0 || static_cast<std::size_t>(index) >= g_barrenListCache.size())
+            return 0;
+        return static_cast<std::int32_t>(g_barrenListCache[index]);
+    }
+
+    // SYSTEM scope (issue #16): every PNDT body sharing akPlanet's parent star, from the ESM-derived
+    // planet->star map — no new engine offset, and offline-validated by test/ValidateMarkers.cpp
+    // against Starfield.esm. Map KEYS are runtime planet FormIDs (multi-master remapped, so DLC
+    // systems like Va'ruun'kai resolve exactly like the species lists); map VALUES are the engine's
+    // own star ids — the id space the star's STDT DNAM carries (and the PNDT GNAM leads with), NOT
+    // FormIDs, never remapped. Sol's star id is 0 and VALID — membership is map PRESENCE, never
+    // "id != 0". Returns the member count (>= 1 on success: the anchor itself is a member), or 0
+    // when akPlanet is null/unknown to the map (caller refuses).
+    static std::vector<std::uint32_t> g_systemPlanetCache;
+    static std::mutex                 g_systemPlanetMtx;
+
+    std::int32_t EnumerateSystemPlanets(std::monostate, RE::TESForm* planetForm)
+    {
+        std::lock_guard lock(g_systemPlanetMtx);
+        g_systemPlanetCache.clear();
+        if (!planetForm)
+        {
+            spdlog::warn("EnumerateSystemPlanets: null planet form");
+            return 0;
+        }
+        const auto  fid   = planetForm->GetFormID();
+        const auto& stars = Esm::GetPlanetStarIds();
+        const auto  it    = stars.find(fid);
+        if (it == stars.end())
+        {
+            spdlog::warn("EnumerateSystemPlanets: planet formId=0x{:08X} has no star id in the ESM map — cannot resolve its system", fid);
+            return 0;
+        }
+        const auto starId = it->second;
+        for (const auto& [planetFid, sid] : stars)
+            if (sid == starId)
+                g_systemPlanetCache.push_back(planetFid);
+        std::sort(g_systemPlanetCache.begin(), g_systemPlanetCache.end());
+        spdlog::info("EnumerateSystemPlanets: {} bodies share star id {} (anchor formId=0x{:08X})",
+                     g_systemPlanetCache.size(), starId, fid);
+        return static_cast<std::int32_t>(g_systemPlanetCache.size());
+    }
+
+    std::int32_t GetSystemPlanetAt(std::monostate, std::int32_t index)
+    {
+        std::lock_guard lock(g_systemPlanetMtx);
+        if (index < 0 || static_cast<std::size_t>(index) >= g_systemPlanetCache.size())
+            return 0;
+        return static_cast<std::int32_t>(g_systemPlanetCache[index]);
+    }
+
     // Case-insensitive: does the comma-list `csv` contain whole token `token` (or the dedicated token "all")?
     // Lets Papyrus parse a "resources,traits,fauna,flora" category string — base Papyrus has no split.
     bool CategoryEnabled(std::monostate, RE::BSFixedString csv, RE::BSFixedString token)
@@ -2652,6 +2749,22 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "EnumerateBarrenPlanets"sv, CPS_GUARDED(EnumerateBarrenPlanets),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetBarrenPlanetFormIdAt"sv, CPS_GUARDED(GetBarrenPlanetAt),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "EnumerateSystemPlanets"sv, CPS_GUARDED(EnumerateSystemPlanets),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "GetSystemPlanetFormIdAt"sv, CPS_GUARDED(GetSystemPlanetAt),
+            std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "CategoryEnabled"sv, CPS_GUARDED_PURE(CategoryEnabled),
             std::optional<bool> {true}, false);
 
@@ -2735,6 +2848,7 @@ namespace Papyrus
 
         spdlog::info("Bound Papyrus natives: DebugLog, DebugLogError, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
+                     "EnumerateBarrenPlanets, GetBarrenPlanetFormIdAt, EnumerateSystemPlanets, GetSystemPlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
                      "TryBeginRun, EndRun, IsRunActive, "
                      "IsHandScannerHookInstalled, IsOrbitalScannerHookInstalled, "

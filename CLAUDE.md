@@ -72,9 +72,11 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
 
 ## Console commands  (`cgf "CompletePlanetSurveyQuest.<Cmd>" "<args>"`)
 
-Completion menu — each takes a category string (`resources,traits,fauna,flora`, or `all`):
-`CompletePlanet`, `CompleteBarrenPlanets`, `CompleteLifePlanets`, `CompleteAllPlanets` (whole
-galaxy, both sweeps, one result). Completion also writes the character-sheet Statistics counters.
+Completion menu — a scope × category grid; each command takes a category string
+(`resources,traits,fauna,flora`, or `all`): `CompletePlanet` (current world), `CompleteSystem`
+(every body around the current star — ESM GNAM star-id filter, no engine offset),
+`CompleteBarrenPlanets`, `CompleteLifePlanets`, `CompleteAllPlanets` (whole galaxy, both sweeps,
+one result). Completion also writes the character-sheet Statistics counters.
 Two ESM Settings toggles auto-complete on a scan: **Hand Scanner** (`0x80C`, on-surface hand-scanner
 → `ID_52157`→`ID_97853` hook) and **Orbital Scanner** (`0x80D`, star-map scan → `ID_52173`→`ID_97853`
 hook, ScanLevelChanged; also repaints the star-map panel in place). See `docs/COMPLETION-COMMANDS.md`.

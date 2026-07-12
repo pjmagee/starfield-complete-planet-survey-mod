@@ -56,6 +56,7 @@ namespace
     constexpr std::uint32_t kSubCTDA = 0x41445443;  // 'CTDA'
     constexpr std::uint32_t kSubPRPS = 0x53505250;  // 'PRPS'
     constexpr std::uint32_t kSubKWDA = 0x4144574B;  // 'KWDA' (PNDT planet-trait / MGEF keyword array)
+    constexpr std::uint32_t kSubGNAM = 0x4D414E47;  // 'GNAM' (PNDT galaxy data; the 12-byte variant leads with the parent-star id)
     constexpr std::uint32_t kSubEFID = 0x44494645;  // 'EFID' (SPEL effect -> MGEF form id)
     constexpr std::uint32_t kSubPRKE = 0x454B5250;  // 'PRKE' (PERK entry header; byte0 == 1 == Ability)
     constexpr std::uint32_t kSubMAST = 0x5453414D;  // 'MAST' (TES4 header master filename)
@@ -471,6 +472,7 @@ namespace
         Catalog                                                      faunaCatalog;
         std::unordered_map<std::uint32_t, std::vector<Ctda>>         cndf;          // CNDF id -> CTDA list
         std::unordered_map<std::uint32_t, std::vector<std::uint32_t>> planetTraits;  // planet -> KWDA traits
+        Esm::PlanetStarMap                                            planetStars;   // planet -> GNAM parent-star id (Sol == 0 is VALID)
     };
 
     // Cross-file intermediates, keyed by RUNTIME FormID. A species' OBTS can reference OMODs from an
@@ -951,7 +953,8 @@ namespace
     // override whose species/trait lists come out empty ERASES the earlier entry.
     void ParsePndtGroup(const std::vector<std::uint8_t>& group, const Remapper& remap,
                         Esm::PlanetSpeciesMap& map,
-                        std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& planetTraits)
+                        std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& planetTraits,
+                        Esm::PlanetStarMap& planetStars)
     {
         std::vector<std::uint8_t> decomp;
         std::size_t               i = 0;
@@ -1004,6 +1007,8 @@ namespace
 
             std::vector<std::uint32_t> species;
             std::vector<std::uint32_t> traitKwds;
+            std::uint32_t              starId  = 0;
+            bool                       hasStar = false;
             ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
                 if (ssig == kSigPPBD)
                     ParsePpbd(p, sz, remap, species);
@@ -1015,12 +1020,28 @@ namespace
                         if (const auto rt = remap(kw); rt != 0)
                             traitKwds.push_back(rt);
                     }
+                else if (ssig == kSubGNAM && sz == 12 && !hasStar)
+                {
+                    // 12-byte GNAM only (PNDT also carries a 4-byte float GNAM): first u32 is the
+                    // parent-star id, matching the star's STDT DNAM. A star id, NOT a FormID — no
+                    // remap. Sol is star id 0, so presence (hasStar) is the validity signal.
+                    std::memcpy(&starId, p, 4);
+                    hasStar = true;
+                }
             });
             // Planet traits gate flora genetics/reproduction (func 858) regardless of species presence.
             if (!traitKwds.empty())
                 planetTraits.insert_or_assign(rtId, std::move(traitKwds));
             else
                 planetTraits.erase(rtId);
+            // Star id: LAST-NON-EMPTY-WINS (PR #26 review) — unlike the species/trait tables, a
+            // missing 12-byte GNAM in an override must NOT erase the earlier entry. DLC/Creation
+            // overrides that only patch species/traits/biomes routinely omit galaxy data; erasing
+            // here would orphan those planets from the system scope (CompleteSystem would refuse on
+            // them). There is no authored "remove this body's parent star" to honour — every base
+            // PNDT carries a GNAM — so retention is always the correct read.
+            if (hasStar)
+                planetStars.insert_or_assign(rtId, starId);
             if (species.empty())
             {
                 map.erase(rtId);  // barren / resource-only body (or an override that emptied it)
@@ -1099,7 +1120,7 @@ namespace
         std::vector<std::uint8_t> decomp;  // reused per-record scratch buffer
 
         if (!pndtGroup.empty())
-            ParsePndtGroup(pndtGroup, remap, map, tables.planetTraits);
+            ParsePndtGroup(pndtGroup, remap, map, tables.planetTraits, tables.planetStars);
         if (!flstGroup.empty())
             BuildCatalogs(flstGroup.data(), flstGroup.size(), decomp, remap,
                           tables.floraCatalog, tables.faunaCatalog);
@@ -1233,9 +1254,10 @@ namespace
         std::size_t speciesCount = 0;
         for (const auto& [_, v] : map)
             speciesCount += v.size();
-        spdlog::info("EsmReader: loaded {} biome planets, {} species refs, {} planet-trait sets "
-                     "from {}/{} source files",
-                     map.size(), speciesCount, tables.planetTraits.size(), parsed, sources.size());
+        spdlog::info("EsmReader: loaded {} biome planets, {} species refs, {} planet-trait sets, "
+                     "{} planet-star ids from {}/{} source files",
+                     map.size(), speciesCount, tables.planetTraits.size(), tables.planetStars.size(),
+                     parsed, sources.size());
     }
 }
 
@@ -1279,6 +1301,12 @@ namespace Esm
     {
         EnsureParsed();
         return g_map;
+    }
+
+    const PlanetStarMap& GetPlanetStarIds()
+    {
+        EnsureParsed();
+        return g_markers.planetStars;
     }
 
     std::vector<std::uint32_t> GetSpeciesMarkers(std::uint32_t speciesFormId, std::uint32_t planetFormId)
