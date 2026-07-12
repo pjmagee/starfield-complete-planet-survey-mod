@@ -56,6 +56,16 @@ namespace Esm
     // nothing could be read. Cheap on subsequent calls.
     const PlanetSpeciesMap& GetPlanetSpecies();
 
+    // planetFormID -> parent-star id, from the PNDT GNAM(12) subrecord's first u32 — the same id
+    // the parent star's STDT DNAM carries (verified: Jemison->AlphaCentauriStar 71456,
+    // Akila->CheyenneStar 72432, Kreet->NarionStar 88327). This is what groups bodies into a star
+    // SYSTEM without any engine offset. CAUTION: Sol's star id is 0 (Earth/Mars/Moon all carry
+    // starId 0), so 0 is a VALID id — membership is "key present in this map", never "id != 0".
+    // Keys are RUNTIME FormIDs; star ids are the engine's own star-id space (NOT FormIDs, never
+    // remapped).
+    using PlanetStarMap = std::unordered_map<std::uint32_t, std::uint32_t>;
+    const PlanetStarMap& GetPlanetStarIds();
+
     // The full slot+0x08 "green marker" set for one species (FLOR or NPC_), derived purely from
     // the plugin files — no game, no visiting, no live instance. This is the array the engine copies
     // into a scanned species' slot+0x08; writing it under the render key greens the species remotely.

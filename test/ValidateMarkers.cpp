@@ -124,6 +124,45 @@ int main(int argc, char** argv)
     }
     std::printf("%d/%d actor-marker cases OK\n", aok, static_cast<int>(kActorCases.size()));
 
-    const bool allPass = ok == static_cast<int>(kCases.size()) && aok == static_cast<int>(kActorCases.size());
+    // --- Planet -> parent-star ids (PNDT GNAM[0] == parent STDT DNAM; issue #16 system scope) ---
+    // Ground truth read straight from Starfield.esm's STDT records: Jemison -> AlphaCentauriStar,
+    // Akila -> CheyenneStar, Kreet -> NarionStar, Earth -> SolStar. Sol's star id is 0 — a VALID
+    // id — so the Earth case also proves the presence-not-nonzero membership semantics.
+    struct StarCase
+    {
+        const char*   name;
+        std::uint32_t planet;
+        std::uint32_t starId;
+    };
+    const std::vector<StarCase> kStarCases = {
+        {"Jemison", 0x0003F5A1, 71456},  // AlphaCentauriStar
+        {"Akila",   0x0005E2B6, 72432},  // CheyenneStar
+        {"Kreet",   0x0003F59F, 88327},  // NarionStar
+        {"Earth",   0x0005DEB5, 0},      // SolStar (star id 0 is VALID)
+    };
+    int         sok   = 0;
+    const auto& stars = Esm::GetPlanetStarIds();
+    std::printf("\n=== planet -> parent-star ids (%zu planets mapped) ===\n", stars.size());
+    for (const auto& c : kStarCases)
+    {
+        const auto it   = stars.find(c.planet);
+        const bool pass = (it != stars.end() && it->second == c.starId);
+        sok += pass;
+        if (it == stars.end())
+            std::printf("  %-8s 0x%08X MISSING (expected starId=%u)\n", c.name, c.planet, c.starId);
+        else
+            std::printf("  %-8s 0x%08X %-8s starId=%u (expected %u)\n", c.name, c.planet,
+                        pass ? "OK" : "MISMATCH", it->second, c.starId);
+    }
+    // Coverage floor: the base game authors GNAM on every PNDT (1765 in Starfield.esm alone) —
+    // a mostly-empty map means the subrecord parse regressed even if the four cases pass.
+    const bool starCoverage = stars.size() >= 1700;
+    if (!starCoverage)
+        std::printf("  COVERAGE FAIL: only %zu planets carry a star id (expected >= 1700)\n", stars.size());
+    std::printf("%d/%d star-id cases OK, coverage %s\n", sok, static_cast<int>(kStarCases.size()),
+                starCoverage ? "OK" : "FAIL");
+
+    const bool allPass = ok == static_cast<int>(kCases.size()) && aok == static_cast<int>(kActorCases.size()) &&
+                         sok == static_cast<int>(kStarCases.size()) && starCoverage;
     return allPass ? 0 : 1;
 }

@@ -119,8 +119,9 @@ int Function SweepBarrenChunk(int aiStartIndex, int aiCount, bool abWriteResourc
 ; CompleteAllPlanetsSurveyData return value for "scanned" log lines.
 int Function GetSweepCompletedCount() global native
 
-; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep touched, so the finalize pass
-; can re-resolve each as a Planet (and mark its traits via GetKeywordTypeList(44) -> MarkTraitKnownForPlanet).
+; Accessors over the planets the last CompleteAllPlanetsSurveyData sweep touched. Since issue #16
+; the barren trait pass enumerates via EnumerateBarrenPlanets instead (decoupled from the sweep);
+; these remain as the sweep's own attempted-set diagnostics surface.
 int Function GetSweepPlanetCount() global native
 int Function GetSweepPlanetFormIdAt(int aiIndex) global native
 
@@ -159,6 +160,23 @@ int Function GetSweepNotAttemptedCount() global native
 ; worlds, so CompleteLifePlanets uses this list to reach their traits / resources / green.
 int Function EnumerateLifePlanets() global native
 int Function GetLifePlanetFormIdAt(int aiIndex) global native
+
+; Enumerate the BARREN planets (no authored flora/fauna) — the exact same classification the
+; resources sweep uses, as a standalone Count/At list (issue #16). This is what decouples a
+; traits-only barren run from the resources sweep: it enumerates here instead of driving
+; CompleteAllPlanetsSurveyData + SweepBarrenChunk just to populate the swept list, so it never
+; touches the sweep/straggler caches. Same iteration pattern as the life list.
+int Function EnumerateBarrenPlanets() global native
+int Function GetBarrenPlanetFormIdAt(int aiIndex) global native
+
+; Enumerate every planet/moon in akPlanet's STAR SYSTEM — all bodies sharing its parent star, from
+; the plugin files' authored galaxy data (PNDT GNAM star id; multi-master remapped, so DLC systems
+; resolve too). No engine offset involved; validated offline by the marker harness. Returns the
+; member count (>= 1 on success — the anchor planet is always a member), or 0 when the planet is
+; null / unknown to the map (the caller must refuse with an honest message, not half-run). Iterate
+; 0..count-1 via GetSystemPlanetFormIdAt + Game.GetForm(...) as Planet.
+int Function EnumerateSystemPlanets(Form akPlanet) global native
+int Function GetSystemPlanetFormIdAt(int aiIndex) global native
 
 ; Parse a "resources,traits,fauna,flora" category string (base Papyrus can't split a string):
 ; returns true if the list contains asToken (case-insensitive) or the wildcard "all".

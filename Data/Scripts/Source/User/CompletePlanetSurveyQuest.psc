@@ -2,19 +2,27 @@ ScriptName CompletePlanetSurveyQuest
 
 ; Console completion commands (category string: comma-separated resources, traits, fauna, flora — or "all"):
 ;   cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits,fauna,flora"
+;   cgf "CompletePlanetSurveyQuest.CompleteSystem" "all"       ; every body in the CURRENT star system
 ;   cgf "CompletePlanetSurveyQuest.CompleteBarrenPlanets" "resources,traits"
 ;   cgf "CompletePlanetSurveyQuest.CompleteLifePlanets" "all"
 ;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"   ; whole galaxy (barren + life)
 ;
-; CompletePlanet — current planet only (player must be on-surface). CompleteBarrenPlanets — ref-free
-; galaxy sweep for lifeless worlds. CompleteLifePlanets — life-bearing worlds. CompleteAllPlanets —
-; both sweeps, the entire galaxy in one command. (See each function's notes.)
+; The surface is a SCOPE x CATEGORY grid (issue #16), not hand-written per-combination commands:
+; every command is a thin gated wrapper over the same per-planet core (_CompletePlanetForm — data /
+; traits / species-green per category) fed by a scope enumerator (current planet | current system |
+; barren galaxy | life galaxy | whole galaxy).
+;
+; CompletePlanet — current planet only (player must be on-surface). CompleteSystem — every planet/
+; moon around the current star (ref-free; anchored on the planet you're on or orbiting).
+; CompleteBarrenPlanets — ref-free galaxy sweep for lifeless worlds. CompleteLifePlanets —
+; life-bearing worlds. CompleteAllPlanets — both sweeps, the entire galaxy in one command. (See each
+; function's notes.)
 ;
 ; Auto-complete on scan: Settings > Gameplay toggle (CompleteSurveyIfEnabled queues native dispatch;
 ; C++ poller runs _AutoCompleteCurrentPlanet after the scanner closes).
 ;
-; Issue #13 — re-entrancy gate: CompletePlanet/CompleteBarrenPlanets/CompleteLifePlanets/
-; CompleteAllPlanets and the two auto-complete dispatch targets (_AutoCompleteCurrentPlanet,
+; Issue #13 — re-entrancy gate: CompletePlanet/CompleteSystem/CompleteBarrenPlanets/
+; CompleteLifePlanets/CompleteAllPlanets and the two auto-complete dispatch targets (_AutoCompleteCurrentPlanet,
 ; _GalaxyMapScanComplete) all acquire CompletePlanetSurveyNative.TryBeginRun(...) before doing any
 ; work and release it via EndRun(gen, ...) on every exit, so a second invocation (manual re-run, or
 ; an auto-scan firing mid-sweep) is CLEANLY REJECTED instead of interleaving with an in-flight run
@@ -223,6 +231,110 @@ float Function _CompletePlanetForm(Planet akPlanet, string asCategories, bool ab
     Return surveyAfter
 EndFunction
 
+; CURRENT star system — every planet/moon orbiting the same star as the world you're on (or over),
+; same category strings as everything else. All ref-free (no spawn, no teleport): works on foot or
+; from orbit anywhere in the system; the system is resolved from your current planet, so deep space
+; (no current planet) refuses honestly. Bodies come from the plugin files' authored galaxy data
+; (multi-master, so DLC systems like Va'ruun'kai work), and each body runs the SAME per-planet core
+; as CompletePlanet — discover-if-remote, then resources / traits / species-green per category.
+;   cgf "CompletePlanetSurveyQuest.CompleteSystem" "all"
+;   cgf "CompletePlanetSurveyQuest.CompleteSystem" "resources,traits"
+Function CompleteSystem(string asCategories) global
+    If !CompletePlanetSurveyNative.CategoriesValid(asCategories)   ; typo/empty -> clean no-op
+        Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
+        Return
+    EndIf
+    ; Issue #13 re-entrancy gate — same wrapper/Core pattern as every other public command (see the
+    ; file-header note + TryBeginRun's doc comment for the stuck-gate failsafe and generation token).
+    int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteSystem")
+    If gen == 0
+        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        CompletePlanetSurveyNative.DebugLog("CompleteSystem: rejected — a completion run is already in progress")
+        Return
+    EndIf
+    _CompleteSystemCore(asCategories, gen)
+    CompletePlanetSurveyNative.EndRun(gen, "CompleteSystem")
+EndFunction
+
+; The actual system body. aiGeneration is the caller's gate token — the IsRunActive check makes this
+; Core FAIL-CLOSED like the other _Complete*Core functions: it is a global function (console-reachable
+; via cgf) and would otherwise bypass the wrapper's gate entirely.
+Function _CompleteSystemCore(string asCategories, int aiGeneration) global
+    If !CompletePlanetSurveyNative.IsRunActive(aiGeneration)
+        CompletePlanetSurveyNative.DebugLog("_CompleteSystemCore: refused — caller does not hold the current run gate (direct cgf invocation, or the gate was stolen); use CompleteSystem instead")
+        Return
+    EndIf
+    CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
+
+    ; Anchor: the planet you're standing on or orbiting names the system. In deep space there is no
+    ; current planet and therefore no system to resolve — refuse honestly instead of guessing.
+    Planet currentPlanet = Game.GetPlayer().GetCurrentPlanet()
+    If currentPlanet == None
+        Debug.Notification("Survey: not near a planet — travel to a planet or moon in the system first")
+        Return
+    EndIf
+    ; ENUMERATE-FIRST invariant (issue #13): build this run's own work list before consuming any
+    ; index — never walk a list a previous run built. 0 = the anchor is unknown to the ESM galaxy
+    ; map (or the parse degraded) — refuse, don't half-run.
+    int n = CompletePlanetSurveyNative.EnumerateSystemPlanets(currentPlanet as Form)
+    If n <= 0
+        Debug.Notification("Survey: could not resolve this system's planet list — see the SFSE log")
+        Return
+    EndIf
+
+    float t0 = Utility.GetCurrentRealTime()
+    bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
+    bool doSpecies   = _WantsSpecies(asCategories)
+    int worlds = 0
+    int i = 0
+    While i < n
+        int pid = CompletePlanetSurveyNative.GetSystemPlanetFormIdAt(i)
+        Planet p = Game.GetForm(pid) as Planet
+        If p != None
+            Bool wasComplete = p.GetSurveyPercent() >= 1.0   ; already fully surveyed BEFORE this run?
+            ; The shared per-planet core: discover-if-needed + the requested categories, ref-free.
+            ; abDiscover=false for the planet you're physically on — its entry exists, and the async
+            ; re-discover would evict freshly written species markers (exactly as CompletePlanet /
+            ; CompleteLifePlanets handle it).
+            _CompletePlanetForm(p, asCategories, p != currentPlanet)
+            ; Count only worlds this run NEWLY brought forward, so re-runs report honestly (0 when the
+            ; system was already done). A category mix that can't reach 100% on its own (e.g. pure
+            ; "fauna,flora") keeps counting each run — expected, those never fully "complete".
+            If !wasComplete
+                worlds += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+
+    ; FINALIZE PASS — same reason as CompleteLifePlanets: DiscoverPlanetEntry creates a never-visited
+    ; world's knowledge entry ASYNCHRONOUSLY, so a same-pass resource/species write can land before
+    ; the entry exists and no-op, leaving that body just under 100%. Yield a beat, then re-run the
+    ; categories for any body still short. Deliberately no re-discover (the entry now exists, and
+    ; re-discovering would re-count Planets Scanned). Only needed when we created entries; a
+    ; traits-only run is self-sufficient and completes in the first loop.
+    If doResources || doSpecies
+        Utility.Wait(1.0)
+        i = 0
+        While i < n
+            int fpid = CompletePlanetSurveyNative.GetSystemPlanetFormIdAt(i)
+            Planet fp = Game.GetForm(fpid) as Planet
+            If fp != None && fp.GetSurveyPercent() < 1.0
+                _CompletePlanetForm(fp, asCategories, false)
+            EndIf
+            i += 1
+        EndWhile
+    EndIf
+
+    float secs = Utility.GetCurrentRealTime() - t0
+    CompletePlanetSurveyNative.DebugLog("CompleteSystem[" + asCategories + "]: " + worlds + " of " + n + " system bodies newly completed in " + secs + "s")
+    If worlds == 0
+        Debug.MessageBox("System already surveyed — nothing new to catalogue (" + asCategories + ").")
+    Else
+        Debug.MessageBox("System survey complete.  " + worlds + " of " + n + " bodies newly catalogued (" + asCategories + ").  Done in " + (secs as int) + "s.")
+    EndIf
+EndFunction
+
 ; Complete the survey for every UNINHABITED planet/moon in the galaxy (no flora/fauna) in one pass —
 ; ref-free (no teleport, no spawn). Worlds WITH species are deliberately skipped (their flora/fauna
 ; can't be greened by this command — that's the separate CompleteLifePlanets command). Console:
@@ -309,33 +421,40 @@ int Function _CompleteBarrenPlanetsCore(string asCategories, bool abShowResult, 
     ; — so the chunked Phase 1 loop below, which widens the mid-run window across frames
     ; (Utility.Wait between chunks), cannot be interleaved by a second invocation.
 
-    ; 1) Phase 1 chunked across frames (issue #9). ENUMERATE all barren PNDT formIds (cheap), then
-    ;    process them in chunks of kBarrenChunkSize with a short Wait between so the ~1798-planet
-    ;    work does not hitch a single frame. Per-planet semantics (guard → discover → write →
-    ;    post-check → conditional event → straggler/fault) are unchanged; the consecutive-fault
-    ;    streak spans chunks; on abort (-1) remaining worlds are notAttempted and we break.
-    ;    Chunk size 150: ballpark 100–200 keeps a chunk under a frame if per-planet work is
-    ;    ~0.5–1 ms (discover + write + two IsPlanetFullyMarked checks), while limiting Wait hops
-    ;    to ~12 for a full barren galaxy. abWriteResources = doResources (same as before).
-    int kBarrenChunkSize = 150
-    int workCount = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData(doResources)
-    int startIdx = 0
-    While startIdx < workCount
-        int advanced = CompletePlanetSurveyNative.SweepBarrenChunk(startIdx, kBarrenChunkSize, doResources)
-        If advanced < 0
-            ; Consecutive-fault cap aborted the sweep — remaining notAttempted already recorded.
-            startIdx = workCount
-        ElseIf advanced == 0
-            startIdx = workCount
-        Else
-            startIdx += advanced
-            ; Yield so the engine can run a frame (slate cascade / UI / async entry creates).
-            If startIdx < workCount
-                Utility.Wait(0.1)
+    ; 1) Phase 1 chunked across frames (issue #9) — RESOURCES path only (issue #16). ENUMERATE all
+    ;    barren PNDT formIds (cheap), then process them in chunks of kBarrenChunkSize with a short
+    ;    Wait between so the ~1798-planet work does not hitch a single frame. Per-planet semantics
+    ;    (guard → discover → write → post-check → conditional event → straggler/fault) are unchanged;
+    ;    the consecutive-fault streak spans chunks; on abort (-1) remaining worlds are notAttempted
+    ;    and we break. Chunk size 150: ballpark 100–200 keeps a chunk under a frame if per-planet
+    ;    work is ~0.5–1 ms (discover + write + two IsPlanetFullyMarked checks), while limiting Wait
+    ;    hops to ~12 for a full barren galaxy.
+    ;    A TRAITS-ONLY run skips the sweep machinery entirely — it used to drive these same chunks
+    ;    with abWriteResources=false purely to populate the swept list for the trait pass below;
+    ;    that pass now enumerates barren worlds directly (EnumerateBarrenPlanets), so nothing here
+    ;    is needed and none of the sweep/straggler/notAttempted state gets touched or consumed.
+    int n = 0
+    If doResources
+        int kBarrenChunkSize = 150
+        int workCount = CompletePlanetSurveyNative.CompleteAllPlanetsSurveyData(true)
+        int startIdx = 0
+        While startIdx < workCount
+            int advanced = CompletePlanetSurveyNative.SweepBarrenChunk(startIdx, kBarrenChunkSize, true)
+            If advanced < 0
+                ; Consecutive-fault cap aborted the sweep — remaining notAttempted already recorded.
+                startIdx = workCount
+            ElseIf advanced == 0
+                startIdx = workCount
+            Else
+                startIdx += advanced
+                ; Yield so the engine can run a frame (slate cascade / UI / async entry creates).
+                If startIdx < workCount
+                    Utility.Wait(0.1)
+                EndIf
             EndIf
-        EndIf
-    EndWhile
-    int n = CompletePlanetSurveyNative.GetSweepCompletedCount()
+        EndWhile
+        n = CompletePlanetSurveyNative.GetSweepCompletedCount()
+    EndIf
     float tAfterSweep = Utility.GetCurrentRealTime()
 
     ; 2) STRAGGLER-ONLY finalize with bounded retry (issue #6). Phase 1 already writes each planet's
@@ -376,18 +495,26 @@ int Function _CompleteBarrenPlanetsCore(string asCategories, bool abShowResult, 
     ; Sweep-abort surfacing: worlds the C++ sweep never even ATTEMPTED (its consecutive-fault cap
     ; tripped and aborted the sweep). Separate from failedCount — those planets are in neither the
     ; straggler list nor the failure report — so the popup below never under-reports an aborted sweep.
-    int notAttempted = CompletePlanetSurveyNative.GetSweepNotAttemptedCount()
+    ; Resources-gated (issue #16): only the resources path runs the sweep now, so a traits-only run
+    ; must not read this counter — it would report a PREVIOUS run's stale residue.
+    int notAttempted = 0
+    If doResources
+        notAttempted = CompletePlanetSurveyNative.GetSweepNotAttemptedCount()
+    EndIf
 
-    ; 3) Trait pass + completion tally across ALL swept planets (unchanged behaviour): TRAITS marks
-    ;    each world's trait keywords known; the 100% count feeds the result popup. The slate is a
-    ;    100%-side-effect of the writes above, so a traits-only run on a resource-incomplete world
-    ;    correctly drops none.
-    int count = CompletePlanetSurveyNative.GetSweepPlanetCount()
+    ; 3) Trait pass + completion tally across ALL barren worlds. Decoupled from the sweep (issue
+    ;    #16): enumerated directly via EnumerateBarrenPlanets — the exact classification the sweep
+    ;    uses — instead of reading the swept list, so a traits-only run never depends on the
+    ;    resources sweep populating state (and an aborted sweep no longer hides not-attempted worlds
+    ;    from the trait pass; MarkTraits is self-sufficient). TRAITS marks each world's trait
+    ;    keywords known; the 100% count feeds the result popup. The slate is a 100%-side-effect of
+    ;    the resource writes, so a traits-only run on a resource-incomplete world correctly drops none.
+    int count = CompletePlanetSurveyNative.EnumerateBarrenPlanets()
     int traitsMarked = 0
     int fullyComplete = 0
     int i = 0
     While i < count
-        int fid = CompletePlanetSurveyNative.GetSweepPlanetFormIdAt(i)
+        int fid = CompletePlanetSurveyNative.GetBarrenPlanetFormIdAt(i)
         Planet p = Game.GetForm(fid) as Planet
         If p != None
             If doTraits
@@ -612,16 +739,14 @@ Function CompleteAllPlanets(string asCategories) global
     ; Straggler-failure surfacing (issue #6): CompleteBarrenPlanets ran with its popup suppressed, so
     ; re-read the residual failure + not-attempted counts for the combined popup. abLogErrors=false —
     ; the barren sweep already logged each failed planet at ERROR; this only fetches the count (no
-    ; duplicate lines). Gated on the categories that actually ran the sweep — a species-only run never
-    ; swept, and reading the lists then would report a PREVIOUS run's stale residue: "resources" is
-    ; the only path that runs the finalize passes; the sweep itself (and so a fault-cap abort) runs
-    ; for resources OR traits.
+    ; duplicate lines). Gated on the category that actually ran the sweep — "resources" is now the
+    ; ONLY path that drives the sweep machinery at all (issue #16: a traits-only run enumerates
+    ; barren worlds directly and touches no sweep state), so any other run reading these lists would
+    ; report a PREVIOUS run's stale residue.
     int failed = 0
     int notAttempted = 0
     If CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
         failed = CompletePlanetSurveyNative.ReportSweepFailures(false)
-    EndIf
-    If CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources") || CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
         notAttempted = CompletePlanetSurveyNative.GetSweepNotAttemptedCount()
     EndIf
     string failNote = ""
