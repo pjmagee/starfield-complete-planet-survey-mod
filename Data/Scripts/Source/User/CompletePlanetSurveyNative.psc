@@ -46,6 +46,36 @@ Function QueueCompleteSurvey() global native
 ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") from an earlier real scan.
 Function CancelPendingAutoComplete() global native
 
+; Issue #13 — re-entrancy gate. The native-side caches consumed BY INDEX across many frames
+; (the chunked barren sweep, the barren/life finalize passes) are not safe under a second
+; concurrent invocation, so every long-running completion entry point must acquire this gate
+; before touching them and release it via EndRun on every exit. asRunName names the command/path
+; and is recorded as the gate OWNER (reject/steal logs name who holds it). Returns the run's
+; GENERATION token (> 0) = acquired, hold it and pass it to EndRun/IsRunActive; 0 = REJECTED —
+; another run is active (and not stale) — the caller must bail out doing NO work.
+; STUCK-GATE FAILSAFE: a gate held longer than several minutes is presumed abandoned (a Papyrus
+; run that died mid-run without reaching EndRun — VM error, save-load, quit-to-menu) and is
+; STOLEN with a logged WARN, so a stuck gate can never require a game restart to clear. The
+; generation token is what makes the steal safe even when the presumption is WRONG (the old run
+; was alive — e.g. the player sat on CompleteBarrenPlanets' modal intro popup past the timeout):
+; the victim's late EndRun carries a superseded generation, mismatches, and is IGNORED instead of
+; releasing the new owner's gate (the ABA race from the PR #25 review).
+int Function TryBeginRun(string asRunName) global native
+
+; Release the gate acquired by TryBeginRun — ONLY honoured when aiGeneration is still the current
+; one (a mismatch means this run's gate was stolen or session-cleared; the call WARN-logs and does
+; NOT release the new owner's gate). Call on EVERY exit path of a gated function (the
+; *Core-function pattern in CompletePlanetSurveyQuest.psc makes this automatic for ordinary
+; Papyrus early Returns — the gated wrapper always resumes after the Core call and calls EndRun
+; next, regardless of which internal path Core took). asRunName is for logging only.
+Function EndRun(int aiGeneration, string asRunName) global native
+
+; True while the gate is held by exactly aiGeneration. The ungated _Complete*Core functions call
+; this at entry as a FAIL-CLOSED guard: Cores are global (console-reachable via cgf) and would
+; otherwise bypass the wrappers' gate — a Core refuses to run unless its caller holds the CURRENT
+; gate generation.
+bool Function IsRunActive(int aiGeneration) global native
+
 ; Issue #12 — whether the native call-site hook that is SUPPOSED to invoke CompleteSurveyIfEnabled
 ; (the Hand Scanner path, ID_52157 -> ID_97853) is actually armed this session. False means a
 ; sig-scan miss (or an install-time fault) left that hook unpatched on this game build — the SFSE

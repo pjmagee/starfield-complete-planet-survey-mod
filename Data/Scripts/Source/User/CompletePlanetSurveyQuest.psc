@@ -12,6 +12,23 @@ ScriptName CompletePlanetSurveyQuest
 ;
 ; Auto-complete on scan: Settings > Gameplay toggle (CompleteSurveyIfEnabled queues native dispatch;
 ; C++ poller runs _AutoCompleteCurrentPlanet after the scanner closes).
+;
+; Issue #13 — re-entrancy gate: CompletePlanet/CompleteBarrenPlanets/CompleteLifePlanets/
+; CompleteAllPlanets and the two auto-complete dispatch targets (_AutoCompleteCurrentPlanet,
+; _GalaxyMapScanComplete) all acquire CompletePlanetSurveyNative.TryBeginRun(...) before doing any
+; work and release it via EndRun(gen, ...) on every exit, so a second invocation (manual re-run, or
+; an auto-scan firing mid-sweep) is CLEANLY REJECTED instead of interleaving with an in-flight run
+; and corrupting the native-side caches the chunked sweeps walk by index across frames. TryBeginRun
+; returns a GENERATION token (0 = rejected): EndRun/IsRunActive only honour the CURRENT generation,
+; so a run whose gate was stolen (stuck-run timeout — see CompletePlanetSurveyNative.psc) cannot
+; release the new owner's gate when it wakes (the ABA race from the PR #25 review). Public commands
+; reject with a player-visible Debug.Notification + a log line; the two auto-complete paths log-only
+; and their scan is SKIPPED outright (the pending flag was already consumed — dropped, not
+; re-queued). CompleteAllPlanets acquires ONE gate for both sweeps and drives them via the ungated
+; _Complete*Core functions — calling the gated public wrappers from inside an already-gated run
+; would immediately reject itself (the gate is one process-wide flag, not per-caller-reentrant).
+; Every _Complete*Core validates the caller's generation at entry (fail-closed): Cores are global
+; and console-reachable via cgf, which would otherwise bypass the gate.
 
 ;=================================================================================================
 ; PINNED ESM FORMIDS (issue #12) — every literal FormID this mod reads from Data/CompletePlanetSurvey.esm
@@ -118,6 +135,31 @@ Function CompletePlanet(string asCategories) global
         Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
         Return
     EndIf
+    ; Issue #13 re-entrancy gate: see the file-header note. Rejected cleanly (no cache touched) if a
+    ; run — including an auto-complete dispatch — is already active. gen is this run's GENERATION
+    ; token: EndRun only honours the release while this generation is still current (a stolen gate
+    ; WARN-logs and does not release the thief's).
+    int gen = CompletePlanetSurveyNative.TryBeginRun("CompletePlanet")
+    If gen == 0
+        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        CompletePlanetSurveyNative.DebugLog("CompletePlanet: rejected — a completion run is already in progress")
+        Return
+    EndIf
+    _CompletePlanetCore(asCategories, gen)
+    CompletePlanetSurveyNative.EndRun(gen, "CompletePlanet")
+EndFunction
+
+; The actual on-surface completion body (issue #13: extracted so _AutoCompleteCurrentPlanet — the
+; hand-scanner auto-complete dispatch target — can run it under ITS OWN gate acquisition, without a
+; nested TryBeginRun that would immediately reject itself; the gate is one process-wide flag, not
+; per-caller-reentrant). aiGeneration is the caller's gate token — the IsRunActive check below makes
+; this Core FAIL-CLOSED: it is a global function (console-reachable via cgf), and without the check
+; a direct invocation would bypass the wrappers' gate entirely.
+Function _CompletePlanetCore(string asCategories, int aiGeneration) global
+    If !CompletePlanetSurveyNative.IsRunActive(aiGeneration)
+        CompletePlanetSurveyNative.DebugLog("_CompletePlanetCore: refused — caller does not hold the current run gate (direct cgf invocation, or the gate was stolen); use CompletePlanet instead")
+        Return
+    EndIf
     ; A manual command wins over a queued auto-complete-on-scan: cancel any pending
     ; _AutoCompleteCurrentPlanet -> CompletePlanet("all") so an explicit category isn't overridden.
     CompletePlanetSurveyNative.CancelPendingAutoComplete()
@@ -194,6 +236,34 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
         Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
         Return 0
     EndIf
+    ; Issue #13 re-entrancy gate: acquired BEFORE any work (including the intro popup below) so a
+    ; second invocation can't even start the chunked Phase 1 loop while ours is mid-sweep. Acquiring
+    ; before the MODAL popup means an AFK player can hold the gate past the stuck-run timeout — that
+    ; is safe by design: a steal supersedes this run's generation, so our late EndRun WARN-logs and
+    ; is ignored (never releases the thief's gate). See the file-header note + TryBeginRun's doc
+    ; comment (CompletePlanetSurveyNative.psc) for the full stuck-gate failsafe.
+    int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteBarrenPlanets")
+    If gen == 0
+        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        CompletePlanetSurveyNative.DebugLog("CompleteBarrenPlanets: rejected — a completion run is already in progress")
+        Return 0
+    EndIf
+    int result = _CompleteBarrenPlanetsCore(asCategories, abShowResult, gen)
+    CompletePlanetSurveyNative.EndRun(gen, "CompleteBarrenPlanets")
+    Return result
+EndFunction
+
+; The actual barren-galaxy sweep body (issue #13: extracted so CompleteAllPlanets can run it under
+; ITS OWN single gate acquisition — see CompleteAllPlanets — without a nested TryBeginRun, which
+; would immediately reject itself; the gate is one process-wide flag, not per-caller-reentrant).
+; aiGeneration is the caller's gate token — the IsRunActive check below makes this Core FAIL-CLOSED:
+; it is a global function (console-reachable via cgf), and without the check a direct invocation
+; would bypass the wrappers' gate entirely.
+int Function _CompleteBarrenPlanetsCore(string asCategories, bool abShowResult, int aiGeneration) global
+    If !CompletePlanetSurveyNative.IsRunActive(aiGeneration)
+        CompletePlanetSurveyNative.DebugLog("_CompleteBarrenPlanetsCore: refused — caller does not hold the current run gate (direct cgf invocation, or the gate was stolen); use CompleteBarrenPlanets instead")
+        Return 0
+    EndIf
     CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
     bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
@@ -220,14 +290,24 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
         recallMsg.Show()
     EndIf
 
+    ; Issue #13: the modal Show() above is the one place this run can legitimately outlive the
+    ; stuck-run timeout (a player AFK on the popup) and have its gate STOLEN while still alive.
+    ; Re-validate the generation on wake: if the gate was stolen (or session-cleared) while we sat
+    ; on the popup, abort BEFORE enumerating/consuming any cache — the thief owns the caches now.
+    If !CompletePlanetSurveyNative.IsRunActive(aiGeneration)
+        CompletePlanetSurveyNative.DebugLog("_CompleteBarrenPlanetsCore: gate lost while waiting on the intro popup (stolen after the stuck-run timeout, or session-cleared) — aborting without touching the caches")
+        Return 0
+    EndIf
+
     ; Phase timings via Utility.GetCurrentRealTime (real seconds) so the log shows how long each
     ; phase actually takes. tStart is captured AFTER the popup closes, so it excludes the player's
     ; reading time and measures pure compute. Phase 1 also logs precise ms on the C++ side.
     float tStart = Utility.GetCurrentRealTime()
 
-    ; Issue #13 re-entrancy gate belongs HERE (command entry, before any yield): the chunked Phase 1
-    ; loop below widens the mid-run window across frames (Utility.Wait between chunks), so a second
-    ; CompleteBarrenPlanets/CompleteAllPlanets can interleave. Not implemented in this issue (#13).
+    ; Issue #13: the re-entrancy gate is held here — acquired by the CompleteBarrenPlanets wrapper
+    ; (or CompleteAllPlanets) BEFORE this Core function was even called, and just re-validated above
+    ; — so the chunked Phase 1 loop below, which widens the mid-run window across frames
+    ; (Utility.Wait between chunks), cannot be interleaved by a second invocation.
 
     ; 1) Phase 1 chunked across frames (issue #9). ENUMERATE all barren PNDT formIds (cheap), then
     ;    process them in chunks of kBarrenChunkSize with a short Wait between so the ~1798-planet
@@ -373,6 +453,30 @@ int Function CompleteLifePlanets(string asCategories, bool abShowResult = true) 
         Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
         Return 0
     EndIf
+    ; Issue #13 re-entrancy gate: see the file-header note + TryBeginRun's doc comment
+    ; (CompletePlanetSurveyNative.psc) for the stuck-gate failsafe and the generation token.
+    int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteLifePlanets")
+    If gen == 0
+        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets: rejected — a completion run is already in progress")
+        Return 0
+    EndIf
+    int result = _CompleteLifePlanetsCore(asCategories, abShowResult, gen)
+    CompletePlanetSurveyNative.EndRun(gen, "CompleteLifePlanets")
+    Return result
+EndFunction
+
+; The actual life-galaxy body (issue #13: extracted so CompleteAllPlanets can run it under ITS OWN
+; single gate acquisition — see CompleteAllPlanets — without a nested TryBeginRun, which would
+; immediately reject itself; the gate is one process-wide flag, not per-caller-reentrant).
+; aiGeneration is the caller's gate token — the IsRunActive check below makes this Core FAIL-CLOSED:
+; it is a global function (console-reachable via cgf), and without the check a direct invocation
+; would bypass the wrappers' gate entirely.
+int Function _CompleteLifePlanetsCore(string asCategories, bool abShowResult, int aiGeneration) global
+    If !CompletePlanetSurveyNative.IsRunActive(aiGeneration)
+        CompletePlanetSurveyNative.DebugLog("_CompleteLifePlanetsCore: refused — caller does not hold the current run gate (direct cgf invocation, or the gate was stolen); use CompleteLifePlanets instead")
+        Return 0
+    EndIf
     CompletePlanetSurveyNative.CancelPendingAutoComplete()   ; manual command wins over queued auto-complete
     bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
     bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
@@ -487,11 +591,24 @@ Function CompleteAllPlanets(string asCategories) global
         Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
         Return
     EndIf
-    CompletePlanetSurveyNative.CancelPendingAutoComplete()
+    ; Issue #13 re-entrancy gate: ONE acquisition covers BOTH sweeps below, which is why they are
+    ; driven via the ungated _CompleteBarrenPlanetsCore/_CompleteLifePlanetsCore functions instead of
+    ; the gated public CompleteBarrenPlanets/CompleteLifePlanets — calling those here would nest a
+    ; second TryBeginRun under this one and immediately reject itself (the gate is one process-wide
+    ; flag, not per-caller-reentrant). See the file-header note + TryBeginRun's doc comment
+    ; (CompletePlanetSurveyNative.psc) for the stuck-gate failsafe.
+    int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteAllPlanets")
+    If gen == 0
+        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        CompletePlanetSurveyNative.DebugLog("CompleteAllPlanets: rejected — a completion run is already in progress")
+        Return
+    EndIf
     ; CompleteBarrenPlanets shows the immersive CPSRecallMessage intro; both run with abShowResult=false
     ; so neither pops its own box — we present ONE cohesive combined result for the whole galaxy.
-    int barren = CompleteBarrenPlanets(asCategories, false)
-    int life   = CompleteLifePlanets(asCategories, false)
+    ; Both Cores validate gen at entry (fail-closed) — if the barren Core's intro popup out-waits
+    ; the stuck-run timeout and the gate is stolen, the life Core refuses too and the run winds down.
+    int barren = _CompleteBarrenPlanetsCore(asCategories, false, gen)
+    int life   = _CompleteLifePlanetsCore(asCategories, false, gen)
     ; Straggler-failure surfacing (issue #6): CompleteBarrenPlanets ran with its popup suppressed, so
     ; re-read the residual failure + not-attempted counts for the combined popup. abLogErrors=false —
     ; the barren sweep already logged each failed planet at ERROR; this only fetches the count (no
@@ -525,6 +642,7 @@ Function CompleteAllPlanets(string asCategories) global
     Else
         Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
     EndIf
+    CompletePlanetSurveyNative.EndRun(gen, "CompleteAllPlanets")
 EndFunction
 
 ; Called by the C++ scan hook on every species/resource scan. Reads the
@@ -598,11 +716,25 @@ Function _GalaxyMapScanComplete() global
         Return   ; already fully surveyed — nothing to do
     EndIf
 
+    ; Issue #13 re-entrancy gate: this auto-complete dispatch touches the same _CompletePlanetForm
+    ; machinery a manual command uses, so it must not fire while a chunked galaxy sweep is mid-run.
+    ; On rejection the scan is SKIPPED, not deferred — the pending flag was already consumed by the
+    ; poller, so this scan's auto-complete is dropped for good (deliberate: a mid-sweep scan is a
+    ; rare overlap, the sweep itself likely completes the same body, and re-queueing would risk a
+    ; stale completion firing long after the scan). Log-only, no player-facing toast — this can
+    ; trigger on any routine star-map scan.
+    int gen = CompletePlanetSurveyNative.TryBeginRun("AutoComplete (Orbital Scanner)")
+    If gen == 0
+        CompletePlanetSurveyNative.DebugLog("_GalaxyMapScanComplete: auto-complete SKIPPED (dropped, not re-queued) — a completion run is already in progress")
+        Return
+    EndIf
+
     ; abDiscover=true: a map-scanned body may be never-visited, so ensure its knowledge entry exists
     ; first — UNLESS it's the planet we're physically on (then skip discover to avoid evicting fresh
     ; markers, exactly as CompletePlanet does).
     Bool onIt = (Game.GetPlayer().GetCurrentPlanet() == p)
     float surveyAfter = _CompletePlanetForm(p, "all", !onIt)
+    CompletePlanetSurveyNative.EndRun(gen, "AutoComplete (Orbital Scanner)")
     ; Repaint the star-map info panel in place (the panel cached its data when the scan first painted,
     ; BEFORE this completion, so without this it only updates on a manual deselect/reselect). The
     ; poller does the actual repaint next frame on the main thread.
@@ -650,6 +782,18 @@ EndFunction
 
 ; INTERNAL — the on-scan auto-complete dispatch target. The C++ poller calls this by name (no args)
 ; when the "auto-complete on scan" setting is on. Not a player command.
+; Issue #13: gated with its OWN TryBeginRun/EndRun (calls _CompletePlanetCore directly, NOT the
+; gated CompletePlanet wrapper — nesting would immediately reject itself). On rejection the scan's
+; auto-complete is SKIPPED, not deferred — the pending flag was already consumed by the poller, so
+; it is dropped for good (deliberate: a mid-sweep hand scan is a rare overlap, and the next scan on
+; a still-incomplete planet re-queues naturally). Log-only, no player-facing toast — this can fire
+; on every routine hand-scanner scan.
 Function _AutoCompleteCurrentPlanet() global
-    CompletePlanet("all")
+    int gen = CompletePlanetSurveyNative.TryBeginRun("AutoComplete (Hand Scanner)")
+    If gen == 0
+        CompletePlanetSurveyNative.DebugLog("_AutoCompleteCurrentPlanet: auto-complete SKIPPED (dropped, not re-queued) — a completion run is already in progress")
+        Return
+    EndIf
+    _CompletePlanetCore("all", gen)
+    CompletePlanetSurveyNative.EndRun(gen, "AutoComplete (Hand Scanner)")
 EndFunction
