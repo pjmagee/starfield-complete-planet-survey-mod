@@ -54,18 +54,21 @@ the Nexus page text: [docs/MOD-DESCRIPTION.md](docs/MOD-DESCRIPTION.md).
 Three layers, each with one job:
 
 ```text
-ESM (CompletePlanetSurvey.esm)        one CK-authored Settings toggle (GPOG + GPOF).
+ESM (CompletePlanetSurvey.esm)        the Settings toggles, CK/binary-authored (GPOG + two GPOFs:
+        |                             Hand Scanner, Orbital Scanner).
         |   Game.GetFormFromFile -> GameplayOption.GetValue()
-Papyrus (CompletePlanetSurveyQuest)   the console commands: reads the toggle, validates and routes
+Papyrus (CompletePlanetSurveyQuest)   the console commands: reads the toggles, validates and routes
         |                             the categories, calls the DLL natives.
 DLL (CompletePlanetSurvey.dll)        the SFSE plugin: binds the Papyrus natives, writes survey state
-                                      into the game's knowledge DB, reads authored species from
-                                      Starfield.esm, and hooks the scan call site for the toggle.
+                                      into the game's knowledge DB, reads authored species from every
+                                      plugin in the load order, and hooks the hand-scanner and
+                                      star-map scan call sites for the toggles.
 ```
 
 Survey state is written directly into the engine's per-body knowledge database. No spawning, no
-teleporting, no fast-travel. Species lists for never-visited worlds come from parsing Starfield.esm's
-PNDT / Per Biome Data records at startup. The on-surface scanner outlines and trait pillars are the
+teleporting, no fast-travel. Species lists for never-visited worlds come from parsing the PNDT / Per
+Biome Data records of every loaded master (base game, DLC, Creations) at startup, with file-local
+FormIDs remapped to their runtime values. The on-surface scanner outlines and trait pillars are the
 game's own per-instance state, so they resolve when an area loads rather than being painted in place.
 
 An interactive architecture diagram (rendered from [`docs/*.c4`](docs/) by CI) is published at
@@ -79,8 +82,8 @@ documented in comments right next to it.
 
 ```text
 src/Main.cpp                              SFSE plugin: natives, knowledge-DB writes, the scan hook
-src/EsmReader.cpp, include/EsmReader.h    Starfield.esm PNDT/PPBD reader (galaxy species + markers)
-Data/CompletePlanetSurvey.esm             CK-authored Settings toggle
+src/EsmReader.cpp, include/EsmReader.h    multi-master PNDT/PPBD reader (galaxy species + markers)
+Data/CompletePlanetSurvey.esm             the Settings toggles
 Data/Scripts/Source/User/*.psc            Papyrus sources (the console commands)
 Data/Scripts/*.pex                        compiled scripts
 test/                                     offline marker-validation harness (build_validate.bat)
@@ -110,7 +113,8 @@ Validate the ESM species-marker derivation offline (no game launch needed):
 test\build_validate.bat   :: compiles src/EsmReader.cpp standalone, checks 17 ground-truth species
 ```
 
-It reads `Starfield.esm` from the Steam default; set `CPS_ESM_PATH` if your install is elsewhere.
+It reads `Starfield.esm` from the Steam default; set `CPS_ESM_PATH` if your install is elsewhere, or
+`CPS_ESM_PATHS` (a `;`-separated load order) to exercise the multi-master / DLC path offline.
 
 Recompile Papyrus and deploy locally:
 

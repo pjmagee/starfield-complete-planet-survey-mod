@@ -103,87 +103,115 @@ whatever your DLC and Creations add (Shattered Space brings it to 185).
 
 ---
 
-## The flow: three passes
+## The flow: how a command completes worlds
 
-Running `cgf "CompletePlanetSurveyQuest.CompleteAllPlanetsSurveyData"` kicks off a
-short narrative popup, then three passes:
+*(This section describes the shipped v1.2.0+ design — everything is **ref-free
+data writing**: no spawning, no teleporting. The earlier spawn-one-creature
+approach is preserved as history in
+[`green-outline-attempts.md`](green-outline-attempts.md).)*
 
-### Pass 0 — the popup
-A modal “recall” message (a custom `MESG` record, `CPSRecallMessage`) appears and
-blocks until you press OK. It’s pure framing — it lands the story before the
-cascade of survey-complete notifications begins.
+The four commands share one core. `CompletePlanet` runs it on the world you're
+standing on; `CompleteBarrenPlanets` / `CompleteLifePlanets` loop it across
+their world lists; `CompleteAllPlanets` runs both sweeps with one combined
+result. Each takes a category string (`resources,traits,fauna,flora` or `all`)
+and touches **only** the requested categories.
 
-### Pass 1 — stamp every planet *(fast, native C++)*
-A native sweep walks **all ~1,798 planets** and, for each one:
-- pokes the engine’s own “fully survey this planet” entry point so a knowledge
+### The barren sweep *(fast, native C++)*
+A native sweep walks **all ~1,798 bodies** and, for every world with **no
+authored flora/fauna**:
+- pokes the engine's own “fully survey this planet” entry point so a knowledge
   entry is created and the **Survey Data slate** drops (`ID_102650`);
-- writes the attribute “known” bits and every per-species scan flag / percentage
-  byte **directly into the planet’s data record** (`ID_124898` / `ID_124899`).
+- writes the attribute “known” bits and resource scan flags **directly into the
+  knowledge entry** (`ID_124898` / `ID_124899`) — the same bytes a real scan
+  sets.
 
-Most of this is raw memory writing, which is why it’s fast — the whole pass
-happens in essentially one breath, **with no pauses**.
+This is raw memory writing through the engine's own writers, so the whole sweep
+happens in essentially one breath. A Papyrus **finalize pass** then walks the
+swept list one world per iteration (the script VM naturally spreads it across
+frames): it re-confirms each world reached a true 100% (the engine creates some
+knowledge entries asynchronously, so a few stragglers need a second stamp),
+fires the completion check (`ID_97853`), and marks each world's **traits** as
+known (`ID_52155`).
 
 > **Side effect — XP.** That per-planet “fully survey” call (`ID_102650`) is the
-> same routine a normal orbital scan uses, so it grants survey XP. Across ~1,798
-> planets that’s a large level jump. The raw memory writes grant none; the XP
-> comes from this one engine call. (See the mod page for how to suppress it.)
+> same routine a normal orbital scan uses, so it grants survey XP. Across the
+> galaxy that's a large level jump. The raw byte writes grant none; the XP comes
+> from this one engine call.
 
-### Pass 2 — finalize & mark traits *(careful, Papyrus script)*
-A script then walks the list of swept planets **one at a time**, re-confirms each
-is complete and fires its completion check (`ID_97853`), and marks each planet’s
-**traits** as known (`ID_52155`). Papyrus is slow, so the game spreads this loop
-**across many frames** so it never freezes — no explicit timers, just natural
-yielding.
+Worlds **with** flora/fauna are deliberately excluded from this sweep — stamping
+them “surveyed” without greening their species would claim 100% with unscanned
+life, an invalid state the mod refuses to create.
 
-### Pass 3 — paint flora & fauna green *(the clever pass)*
-This is where the “green = data” insight pays off. Instead of visiting planets, we
-work **per species**:
+### Life worlds — green as pure data *(the clever part)*
+For every world with authored species (the base game has 182; DLC adds more —
+185 with Shattered Space), completion is a per-world sequence of knowledge-DB
+writes, valid for the world you're on **or** a never-visited one across the
+galaxy:
 
-1. Spawn **one invisible, throwaway instance** of the species right where you’re
-   standing — on your *current* loaded planet (the only place anything can spawn).
-2. Use that instance only as a **type sample**, and for every planet that hosts
-   the species, write its “scanned” fact: the **per-type tree write** (`ID_52161`)
-   plus the **count completion** (`ID_52158`), with the **planet named
-   explicitly** each time.
-3. Disable and delete the instance. Move to the next species.
+1. **Ensure the knowledge entry exists** — the ref-free engine discover
+   (`ID_102650`) creates it for a never-visited world (skipped for the world
+   you're standing on, whose entry already exists).
+2. **Resources**: mark the attribute bits and resource flags (as in the sweep).
+3. **Traits**: mark each trait known (`ID_52155`). The in-world “0 of N SCANNED”
+   landmark objects can't be driven remotely (they aren't loaded), but because
+   the trait is now *known*, the game's own `CheckForScanTargetUpdate` resolves
+   them the moment you arrive; on the world you're standing on, the mod drives
+   the vanilla survey quest's own API (`SQ_Parent.DiscoverMatchingPlanetTraits`)
+   to finish them immediately.
+4. **Flora/fauna — the green**: for each authored species on that world, write
+   the same per-(planet, species) knowledge-entry state a real hand scan writes:
+   the **scan-flag byte** (what the outline colour reads), the **percent byte**
+   (what the survey % math reads), and the **attribute-marker catalogue**
+   (genetics / reproduction / temperament / abilities — the rows the scanner
+   panel shows), with the marker set derived offline from the plugin files (see
+   below). No creature is ever spawned; the target planet is addressed by form
+   id.
 
-Only **one creature is ever alive at a time** — spawn, write everywhere, delete.
+Re-runs are true no-ops: any species whose scan flag and marker set are already
+complete is skipped, so repeat commands don't inflate statistics or re-fire
+completion events.
 
-> **Why spawn anything at all, if it’s just a data write?** Because the tree write
-> resolves the species’ *canonical type key* from a **live reference’s** type
-> info — the static base form returns a null key (an earlier attempt confirmed
-> base forms yield `{0,0,0}`). So we need one real, spawned creature to read the
-> key from. Its *location is irrelevant*; only its *type* is used, and the target
-> planet is passed by name. The tree write **alone** only produces blue; the tree
-> write **plus** the count completion is what produces green.
+### Pacing
 
-Every 16 species, the loop takes a **0.05-second breather** so the engine can
-flush the spawn/delete churn before more are created.
+| Stage | Batching | Why it never hitches |
+|---|---|---|
+| Barren sweep | All bodies in one native call | Native writes are near-instant |
+| Finalize / traits / life worlds | One world per script iteration | Papyrus yields across frames by design — a tight native loop isn't needed, and the script VM's own scheduling is the brake |
 
----
-
-## Why the pacing differs between passes
-
-| Pass | Batching | Pauses? | Why |
-|---|---|---|---|
-| 1 — sweep | All ~1,798 at once | None | Native code is fast enough to do it in one shot |
-| 2 — finalize/traits | One planet at a time | None explicit; the script VM spreads it across frames | A tight script loop would freeze the game or overrun its per-frame budget |
-| 3 — green | One *species* at a time (~1,100), each fanning out to all its host planets | Yes — 0.05s every 16 species | It’s the only pass that spawns real objects; the breather lets spawn/delete settle so refs don’t pile up |
-
-One-line model: **the native pass has no brakes; the script passes tap the brakes
-so the engine keeps up.** The trick that keeps Pass 3 quick is working by *unique
-species* (~1,100) rather than *planet × species* — and naming the target planet
-directly so the engine doesn’t need you to be there.
+One-line model: **the native pass has no brakes; the script passes inherit the
+VM's brakes.** There is nothing to throttle beyond that because nothing is
+spawned — every step is a bounded data write.
 
 ---
 
 ## By the numbers (confirmed in testing)
 
-- **1,798 / 1,798** planets completed (survey data).
-- **~1,100** unique flora/fauna species, across **182** biome-bearing worlds.
-- **~1,700** planet-species green records written.
-- Confirmed end-to-end: run on Jemison → fly to a **never-visited** planet → its
-  flora and fauna spawn **green**.
+- **1,798 / 1,798** planets and moons completed (survey data).
+- **~1,100** unique flora/fauna species in the base game, across **182**
+  biome-bearing worlds — **185** with Shattered Space, plus whatever other
+  DLC/Creations add.
+- Confirmed end-to-end: run the command → fly to a **never-visited** planet →
+  its flora and fauna spawn **green**, with the full scanned attribute panel.
+- Confirmed on DLC worlds (v1.5.0): Va'ruun'kai completes via the hand scanner,
+  the orbital scanner, and the console commands.
+
+---
+
+## The auto-complete toggles (v1.3.0+ / v1.4.0+)
+
+The two Settings → Gameplay toggles are crash-safe hooks on two *call sites* of
+the engine's survey check-and-notify (`ID_97853`) — the single function every
+survey change in the game funnels through:
+
+- **Hand Scanner** — the on-surface hand-scan site (`ID_52157`): finish scanning
+  anything on foot and the mod completes that world.
+- **Orbital Scanner** — the star-map scan site (`ID_52173`), filtered to the
+  *scan-level-changed* reason: scan a body on the galaxy map and the mod
+  completes it, then re-invokes the engine's own panel-populate call so the
+  info panel repaints to 100% in place.
+
+Both hooks only *observe* the call and queue work for later dispatch (after the
+scanner UI closes), so the engine's own scan flow is never interrupted.
 
 ---
 
@@ -196,12 +224,18 @@ the Address Library (`REL::ID(n)`). Names are the mod’s own.
 |---|---|---|
 | `126578` | `GetKnowledgeManager` | Singleton holding the per-save knowledge database |
 | `102650` | `ScanCompletePlanet` | Engine’s ref-free “fully survey a planet” (creates the entry, drops the slate, grants XP) |
-| `124898` / `124899` | `IncrementScanFlag` / `SetPercentByte` | Raw per-species scan-flag and percentage writers in the planet data record |
+| `124898` / `124899` | `IncrementScanFlag` / `SetPercentByte` | Per-species scan-flag and percentage writers in the knowledge entry (the outline “green”) |
 | `52155` | `SetTraitKnownNative` | Marks a planet trait as discovered (and fires its event) |
-| `97853` | `SurveyCheckNotify` | Survey check-and-notify; the completion check that drops the Survey Data slate |
-| `52161` | `TypeScanInner` | Per-type “scanned species” **tree** write (the green seed — half of it) |
-| `52158` | `PlanetProgressInner` | Per-species **count completion** (the other half of the green) |
+| `97853` | `SurveyCheckNotify` | Survey check-and-notify — the convergence point; also where the two toggles hook (via its `ID_52157` / `ID_52173` call sites) |
+| `126806` | `DbLookup` | The knowledge DB's own hash-map lookup (resolving a planet's entry without creating one) |
 | `52188` | *(avoided)* | The “which planet am I on?” location resolver we deliberately bypass |
+
+The species **marker catalogue** (the scanned panel's genetics / reproduction /
+temperament / abilities rows) is not written by an engine call at all: the mod
+derives each species' exact marker set offline by evaluating the game's own
+authored `CTDA` conditions from the HandScanner catalog FormLists, and writes
+the result into the knowledge entry — byte-identical to a real scan (validated
+against in-game ground truth, 17/17).
 
 Plus the **EsmReader** (project code, not an engine call): opens every plugin in
 the load order (`Starfield.esm`, DLC, Creations), inflates each `PNDT` record,
