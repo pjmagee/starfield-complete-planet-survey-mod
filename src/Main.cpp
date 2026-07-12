@@ -1539,17 +1539,24 @@ namespace Engine
     // patch); everything else the plugin does (console commands, natives, the other hook) is
     // unaffected, so we do NOT touch g_offsetsValid/g_degraded here — only the caller marks its own
     // g_*HookInstalled flag false (the default) and the affected Settings toggle becomes an inert
-    // no-op until a future build's byte pattern matches again. Logs ONE ERROR line (already logged by
-    // the caller) plus this same non-blocking player notice, so a player who never opens the SFSE log
-    // still learns why flipping the toggle does nothing instead of assuming the mod is broken.
+    // no-op until a future build's byte pattern matches again. The caller's ERROR line names each
+    // miss individually; the player-visible notice shows AT MOST ONCE per process (the once_flag) —
+    // if BOTH scan hooks miss (the likely case when the game rebuilds, since they share the same
+    // notify target), one MessageBox naming the first miss and pointing at the log beats stacking
+    // two — so a player who never opens the SFSE log still learns why the toggles do nothing.
+    inline std::once_flag g_hookMissingNoticeOnce;
+
     inline void NotifyHookMissing(const std::string& featureName)
     {
-        ShowDisabledNotice(std::format(
-            "Complete Planet Survey: the {} scan-hook could not be installed on this game build "
-            "(signature scan miss).\n\n"
-            "Auto-complete-on-scan for {} is disabled until an updated build restores it. "
-            "Everything else — including the console completion commands — still works normally.",
-            featureName, featureName));
+        std::call_once(g_hookMissingNoticeOnce, [&featureName] {
+            ShowDisabledNotice(std::format(
+                "Complete Planet Survey: the {} scan-hook could not be installed on this game build "
+                "(signature scan miss).\n\n"
+                "Auto-complete-on-scan for that feature is disabled until an updated build restores it "
+                "(any other scan-hook failures are listed in the SFSE log). "
+                "Everything else — including the console completion commands — still works normally.",
+                featureName));
+        });
     }
 
     // SizeOfImage of the module at `base`, read from its in-memory PE headers (all guarded).
@@ -1764,6 +1771,16 @@ namespace Papyrus
     void DebugLog(std::monostate, RE::BSFixedString msg)
     {
         spdlog::info("[papyrus] {}", msg.c_str());
+    }
+
+    // ERROR-level sibling of DebugLog (issue #12 review): Papyrus has no log-level primitive of its
+    // own, so genuine script-side failures (e.g. ResolveEsmForm's missing / wrong-type pinned form)
+    // route here and land at spdlog ERROR — greppable as [E] and never dropped by a level cap —
+    // instead of INFO lines that merely contain the word "ERROR". PURE like DebugLog: it must stay
+    // live in a degraded session precisely because it reports failures.
+    void DebugLogError(std::monostate, RE::BSFixedString msg)
+    {
+        spdlog::error("[papyrus] {}", msg.c_str());
     }
 
     // PROBE (isolation test): write the +0x21 scan-flag / +0x20 percent DIRECTLY under the ESM
@@ -2394,11 +2411,15 @@ namespace Papyrus
         }
         auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
 
-        // DebugLog / CategoryEnabled / CategoriesValid are PURE (string parse / logging, no engine
-        // pointers) — bound un-gated so a DEGRADED session (fault latch) still parses categories
-        // honestly. (When offsets are invalid, Register is never called at all — nothing is bound.)
+        // DebugLog / DebugLogError / CategoryEnabled / CategoriesValid are PURE (string parse /
+        // logging, no engine pointers) — bound un-gated so a DEGRADED session (fault latch) still
+        // parses categories and reports failures honestly. (When offsets are invalid, Register is
+        // never called at all — nothing is bound.)
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "DebugLog"sv, CPS_GUARDED_PURE(DebugLog), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "DebugLogError"sv, CPS_GUARDED_PURE(DebugLogError), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, CPS_GUARDED(MarkTraitKnownForPlanet),
@@ -2442,11 +2463,15 @@ namespace Papyrus
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "CancelPendingAutoComplete"sv, CPS_GUARDED(CancelPendingAutoComplete), std::optional<bool> {true}, false);
 
+        // PURE (issue #12 review): these only read our own atomics — no engine pointers — and they
+        // report hook status, so they must answer honestly even in a DEGRADED session. CPS_GUARDED
+        // would return false when g_degraded latches, which Papyrus would mis-attribute to a
+        // sig-scan miss.
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "IsHandScannerHookInstalled"sv, CPS_GUARDED(IsHandScannerHookInstalled), std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "IsHandScannerHookInstalled"sv, CPS_GUARDED_PURE(IsHandScannerHookInstalled), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "IsOrbitalScannerHookInstalled"sv, CPS_GUARDED(IsOrbitalScannerHookInstalled), std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "IsOrbitalScannerHookInstalled"sv, CPS_GUARDED_PURE(IsOrbitalScannerHookInstalled), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "GetGalaxyScanPlanetFormId"sv, CPS_GUARDED(GetGalaxyScanPlanetFormId), std::optional<bool> {true}, false);
@@ -2494,7 +2519,7 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "GetSweepNotAttemptedCount"sv, CPS_GUARDED(GetSweepNotAttemptedCount),
             std::optional<bool> {true}, false);
 
-        spdlog::info("Bound Papyrus natives: DebugLog, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
+        spdlog::info("Bound Papyrus natives: DebugLog, DebugLogError, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "
                      "IsHandScannerHookInstalled, IsOrbitalScannerHookInstalled, "

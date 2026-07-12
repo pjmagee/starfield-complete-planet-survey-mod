@@ -26,14 +26,17 @@ ScriptName CompletePlanetSurveyQuest
 ; docs/ESM-BINARY-EDIT-CHECKLIST.md for the safe (non-CK, FormID-preserving) way to add a NEW record
 ; to the master, and verify all THREE ids below in xEdit/SF1Edit after any CK regen regardless.
 ;
-; FAILURE POLICY when ResolveEsmForm can't find a pinned form (see ResolveEsmForm below for the log):
-;   - Settings TOGGLES (GPOF) are FAIL-CLOSED: the caller treats "not found" the same as "off", since
-;     we cannot safely assume the player's intended value. The toggle becomes an inert no-op — never
-;     a crash, never a guess — until the ESM is fixed. (CompleteSurveyIfEnabled, _GalaxyMapScanComplete.)
+; FAILURE POLICY when a pinned form can't be resolved — either NOT FOUND (ResolveEsmForm returns
+; None) or WRONG TYPE (the form resolved but the cast failed: the classic renumbered-FormID case,
+; where the id now points at some OTHER record — worse than missing, because nothing else notices):
+;   - Settings TOGGLES (GPOF) are FAIL-CLOSED: the caller treats both failures the same as "off",
+;     since we cannot safely assume the player's intended value. The toggle becomes an inert no-op —
+;     never a crash, never a guess — until the ESM is fixed. (ResolveEsmToggle wraps both checks.)
 ;   - The cosmetic intro MESSAGE is FAIL-OPEN: the underlying sweep/completion still runs; only the
 ;     immersive popup is skipped. A player never loses functionality over a missing flavor popup.
-;   Both paths now LOG a clear, named error via ResolveEsmForm — the old asymmetry (the message form
-;   failed silently while the toggles logged) is gone; every pinned form logs the same way.
+;   Both failure modes LOG a clear, named ERROR (DebugLogError -> spdlog error) — the old asymmetry
+;   (the message form failed silently while the toggles logged) is gone; every pinned form logs the
+;   same way, for missing AND wrong-type alike.
 ;=================================================================================================
 int Function _FormId_RecallMessage() global
     Return 0x807   ; MESG CPSRecallMessage — CompleteBarrenPlanets' immersive intro popup (cosmetic)
@@ -50,15 +53,30 @@ EndFunction
 ; Resolve-or-log helper (issue #12): the ONE place every pinned FormID above is actually looked up.
 ; asDebugName should name what the form IS, not just repeat the hex, so the log line is self-
 ; explaining without cross-referencing this file (e.g. "GPOF CPSScanAutoComplete (Hand Scanner
-; toggle, 0x80C)"). Logs via the native DebugLog channel (there is no separate Papyrus "log at ERROR"
-; primitive) with an ERROR-worded message, so it reads as a problem in the SFSE log even though the
-; underlying log level is INFO — consistent with how this file already flagged 0x80C/0x80D misses.
+; toggle, 0x80C)"). Failures log at real ERROR level via the DebugLogError native (spdlog::error),
+; so they read as [E] in the SFSE log and survive any level filtering.
 Form Function ResolveEsmForm(int aiFormId, string asDebugName) global
     Form f = Game.GetFormFromFile(aiFormId, "CompletePlanetSurvey.esm")
     If f == None
-        CompletePlanetSurveyNative.DebugLog("ResolveEsmForm: ERROR — '" + asDebugName + "' not found in CompletePlanetSurvey.esm — ESM missing, not enabled, or FormID reassigned by a CK regen (verify in xEdit; see docs/ESM-BINARY-EDIT-CHECKLIST.md)")
+        CompletePlanetSurveyNative.DebugLogError("ResolveEsmForm: '" + asDebugName + "' not found in CompletePlanetSurvey.esm — ESM missing, not enabled, or FormID reassigned by a CK regen (verify in xEdit; see docs/ESM-BINARY-EDIT-CHECKLIST.md)")
     EndIf
     Return f
+EndFunction
+
+; Toggle-flavored wrapper: resolve AND cast to GameplayOption, logging a named error on EITHER
+; failure. The wrong-type branch matters (issue #12 review): a renumbered FormID that now points at
+; some other record resolves non-None but casts to None — without this log that's a silent Return,
+; exactly the failure mode the checklist warns about. Returns None on any failure (fail-closed).
+GameplayOption Function ResolveEsmToggle(int aiFormId, string asDebugName) global
+    Form f = ResolveEsmForm(aiFormId, asDebugName)   ; logs the not-found case itself
+    If f == None
+        Return None
+    EndIf
+    GameplayOption opt = f as GameplayOption
+    If opt == None
+        CompletePlanetSurveyNative.DebugLogError("ResolveEsmToggle: '" + asDebugName + "' resolved but is NOT a GameplayOption — FormID renumbered to a different record type? (verify in xEdit; see docs/ESM-BINARY-EDIT-CHECKLIST.md)")
+    EndIf
+    Return opt
 EndFunction
 
 ; Green a planet's flora/fauna REF-FREE (no spawning) — the standard species-completion path for every
@@ -190,9 +208,14 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     ; NOT a toast. A toast would be buried under the cascade of native "<Planet> Survey Data"
     ; notifications that drains over several minutes. Message.Show() is modal and blocks until the
     ; player presses OK, so the narrative lands first; the cascade that follows becomes the story.
-    ; FAIL-OPEN (see the PINNED ESM FORMIDS policy block above): a missing form only skips the popup
-    ; (now logged, not silent) — the sweep below runs regardless.
-    Message recallMsg = ResolveEsmForm(_FormId_RecallMessage(), "MESG CPSRecallMessage (intro popup, 0x807)") as Message
+    ; FAIL-OPEN (see the PINNED ESM FORMIDS policy block above): a missing OR wrong-type form only
+    ; skips the popup (both logged, not silent) — the sweep below runs regardless.
+    Form recallForm = ResolveEsmForm(_FormId_RecallMessage(), "MESG CPSRecallMessage (intro popup, 0x807)")
+    Message recallMsg = recallForm as Message
+    If recallForm != None && recallMsg == None
+        ; Resolved but wrong type = renumbered FormID pointing at another record (issue #12 review).
+        CompletePlanetSurveyNative.DebugLogError("CompleteBarrenPlanets: 'MESG CPSRecallMessage (intro popup, 0x807)' resolved but is NOT a Message — FormID renumbered to a different record type? (verify in xEdit; see docs/ESM-BINARY-EDIT-CHECKLIST.md)")
+    EndIf
     If recallMsg != None
         recallMsg.Show()
     EndIf
@@ -512,8 +535,7 @@ EndFunction
 Function CompleteSurveyIfEnabled() global
     ; FAIL-CLOSED (see the PINNED ESM FORMIDS policy block near the top of this file): a missing
     ; toggle form is treated as "off" — logged by ResolveEsmForm, not silent.
-    Form gpofForm = ResolveEsmForm(_FormId_HandScannerToggle(), "GPOF CPSScanAutoComplete (Hand Scanner toggle, 0x80C)")
-    GameplayOption gpofOption = gpofForm as GameplayOption
+    GameplayOption gpofOption = ResolveEsmToggle(_FormId_HandScannerToggle(), "GPOF CPSScanAutoComplete (Hand Scanner toggle, 0x80C)")
     If gpofOption == None
         Return
     EndIf
@@ -522,9 +544,10 @@ Function CompleteSurveyIfEnabled() global
     EndIf
 
     ; The toggle only MEANS something if the native hook that is SUPPOSED to invoke this function is
-    ; actually armed (issue #12) — normally this is moot (a missing hook never calls us at all, since
-    ; it's the hook's job to dispatch here), but this guards a future direct invocation and makes the
-    ; "toggle on but nothing happens" state diagnosable from the log instead of a silent no-op.
+    ; actually armed (issue #12). NOTE: on a real sig-scan miss this guard normally never executes —
+    ; a missing hook simply never dispatches here, so flipping the toggle produces NO Papyrus log
+    ; line; the only signals are Hook::Install's load-time ERROR + one-time player notice. This is
+    ; defense-in-depth for any future DIRECT invocation of this function without the hook armed.
     If !CompletePlanetSurveyNative.IsHandScannerHookInstalled()
         CompletePlanetSurveyNative.DebugLog("CompleteSurveyIfEnabled: Hand Scanner hook not installed this session (sig-scan miss at load — see the SFSE log) — ignoring")
         Return
@@ -546,8 +569,7 @@ EndFunction
 Function _GalaxyMapScanComplete() global
     ; FAIL-CLOSED (see the PINNED ESM FORMIDS policy block near the top of this file): a missing
     ; toggle form is treated as "off" — logged by ResolveEsmForm, not silent.
-    Form gpofForm = ResolveEsmForm(_FormId_OrbitalScannerToggle(), "GPOF CPSGalaxyMapScan (Orbital Scanner toggle, 0x80D)")
-    GameplayOption gpofOption = gpofForm as GameplayOption
+    GameplayOption gpofOption = ResolveEsmToggle(_FormId_OrbitalScannerToggle(), "GPOF CPSGalaxyMapScan (Orbital Scanner toggle, 0x80D)")
     If gpofOption == None
         Return
     EndIf
@@ -555,8 +577,9 @@ Function _GalaxyMapScanComplete() global
         Return   ; setting off -> vanilla galaxy-map scan
     EndIf
 
-    ; Same hook-armed guard as CompleteSurveyIfEnabled (issue #12) — moot in normal play (the hook
-    ; dispatches here itself), defense-in-depth against a future direct invocation.
+    ; Same hook-armed guard as CompleteSurveyIfEnabled (issue #12): normally never executes on a real
+    ; sig-scan miss (a missing hook never dispatches here — no Papyrus log line results; the signals
+    ; are the load-time ERROR + notice). Defense-in-depth against a future direct invocation.
     If !CompletePlanetSurveyNative.IsOrbitalScannerHookInstalled()
         CompletePlanetSurveyNative.DebugLog("_GalaxyMapScanComplete: Orbital Scanner hook not installed this session (sig-scan miss at load — see the SFSE log) — ignoring")
         Return
