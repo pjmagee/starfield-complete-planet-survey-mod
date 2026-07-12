@@ -38,8 +38,13 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
 
 - `src/Main.cpp` — the plugin: REL::ID engine bindings, the native Papyrus functions, the
   survey/trait/species completion logic, character-Statistics writes, the scan-site hook.
-- `src/EsmReader.cpp` + `include/EsmReader.h` — offline Starfield.esm PNDT/PPBD reader (galaxy
-  species lists + scan markers for never-visited worlds).
+- `src/EsmReader.cpp` + `include/EsmReader.h` — offline multi-master PNDT/PPBD reader (galaxy
+  species lists + scan markers for never-visited worlds). Parses EVERY loaded master in load order
+  (base + DLC/Creations, e.g. ShatteredSpace.esm — the Dazra/Va'ruun'kai fix) with per-file FormID
+  remapping to runtime ids (full / FD-medium / FE-small index spaces, later file overrides earlier);
+  Main.cpp hands it the engine load order from TESDataHandler at kPostDataLoad (any failure → the
+  old Starfield.esm-only fallback). Offline: `CPS_ESM_PATHS` (';'-separated load order) or legacy
+  single-file `CPS_ESM_PATH`.
 - `Data/Scripts/Source/User/CompletePlanetSurveyQuest.psc` — the console commands.
 - `Data/Scripts/Source/User/CompletePlanetSurveyNative.psc` — `native` decls for the C++ functions.
 - `Data/CompletePlanetSurvey.esm` — the Settings toggles (Hand Scanner `0x80C`, Orbital Scanner
