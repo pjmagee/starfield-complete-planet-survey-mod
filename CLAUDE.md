@@ -20,6 +20,10 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
 - `deploy.bat` — compiles Papyrus + copies DLL/ESM/.pex into the game. **Refuses while Starfield
   is running** (DLL/ESM are locked — close the game first).
 - Compile one script only: `PapyrusCompiler.exe "<Script>" -i=<game>\Data\Scripts\Source;Data\Scripts\Source\User -f=<flags> -o=Data\Scripts`.
+- **Git-worktree builds**: in a worktree nested under the repo dir, plain `build.bat`/`xmake`
+  silently builds the MAIN checkout ("You are working in the project directory" warning) and then
+  fails `[FAIL] DLL not produced`. Force the project dir: `xmake f -m releasedbg -y -P . && xmake -y -P .`
+  — and `git submodule update --init --recursive` first (worktrees don't inherit submodules).
 - **In-game behaviour can only be verified by the user** — the running game can't be automated.
 
 ## CI & release (`.github/workflows/`)
@@ -30,9 +34,12 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
   the group id is validated (v1.2.0 + v1.3.0 tag runs green).
 - `pages.yml` — renders the LikeC4 architecture model (`docs/*.c4`) to GitHub Pages;
   `docs/dist/` is CI output and gitignored.
-- Release flow: update CHANGELOG.md (use the `changelog` skill) → tag → CI publishes → paste
-  `docs/NEXUS-DESCRIPTION.bbcode.txt` (into the Nexus editor's **BBCode source view**, not the
-  WYSIWYG view) and `docs/NEXUS-CHANGELOG.txt` onto mod page 16493.
+- Release flow: use the `release` skill (gates → version bump → `changelog` skill → tag → CI
+  publishes → paste `docs/NEXUS-DESCRIPTION.bbcode.txt` into the Nexus editor's **BBCode source
+  view**, not WYSIWYG, + `docs/NEXUS-CHANGELOG.txt` onto mod page 16493).
+- **Version fields DRIFT**: the tag is what CI releases, but `xmake.lua set_version` and
+  `include/Plugin.h Plugin::Version` (the SFSE log banner) must be bumped by hand — v1.5.0 shipped
+  logging "v1.4.0.0". Sync all three every release.
 
 ## Layout
 
@@ -93,13 +100,24 @@ hook, ScanLevelChanged; also repaints the star-map panel in place). See `docs/CO
 - **Formless scripts unbind on quit-to-menu** — the VM drops their types on session teardown, which
   unbinds the natives; Main.cpp re-binds per session. Any NEW native must be registered in that same
   re-bind path or it dies after a Main-Menu reload.
+- **New engine bindings go in the X-macro table** (`CPS_RELOC_IDS`/`CPS_HOOKSITE_IDS` in Main.cpp):
+  it generates the declaration, the load-time versionlib probe, AND the direct-RVA assignment in one
+  list. A bare `REL::ID`/`REL::Relocation` outside it bypasses the probe and reintroduces the
+  crash-on-stale-versionlib the probe exists to prevent (CommonLibSF-internal ids our calls touch are
+  probe-only entries — re-audit them on submodule bumps).
+- **New user-facing commands must take the run gate** — `TryBeginRun`/`EndRun(generation)` like the
+  existing wrappers, with the core validating the generation; the cross-frame caches are consumed by
+  index and an ungated command can interleave/corrupt a multi-frame run.
 - **Logging** — spdlog must `flush_on(info)` (Starfield exit eats unflushed lines); runtime log under
-  `…\My Games\Starfield\SFSE\Logs\CompletePlanetSurvey.log`.
+  `…\My Games\Starfield\SFSE\Logs\CompletePlanetSurvey.log`. The log is TRUNCATED on every game
+  launch — read/copy a run's evidence before the next launch overwrites it.
 - **Deep RE notes** live in the session's local memory + `re/`, not all in git.
 
 ## Skills
 
 - `/changelog` — honest tag-to-tag CHANGELOG + Nexus-notes maintenance (behaviour vs refactor split,
   versioning policy).
+- `/release` — cut a release end-to-end: gates (CI, build, offline validation, the user's in-game
+  checklist + healthy-log signature), three-place version bump, tag → CI → Nexus steps.
 - `/starfield-modding` — SFSE / CommonLibSF / Papyrus / Ghidra / address-library workflow reference.
 - `/grok` — xAI grok CLI as a separate-billing reviewer / background worker (`.claude/skills/grok/`).
