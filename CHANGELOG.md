@@ -39,7 +39,15 @@ verified.
 
 ## [Unreleased]
 
-*No unreleased changes.*
+### Fixed
+
+- **SFSE compatible-version list matches verified struct layouts.** The manifest previously
+  declared **1.16.244.0** only (`RUNTIME_LATEST`) while native Address Library IDs and
+  Ghidra-derived struct offsets are verified byte-identical across **1.16.236.0**,
+  **1.16.242.0**, and **1.16.244.0** (`re/ghidra/output/offset-skew-236-vs-244.md`). With
+  `IsLayoutDependent(true)`, SFSE refused to load on 236/242 despite that verification; the
+  manifest now lists all three builds. Update the list on each release when offsets are
+  re-verified for a new game version.
 
 ## [1.5.0] — 2026-07-12
 
