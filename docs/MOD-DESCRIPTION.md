@@ -134,15 +134,66 @@ The names are in quotes and case-sensitive. The ones this mod touches:
 - `"Fauna Fully Scanned"`
 - `"Unique Creatures Scanned"`
 
-**Why you might.** These counters are cumulative and additive. If you run a completion command
-several times on the same save, some can climb past the real galaxy total (each run counts again).
-To pull one back to the true number, subtract the excess — e.g. `ModPCMS "Planets Fully Surveyed" -2000`
-— then re-check with `GetPCMS`. Same tool if you'd rather zero a counter out and start clean.
+**Why you might.** Since v1.3.0 re-running a completion command is a true no-op (already-done work
+is skipped, so the counters don't inflate). But if a counter ever drifted — an older version, other
+mods, or your own tinkering — this is the tool to fix it: subtract the excess, e.g.
+`ModPCMS "Planets Fully Surveyed" -2000`, then re-check with `GetPCMS`. Same tool if you'd rather
+zero a counter out and start clean.
 
 These changes are additive and permanent in the save, and (like any console command) they switch
 achievements off for that save unless you run an Achievement Enabler mod.
 
-## Optional setting
+## Optional settings
 
-There's an "auto-complete on scan" toggle under Settings > Gameplay. Turn it on and scanning any single
-plant or creature finishes that whole world for you. Leave it off to do everything by command.
+Two toggles under Settings > Gameplay, both off by default:
+
+- **Hand Scanner** — scanning any single plant or creature on foot finishes that whole world for you.
+- **Orbital Scanner** — scanning a planet or moon on the star map finishes that world, and the info
+  panel updates to 100% on the spot.
+
+Leave them off to do everything by command.
+
+## FAQ
+
+**Does it just paint the outlines green?**
+No. It writes the same underlying survey data a real scan writes — the green outline, the survey %,
+the scanner-panel details (genetics, reproduction, temperament), the Survey Data slate and the
+statistics all follow from that data. A world the mod completed is indistinguishable from one you
+surveyed by hand.
+
+**Does it visit or load the planets in the background?**
+No. Nothing is visited, loaded, spawned or teleported. The mod reads each planet's authored contents
+from the game's own plugin files and writes the survey results into the same bookkeeping the game
+keeps in your save.
+
+**Does it edit my save file?**
+No. It writes through the running game, using the engine's own functions; your next normal save
+stores the result exactly as if you had done the scans yourself.
+
+**If I uninstall the mod, do the surveys revert?**
+No. Completed surveys are ordinary vanilla save data. Remove the mod and everything stays surveyed.
+
+**Is the XP a cheat the mod adds?**
+The XP is the game's own reward for surveying — the mod completes lifeless worlds through the
+engine's own survey routine, and that routine grants the XP. The mod adds nothing on top. See
+"Watch the XP" above before running the whole galaxy.
+
+**Does running a command twice double anything?**
+No. Re-runs detect the work is already done and do nothing — no double XP, no inflated statistics.
+
+**Does it work with DLC and mod-added planets?**
+Yes (v1.5.0+). The mod reads your full load order — base game, Shattered Space, Creations, other
+mods — following the game's own load-order rules. No per-DLC patch needed.
+
+**Does it conflict with other mods?**
+Very unlikely. The ESM only *adds* two settings records and modifies no vanilla record. The DLL
+changes no game files on disk.
+
+**Will it survive game updates?**
+Like every SFSE mod, the DLL needs a matching SFSE and Address Library for your exact game version —
+after a game patch, wait for those to update. Your completed surveys are never at risk; they live in
+the save.
+
+**Do the console commands disable achievements?**
+Using the console flags the save as modded, as with any Starfield console command — that's the
+game's rule, not the mod's. An Achievement Enabler mod restores achievements if you want both.

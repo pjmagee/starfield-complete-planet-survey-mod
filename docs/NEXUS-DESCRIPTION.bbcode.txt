@@ -2,7 +2,7 @@
 
 Finish planet surveys from the console. One world, or the whole galaxy.
 
-Resources, traits, flora and fauna get marked surveyed. The survey hits 100%, the star map updates, and the [i]"<Planet> Survey Data"[/i] items land in your inventory. It works on worlds you've never even been to.
+Resources, traits, flora and fauna get marked surveyed. The survey hits 100%, the star map updates, and the [i]"<Planet> Survey Data"[/i] items land in your inventory. It works on worlds you've never even been to — including DLC and Creations worlds like Va'ruun'kai (v1.5.0+).
 
 You pick which worlds and which categories to complete, so it fits how you play.
 
@@ -113,6 +113,46 @@ If you'd rather skip the levels:
 [/list]
 
 
-[size=4][b]Optional setting[/b][/size]
+[size=4][b]Optional settings[/b][/size]
 
-There's an "auto-complete on scan" toggle under Settings > Gameplay. Turn it on and scanning any single plant or creature finishes that whole world for you. Leave it off to do everything by command.
+Two toggles under Settings > Gameplay, both off by default:
+
+[list]
+[*][b]Hand Scanner[/b] - scanning any single plant or creature on foot finishes that whole world for you.
+[*][b]Orbital Scanner[/b] - scanning a planet or moon on the star map finishes that world, and the info panel updates to 100% on the spot.
+[/list]
+
+Leave them off to do everything by command.
+
+
+[size=4][b]FAQ[/b][/size]
+
+[b]Does it just paint the outlines green?[/b]
+No. It writes the same underlying survey data a real scan writes — the green outline, the survey %, the scanner-panel details (genetics, reproduction, temperament), the Survey Data slate and the statistics all follow from that data. A world the mod completed is indistinguishable from one you surveyed by hand.
+
+[b]Does it visit or load the planets in the background?[/b]
+No. Nothing is visited, loaded, spawned or teleported. The mod reads each planet's authored contents from the game's own plugin files and writes the survey results into the same bookkeeping the game keeps in your save.
+
+[b]Does it edit my save file?[/b]
+No. It writes through the running game, using the engine's own functions; your next normal save stores the result exactly as if you had done the scans yourself.
+
+[b]If I uninstall the mod, do the surveys revert?[/b]
+No. Completed surveys are ordinary vanilla save data. Remove the mod and everything stays surveyed.
+
+[b]Is the XP a cheat the mod adds?[/b]
+The XP is the game's own reward for surveying — the mod completes lifeless worlds through the engine's own survey routine, and that routine grants the XP. The mod adds nothing on top. See "Watch the XP" above before running the whole galaxy.
+
+[b]Does running a command twice double anything?[/b]
+No. Re-runs detect the work is already done and do nothing — no double XP, no inflated statistics.
+
+[b]Does it work with DLC and mod-added planets?[/b]
+Yes (v1.5.0+). The mod reads your full load order — base game, Shattered Space, Creations, other mods — following the game's own load-order rules. No per-DLC patch needed.
+
+[b]Does it conflict with other mods?[/b]
+Very unlikely. The ESM only [i]adds[/i] two settings records and modifies no vanilla record. The DLL changes no game files on disk.
+
+[b]Will it survive game updates?[/b]
+Like every SFSE mod, the DLL needs a matching SFSE and Address Library for your exact game version — after a game patch, wait for those to update. Your completed surveys are never at risk; they live in the save.
+
+[b]Do the console commands disable achievements?[/b]
+Using the console flags the save as modded, as with any Starfield console command — that's the game's rule, not the mod's. An Achievement Enabler mod restores achievements if you want both.
