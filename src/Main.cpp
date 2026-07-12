@@ -1021,23 +1021,38 @@ namespace Engine
         std::vector<std::uint32_t> work;
         total         = 0;
         skippedLiving = 0;
+        int faulted   = 0;
 
         const auto& planetSpecies = Esm::GetPlanetSpecies();
         ForEachFormOfType(RE::FormType::kPNDT, [&](RE::TESForm* form)
         {
             ++total;
-            if (!form)
-                return;
-            const auto planetId = ReadPlanetId(form);
-            if (!planetId)
-                return;
-            if (planetSpecies.count(planetId))
+            // PER-FORM fault isolation (PR #26 review; same spirit as SweepBarrenChunk's per-planet
+            // catch): one bad PNDT — a garbage +0x54 read on a malformed form — must skip just that
+            // form. Without this, a single AV escapes to GuardedNative, latches the session-wide
+            // degrade and kills every later traits/system native over one form. /EHa (src is built
+            // with it) makes catch(...) trap the access violation, not just C++ exceptions.
+            try
             {
-                ++skippedLiving;
-                return;
+                if (!form)
+                    return;
+                const auto planetId = ReadPlanetId(form);
+                if (!planetId)
+                    return;
+                if (planetSpecies.count(planetId))
+                {
+                    ++skippedLiving;
+                    return;
+                }
+                work.push_back(form->GetFormID());
             }
-            work.push_back(form->GetFormID());
+            catch (...)
+            {
+                ++faulted;
+            }
         });
+        if (faulted > 0)
+            spdlog::warn("CollectBarrenPlanetForms: {} PNDT forms faulted during classification and were skipped", faulted);
         return work;
     }
 
@@ -2556,12 +2571,13 @@ namespace Papyrus
     }
 
     // SYSTEM scope (issue #16): every PNDT body sharing akPlanet's parent star, from the ESM-derived
-    // planet->star map (PNDT GNAM leads with the same star id the parent STDT's DNAM carries) — no
-    // new engine offset, and offline-validated by test/ValidateMarkers.cpp against Starfield.esm.
-    // The map's keys/values are runtime FormIDs/star ids, so DLC systems (e.g. Va'ruun'kai) resolve
-    // through the same multi-master remap as the species lists. Sol's star id is 0 (a VALID id) —
-    // membership is map PRESENCE, never "id != 0". Returns the member count (>= 1 on success: the
-    // anchor itself is a member), or 0 when akPlanet is null/unknown to the map (caller refuses).
+    // planet->star map — no new engine offset, and offline-validated by test/ValidateMarkers.cpp
+    // against Starfield.esm. Map KEYS are runtime planet FormIDs (multi-master remapped, so DLC
+    // systems like Va'ruun'kai resolve exactly like the species lists); map VALUES are the engine's
+    // own star ids — the id space the star's STDT DNAM carries (and the PNDT GNAM leads with), NOT
+    // FormIDs, never remapped. Sol's star id is 0 and VALID — membership is map PRESENCE, never
+    // "id != 0". Returns the member count (>= 1 on success: the anchor itself is a member), or 0
+    // when akPlanet is null/unknown to the map (caller refuses).
     static std::vector<std::uint32_t> g_systemPlanetCache;
     static std::mutex                 g_systemPlanetMtx;
 

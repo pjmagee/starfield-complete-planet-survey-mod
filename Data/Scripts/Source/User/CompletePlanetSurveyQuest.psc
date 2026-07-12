@@ -284,25 +284,39 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
 
     float t0 = Utility.GetCurrentRealTime()
     bool doResources = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "resources")
+    bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     bool doSpecies   = _WantsSpecies(asCategories)
-    int worlds = 0
+    ; Belt-and-braces (mirrors _CompleteLifePlanetsCore): CategoriesValid in the wrapper already
+    ; guarantees at least one recognized token, but the guard keeps a future direct caller honest.
+    If !doResources && !doTraits && !doSpecies
+        Debug.Notification("CompleteSystem: nothing selected (resources,traits,fauna,flora,all)")
+        Return
+    EndIf
+
+    ; MAIN PASS: per body, capture the pre-write 100% state (for the post-run "newly completed"
+    ; metric below), then run the shared per-planet core — discover-if-needed + the requested
+    ; categories, ref-free. abDiscover=false for the planet you're physically on: its entry exists,
+    ; and the async re-discover would evict freshly written species markers (exactly as
+    ; CompletePlanet / CompleteLifePlanets handle it).
+    int preComplete = 0
+    int resolveMisses = 0
     int i = 0
     While i < n
         int pid = CompletePlanetSurveyNative.GetSystemPlanetFormIdAt(i)
         Planet p = Game.GetForm(pid) as Planet
-        If p != None
-            Bool wasComplete = p.GetSurveyPercent() >= 1.0   ; already fully surveyed BEFORE this run?
-            ; The shared per-planet core: discover-if-needed + the requested categories, ref-free.
-            ; abDiscover=false for the planet you're physically on — its entry exists, and the async
-            ; re-discover would evict freshly written species markers (exactly as CompletePlanet /
-            ; CompleteLifePlanets handle it).
-            _CompletePlanetForm(p, asCategories, p != currentPlanet)
-            ; Count only worlds this run NEWLY brought forward, so re-runs report honestly (0 when the
-            ; system was already done). A category mix that can't reach 100% on its own (e.g. pure
-            ; "fauna,flora") keeps counting each run — expected, those never fully "complete".
-            If !wasComplete
-                worlds += 1
+        If p == None
+            ; A non-zero id that doesn't resolve to a Planet is exactly the failure DLC-system
+            ; debugging needs named, not swallowed (PR #26 review) — e.g. a Creation was removed,
+            ; or the runtime remap went stale.
+            If pid != 0
+                resolveMisses += 1
+                CompletePlanetSurveyNative.DebugLog("_CompleteSystemCore: system-list formId " + pid + " did not resolve to a Planet — body skipped (plugin removed, or a stale runtime remap?)")
             EndIf
+        Else
+            If p.GetSurveyPercent() >= 1.0
+                preComplete += 1
+            EndIf
+            _CompletePlanetForm(p, asCategories, p != currentPlanet)
         EndIf
         i += 1
     EndWhile
@@ -315,6 +329,14 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
     ; traits-only run is self-sufficient and completes in the first loop.
     If doResources || doSpecies
         Utility.Wait(1.0)
+        ; Issue #13 (PR #26 review): re-validate the gate on wake BEFORE consuming the system list
+        ; again — mirrors the barren core's post-popup recheck. If the gate was stolen (stuck-run
+        ; timeout) or session-cleared during the Wait, the new owner may already be refilling the
+        ; enumeration caches; abort without touching them.
+        If !CompletePlanetSurveyNative.IsRunActive(aiGeneration)
+            CompletePlanetSurveyNative.DebugLog("_CompleteSystemCore: gate lost while waiting for the deferred entry creates (stolen after the stuck-run timeout, or session-cleared) — aborting without touching the caches")
+            Return
+        EndIf
         i = 0
         While i < n
             int fpid = CompletePlanetSurveyNative.GetSystemPlanetFormIdAt(i)
@@ -326,12 +348,32 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
         EndWhile
     EndIf
 
+    ; RESULT METRIC (PR #26 review): "newly completed" is measured AFTER processing + finalize —
+    ; postComplete - preComplete — never charged up front on the old !wasComplete counter, which
+    ; claimed success before it was known (partial categories, failed writes and unresolvable forms
+    ; all inflated it). Partial category mixes that can't reach 100% now honestly report 0 newly
+    ; completed (the popup's "processed" wording covers the work that still happened).
+    int postComplete = 0
+    i = 0
+    While i < n
+        int qpid = CompletePlanetSurveyNative.GetSystemPlanetFormIdAt(i)
+        Planet qp = Game.GetForm(qpid) as Planet
+        If qp != None && qp.GetSurveyPercent() >= 1.0
+            postComplete += 1
+        EndIf
+        i += 1
+    EndWhile
+    int worlds = postComplete - preComplete
+    If worlds < 0
+        worlds = 0
+    EndIf
+
     float secs = Utility.GetCurrentRealTime() - t0
-    CompletePlanetSurveyNative.DebugLog("CompleteSystem[" + asCategories + "]: " + worlds + " of " + n + " system bodies newly completed in " + secs + "s")
-    If worlds == 0
-        Debug.MessageBox("System already surveyed — nothing new to catalogue (" + asCategories + ").")
+    CompletePlanetSurveyNative.DebugLog("CompleteSystem[" + asCategories + "]: " + n + " system bodies processed, at-100% " + preComplete + " -> " + postComplete + " (" + worlds + " newly completed), " + resolveMisses + " unresolved, in " + secs + "s")
+    If worlds > 0
+        Debug.MessageBox("System survey complete.  " + worlds + " of " + n + " bodies newly at 100% (" + asCategories + ").  Done in " + (secs as int) + "s.")
     Else
-        Debug.MessageBox("System survey complete.  " + worlds + " of " + n + " bodies newly catalogued (" + asCategories + ").  Done in " + (secs as int) + "s.")
+        Debug.MessageBox("System processed: " + n + " bodies (" + asCategories + ").  Nothing newly reached 100% — already surveyed, or the chosen categories alone don't finish a world.")
     EndIf
 EndFunction
 
@@ -342,7 +384,9 @@ EndFunction
 ; Barren = worlds with no flora/fauna. Resources are written by the sweep as it discovers each
 ; world (always applied); "traits" additionally marks each world's traits known.
 ; abShowResult=false suppresses the result popup (CompleteAllPlanets shows ONE combined result instead);
-; the immersive CPSRecallMessage intro always shows. Returns the count of barren worlds fully surveyed.
+; the immersive CPSRecallMessage intro always shows. Returns the count of barren worlds NEWLY completed
+; THIS RUN (resources path: the sweep's own attempted set now at 100%; traits-only: worlds the trait
+; pass carried from <100% to 100%) — 0 on a re-run of an already-complete galaxy.
 int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true) global
     If !CompletePlanetSurveyNative.CategoriesValid(asCategories)   ; typo/empty -> clean no-op
         Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
@@ -502,33 +546,65 @@ int Function _CompleteBarrenPlanetsCore(string asCategories, bool abShowResult, 
         notAttempted = CompletePlanetSurveyNative.GetSweepNotAttemptedCount()
     EndIf
 
-    ; 3) Trait pass + completion tally across ALL barren worlds. Decoupled from the sweep (issue
-    ;    #16): enumerated directly via EnumerateBarrenPlanets — the exact classification the sweep
-    ;    uses — instead of reading the swept list, so a traits-only run never depends on the
-    ;    resources sweep populating state (and an aborted sweep no longer hides not-attempted worlds
-    ;    from the trait pass; MarkTraits is self-sufficient). TRAITS marks each world's trait
-    ;    keywords known; the 100% count feeds the result popup. The slate is a 100%-side-effect of
-    ;    the resource writes, so a traits-only run on a resource-incomplete world correctly drops none.
-    int count = CompletePlanetSurveyNative.EnumerateBarrenPlanets()
+    ; 3) Trait pass across ALL barren worlds. Decoupled from the sweep (issue #16): enumerated
+    ;    directly via EnumerateBarrenPlanets — the exact classification the sweep uses — instead of
+    ;    reading the swept list, so a traits-only run never depends on the resources sweep populating
+    ;    state (and an aborted sweep no longer hides not-attempted worlds from the trait pass;
+    ;    MarkTraits is self-sufficient). The slate is a 100%-side-effect of the resource writes, so a
+    ;    traits-only run on a resource-incomplete world correctly drops none.
+    ;    WORK vs METRICS (PR #26 review): this galaxy-absolute list is for the trait WORK only. The
+    ;    completion metric must stay a THIS-RUN count — tallying "at 100%" over ALL barren made every
+    ;    re-run report the whole galaxy as freshly completed and broke CompleteAllPlanets' "already
+    ;    fully surveyed" branch (its barren+life==0 test could never fire again). So: a traits-only
+    ;    run counts the worlds THIS trait pass carried from <100% to 100% (an honest 0 when nothing
+    ;    transitioned); the resources path's tally comes from the sweep's own set just below.
+    int barrenEnumerated = 0
     int traitsMarked = 0
     int fullyComplete = 0
     int i = 0
-    While i < count
-        int fid = CompletePlanetSurveyNative.GetBarrenPlanetFormIdAt(i)
-        Planet p = Game.GetForm(fid) as Planet
-        If p != None
-            If doTraits
+    If doTraits
+        barrenEnumerated = CompletePlanetSurveyNative.EnumerateBarrenPlanets()
+        While i < barrenEnumerated
+            int fid = CompletePlanetSurveyNative.GetBarrenPlanetFormIdAt(i)
+            Planet p = Game.GetForm(fid) as Planet
+            If p != None
+                bool wasDone = false
+                If !doResources
+                    wasDone = p.GetSurveyPercent() >= 1.0   ; pre-state for the traits-only transition metric
+                EndIf
                 traitsMarked += MarkTraits(p, p.GetKeywordTypeList(44))
+                If !doResources && !wasDone && p.GetSurveyPercent() >= 1.0
+                    fullyComplete += 1   ; traits-only: newly carried to 100% by THIS pass
+                EndIf
             EndIf
-            If p.GetSurveyPercent() >= 1.0
+            i += 1
+        EndWhile
+    EndIf
+
+    ; Completion tally for the RESOURCES path — the sweep's THIS-RUN set only (GetSweepPlanetFormIdAt:
+    ; exactly the planets the sweep attempted this run; worlds already complete at run start were
+    ; skipped by the pre-write guard and never enter it). This restores the honest re-run semantics
+    ; the result popup and CompleteAllPlanets' combined popup are worded around (PR #26 review — the
+    ; galaxy-absolute tally regression).
+    If doResources
+        int sweptCount = CompletePlanetSurveyNative.GetSweepPlanetCount()
+        i = 0
+        While i < sweptCount
+            int swfid = CompletePlanetSurveyNative.GetSweepPlanetFormIdAt(i)
+            Planet swp = Game.GetForm(swfid) as Planet
+            If swp != None && swp.GetSurveyPercent() >= 1.0
                 fullyComplete += 1
             EndIf
-        EndIf
-        i += 1
-    EndWhile
+            i += 1
+        EndWhile
+    EndIf
     float tAfterFinalize = Utility.GetCurrentRealTime()
 
-    CompletePlanetSurveyNative.DebugLog("Sweep result: " + n + " scanned, " + fullyComplete + " / " + count + " at 100%, " + traitsMarked + " traits marked, " + failedCount + " stragglers unresolved, " + notAttempted + " not attempted")
+    ; Diagnostics keep the this-run vs galaxy-absolute numbers SEPARATE (PR #26 review) so
+    ; abort/straggler triage stays possible: sweepCompleted = this-run sweep successes (0 when no
+    ; resources sweep ran), barrenEnumerated = the galaxy-absolute barren list the trait pass walked
+    ; (0 when no trait pass ran), newlyAt100 = this run's completion metric (see WORK vs METRICS above).
+    CompletePlanetSurveyNative.DebugLog("Sweep result: sweepCompleted=" + n + " barrenEnumerated=" + barrenEnumerated + " newlyAt100=" + fullyComplete + " traitsMarked=" + traitsMarked + " stragglersUnresolved=" + failedCount + " notAttempted=" + notAttempted)
 
     ; NO galaxy-wide green pass here. Greening a world's flora/fauna requires the per-(planet,species)
     ; CANONICAL id the engine only produces when the biome materializes the creature on-planet — it
@@ -549,7 +625,9 @@ int Function _CompleteBarrenPlanetsCore(string asCategories, bool abShowResult, 
     ; runs us (it shows ONE combined result for the whole galaxy).
     _ReconcilePlanetsScanned()   ; keep Planets Scanned >= Planets Fully Surveyed after the barren sweep
     If abShowResult
-        string resultMsg = "Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s."
+        ; fullyComplete is the THIS-RUN count (newly completed — 0 on a re-run of an already-done
+        ; galaxy), so the wording says "newly": the popup never re-claims prior runs' work.
+        string resultMsg = "Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds newly fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s."
         If failedCount > 0
             ; Straggler-failure surfacing (issue #6): a non-zero count is visible in the popup, not
             ; just the log. The SFSE log names each planet (formId + name + failure mode) at ERROR.
@@ -756,8 +834,10 @@ Function CompleteAllPlanets(string asCategories) global
     If notAttempted > 0
         failNote += "  WARNING: the sweep aborted early after repeated faults — " + notAttempted + " worlds were not attempted (see the SFSE log; re-run the command to retry)."
     EndIf
-    ; barren/life are NEWLY-completed counts (0 when everything was already done), so a re-run reads
-    ; honestly as "already surveyed" instead of always re-claiming the whole galaxy. FAILURE-FIRST
+    ; barren/life are NEWLY-completed counts (0 when everything was already done): barren = the
+    ; resources sweep's this-run completions, or — traits-only — the worlds the trait pass carried to
+    ; 100%; life = worlds newly brought forward. So a re-run reads honestly as "already surveyed"
+    ; instead of always re-claiming the whole galaxy (PR #26 review restored this). FAILURE-FIRST
     ; precedence: any failure/abort makes the headline "finished with problems" — never the
     ; contradictory "already fully surveyed ... WARNING: N worlds could not be finalized".
     If failed + notAttempted > 0

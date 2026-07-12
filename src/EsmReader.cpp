@@ -1034,12 +1034,14 @@ namespace
                 planetTraits.insert_or_assign(rtId, std::move(traitKwds));
             else
                 planetTraits.erase(rtId);
-            // Same wholesale-override semantics as the other per-planet tables: an override with no
-            // 12-byte GNAM erases the earlier entry rather than keeping a stale star id.
+            // Star id: LAST-NON-EMPTY-WINS (PR #26 review) — unlike the species/trait tables, a
+            // missing 12-byte GNAM in an override must NOT erase the earlier entry. DLC/Creation
+            // overrides that only patch species/traits/biomes routinely omit galaxy data; erasing
+            // here would orphan those planets from the system scope (CompleteSystem would refuse on
+            // them). There is no authored "remove this body's parent star" to honour — every base
+            // PNDT carries a GNAM — so retention is always the correct read.
             if (hasStar)
                 planetStars.insert_or_assign(rtId, starId);
-            else
-                planetStars.erase(rtId);
             if (species.empty())
             {
                 map.erase(rtId);  // barren / resource-only body (or an override that emptied it)
