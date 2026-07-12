@@ -63,11 +63,15 @@ int Function CompleteAllPlanetsSurveyData(bool abWriteResources) global native
 int Function GetSweepPlanetCount() global native
 int Function GetSweepPlanetFormIdAt(int aiIndex) global native
 
-; Fully complete one swept planet (by form ID): write its survey state (attribute bits + species/resource
-; flags) and fire the survey-complete event so its Survey Data slate drops. Called from the finalize pass,
-; which runs across later frames — by then the sweep's asynchronous knowledge-entry creates have flushed,
-; so this also catches the few planets whose entry wasn't ready during the C++ pass. The slate award is
-; idempotent (the engine awards a planet's survey reward once). Returns the number of forms marked.
+; Mop-up for one swept planet (by form ID): ALWAYS re-write its survey state (attribute bits +
+; species/resource flags — an idempotent restamp), then fire the survey-complete event ONLY if the
+; planet was not already fully complete before this call (the C++ sweep fires the event itself for
+; every planet it fully wrote in-frame; re-firing would inflate the un-deduped "Planets Fully
+; Surveyed" statistic). Called from the finalize pass across later frames — by then the sweep's
+; asynchronous knowledge-entry creates have flushed, so this completes the few stragglers whose
+; entry wasn't ready during the C++ pass. Returns the number of forms marked THIS call (0 means
+; nothing was marked: the form/planet didn't resolve or the entry still isn't ready — it does NOT
+; mean the planet is incomplete).
 int Function FinalizeSweptPlanet(int aiFormId) global native
 
 ; Enumerate the UNIQUE life-bearing planets (those with flora/fauna). Call once, then iterate
