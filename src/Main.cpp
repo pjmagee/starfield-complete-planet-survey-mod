@@ -2,9 +2,18 @@
 
 #include "EsmReader.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
+#include <windows.h>  // GetModuleFileNameW, MAX_PATH (for ConfigureEsmSources)
+
 #include <chrono>
 #include <cmath>
 #include <exception>
+#include <filesystem>
 #include <type_traits>
 #include <unordered_map>
 
@@ -1853,10 +1862,117 @@ namespace Hook
 
 namespace
 {
+    // Hand the ESM reader the ENGINE's own load order: every compiled plugin's path, master type
+    // (full/medium/small) and runtime compile index, sequenced by the data handler's file list so
+    // later files override earlier ones exactly like they do in-game. This is what lets DLC /
+    // Creations planets (ShatteredSpace.esm, SFBGS00D.esm, SFBGS050.esm, …) resolve to their real
+    // runtime FormIDs. Crash-safe: null-checked and bounded throughout; on ANY failure we simply
+    // don't configure sources and the reader falls back to Starfield.esm alone (v1.4.0 behaviour).
+    void ConfigureEsmSources() noexcept
+    {
+        try
+        {
+            auto* dh = RE::TESDataHandler::GetSingleton();
+            if (!dh)
+            {
+                spdlog::warn("EsmSources: TESDataHandler unavailable; reader falls back to Starfield.esm");
+                return;
+            }
+
+            wchar_t buf[MAX_PATH] {};
+            const auto n = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+            if (n == 0 || n >= MAX_PATH)
+                return;
+            const auto dataDir = std::filesystem::path {buf}.parent_path() / L"Data";
+
+            // The compiled arrays give (type, runtime index) per file; array position IS the
+            // compile index within that type's FormID space.
+            struct Entry
+            {
+                const RE::TESFile* file;
+                Esm::SourceFile    source;
+                bool               consumed {false};
+            };
+            std::vector<Entry> entries;
+            auto collect = [&](const RE::BSTArray<RE::TESFile*>& arr, Esm::MasterType type) {
+                const auto count = std::min<std::uint32_t>(arr.size(), 0x1000);  // bounded (paranoia)
+                for (std::uint32_t i = 0; i < count; ++i)
+                {
+                    const auto* file = arr[i];
+                    if (!file)
+                        continue;
+                    const std::string name(file->fileName, strnlen(file->fileName, sizeof file->fileName));
+                    if (name.empty())
+                        continue;
+                    entries.push_back({file, {dataDir / name, type, static_cast<std::uint16_t>(i)}});
+                }
+            };
+            const auto& cc = dh->compiledFileCollection;
+            collect(cc.files, Esm::MasterType::kFull);
+            collect(cc.mediumFiles, Esm::MasterType::kMedium);
+            collect(cc.smallFiles, Esm::MasterType::kSmall);
+            if (entries.empty())
+            {
+                spdlog::warn("EsmSources: compiled file collection empty; reader falls back to Starfield.esm");
+                return;
+            }
+
+            // Sequence by the data handler's master file list (true load order). Files the list
+            // doesn't surface are appended afterwards in array order (full, medium, small) — the
+            // per-type indices stay correct either way; only cross-type override order could vary.
+            std::vector<Esm::SourceFile> sources;
+            sources.reserve(entries.size());
+            std::size_t guard = 0;
+            for (auto* file : dh->files)
+            {
+                if (++guard > 0x2000)  // bounded walk of an engine-owned linked list
+                    break;
+                if (!file)
+                    continue;
+                for (auto& e : entries)
+                {
+                    if (!e.consumed && e.file == file)
+                    {
+                        e.consumed = true;
+                        sources.push_back(e.source);
+                        break;
+                    }
+                }
+            }
+            std::size_t appended = 0;
+            for (auto& e : entries)
+            {
+                if (!e.consumed)
+                {
+                    sources.push_back(e.source);
+                    ++appended;
+                }
+            }
+
+            spdlog::info("EsmSources: configured {} plugins from the engine load order ({} full, {} medium, "
+                         "{} small; {} not in the file list, appended)",
+                         sources.size(), cc.files.size(), cc.mediumFiles.size(), cc.smallFiles.size(),
+                         appended);
+            for (const auto& s : sources)
+                spdlog::debug("EsmSources:   [{}:{}] {}", static_cast<int>(s.type), s.runtimeIndex,
+                              s.path.filename().string());
+            Esm::SetSources(std::move(sources));
+        }
+        catch (const std::exception& e)
+        {
+            spdlog::error("EsmSources: failed ({}); reader falls back to Starfield.esm", e.what());
+        }
+        catch (...)
+        {
+            spdlog::error("EsmSources: failed (unknown); reader falls back to Starfield.esm");
+        }
+    }
+
     void MessageCallback(SFSE::MessagingInterface::Message* a_msg) noexcept
     {
         if (a_msg->type == SFSE::MessagingInterface::kPostDataLoad)
         {
+            ConfigureEsmSources();  // must precede any Esm:: query (the parse is one-shot)
             Papyrus::Register();
             Hook::Install();
             Hook::InstallStarMapScanHook();     // galaxy-map planet scan → complete-that-planet

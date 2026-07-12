@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <exception>
@@ -20,6 +21,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include <spdlog/spdlog.h>  // logging — also via the forced PCH, but include-what-you-use
@@ -56,6 +58,7 @@ namespace
     constexpr std::uint32_t kSubKWDA = 0x4144574B;  // 'KWDA' (PNDT planet-trait / MGEF keyword array)
     constexpr std::uint32_t kSubEFID = 0x44494645;  // 'EFID' (SPEL effect -> MGEF form id)
     constexpr std::uint32_t kSubPRKE = 0x454B5250;  // 'PRKE' (PERK entry header; byte0 == 1 == Ability)
+    constexpr std::uint32_t kSubMAST = 0x5453414D;  // 'MAST' (TES4 header master filename)
 
     // The three func-699 scanner effect keywords and the catalog markers they gate, as a 3-bit mask.
     // (Abilities/Resistances/Weaknesses — the live HandScanner attributes a spawned creature carries.)
@@ -108,26 +111,11 @@ namespace
     // CNDF recursion (func 837) depth cap — guards a hostile/cyclic ESM from overflowing the stack.
     constexpr int kMaxCondFormDepth = 16;
 
-    // Sanity ceiling on a single PNDT record's *decompressed* size, read straight from the file
+    // Sanity ceiling on a single record's *decompressed* size, read straight from the file
     // before we allocate for it. A real planet record inflates to tens of KB; this 64 MiB cap
     // turns a corrupt/hostile decompSize (e.g. 0xFFFFFFFF) into a skipped record instead of a
     // multi-GiB bad_alloc / DoS on game launch.
     constexpr std::uint32_t kMaxDecompSize = 64u * 1024u * 1024u;
-
-    // Resolve <game-root>/Data/Starfield.esm from the running executable path. An explicit
-    // CPS_ESM_PATH environment override takes precedence — handy for a non-standard game layout and
-    // for the offline validation harness (test/ValidateMarkers.cpp).
-    std::filesystem::path ResolveEsmPath()
-    {
-        wchar_t envbuf[MAX_PATH] {};
-        if (const auto en = GetEnvironmentVariableW(L"CPS_ESM_PATH", envbuf, MAX_PATH); en > 0 && en < MAX_PATH)
-            return std::filesystem::path {envbuf};
-        wchar_t buf[MAX_PATH] {};
-        const auto n = GetModuleFileNameW(nullptr, buf, MAX_PATH);
-        if (n == 0 || n >= MAX_PATH)
-            return {};
-        return std::filesystem::path {buf}.parent_path() / L"Data" / L"Starfield.esm";
-    }
 
     // Bounds-checked little-endian cursor over a byte buffer.
     struct Cursor
@@ -145,52 +133,6 @@ namespace
             return v;
         }
     };
-
-    // Parse one PPBD payload (a single biome) and append its flora + fauna FormIDs.
-    //   u32 biome | u32 chance | u32 unk | u32 RSGD
-    //   u32 nFauna | nFauna x u32 (NPC_)
-    //   u32 nKw    | nKw    x u32 (KYWD)
-    //   u32 nFlora | u32 entrySize(>=9) | nFlora x { u32 FLOR, u32 MISC, u8 freq, pad to entrySize }
-    void ParsePpbd(const std::uint8_t* data, std::size_t size, std::vector<std::uint32_t>& out)
-    {
-        Cursor c {data, size};
-        if (!c.can(16))
-            return;
-        c.off += 16;  // biome, chance, unk, resource-gen
-
-        if (!c.can(4))
-            return;
-        const auto nFauna = c.u32();
-        if (nFauna > kMaxListLen || !c.can(static_cast<std::size_t>(nFauna) * 4))
-            return;
-        for (std::uint32_t i = 0; i < nFauna; ++i)
-            if (const auto f = c.u32(); f != 0)
-                out.push_back(f);
-
-        if (!c.can(4))
-            return;
-        const auto nKw = c.u32();
-        if (nKw > kMaxListLen || !c.can(static_cast<std::size_t>(nKw) * 4))
-            return;
-        c.off += static_cast<std::size_t>(nKw) * 4;  // skip keywords
-
-        if (!c.can(8))
-            return;
-        const auto nFlora    = c.u32();
-        auto       entrySize = c.u32();
-        if (entrySize < 9)
-            entrySize = 9;
-        if (nFlora > kMaxListLen || !c.can(static_cast<std::size_t>(nFlora) * entrySize))
-            return;
-        for (std::uint32_t i = 0; i < nFlora; ++i)
-        {
-            std::uint32_t flor;
-            std::memcpy(&flor, c.p + c.off, sizeof flor);  // first FormID in the entry
-            if (flor != 0)
-                out.push_back(flor);
-            c.off += entrySize;
-        }
-    }
 
     // Walk subrecords in a record's (decompressed) data; call fn(sig, payload, size).
     template <typename Fn>
@@ -225,6 +167,262 @@ namespace
                 break;
             fn(sig, data + i, dsz);
             i += dsz;
+        }
+    }
+
+    // ---- Multi-file sources + FormID remapping ---------------------------------------------------
+    // Every plugin stores its records' FormIDs in FILE-LOCAL form: the high bits index the file's
+    // OWN master list (per type-space), not the runtime load order. We remap every FormID we read —
+    // record ids AND cross-references — into runtime form before it enters any table, so lookups
+    // match the runtime FormIDs the natives receive from live forms. Encodings:
+    //   full   II XXXXXX  (byte slot, 24-bit record id)
+    //   medium FD IIXXXX  (8-bit slot, 16-bit record id)
+    //   small  FE IIIXXX  (12-bit slot, 12-bit record id)
+    // A slot at/past the file's master count of that space resolves to the file ITSELF. That is how
+    // a file's own new records are encoded, and it also covers small-flagged third-party files that
+    // encode their own records full-style (e.g. 01xxxxxx with one master).
+
+    constexpr std::uint32_t kFlagSmall  = 0x00000100;  // TES4 header flag: small (ESL-style) master
+    constexpr std::uint32_t kFlagMedium = 0x00000400;  // TES4 header flag: medium master
+
+    std::vector<Esm::SourceFile> g_sources;  // configured load order (SetSources / env fallbacks)
+    std::mutex                   g_sourcesMtx;
+
+    Esm::MasterType TypeFromFlags(std::uint32_t flags)
+    {
+        if (flags & kFlagMedium)
+            return Esm::MasterType::kMedium;
+        if (flags & kFlagSmall)
+            return Esm::MasterType::kSmall;
+        return Esm::MasterType::kFull;
+    }
+
+    // ASCII case-insensitive filename comparison (plugin names are ASCII).
+    bool IEquals(std::string_view a, std::string_view b)
+    {
+        if (a.size() != b.size())
+            return false;
+        for (std::size_t i = 0; i < a.size(); ++i)
+        {
+            const auto ca = static_cast<unsigned char>(a[i]);
+            const auto cb = static_cast<unsigned char>(b[i]);
+            if (std::tolower(ca) != std::tolower(cb))
+                return false;
+        }
+        return true;
+    }
+
+    // Per-file FormID remapper: local type-space slot -> the target file's (type, runtime index).
+    struct Remapper
+    {
+        struct Slot
+        {
+            Esm::MasterType type {Esm::MasterType::kFull};
+            std::uint16_t   index {0};
+            bool            valid {false};
+        };
+        std::vector<Slot> full, medium, small;
+        Slot              self;
+
+        std::uint32_t operator()(std::uint32_t raw) const
+        {
+            if (raw == 0)
+                return 0;
+            const std::uint32_t hi = raw >> 24;
+            const Slot*         s;
+            if (hi == 0xFE)
+            {
+                const auto i = (raw >> 12) & 0xFFFu;
+                s            = i < small.size() ? &small[i] : &self;
+            }
+            else if (hi == 0xFD)
+            {
+                const auto i = (raw >> 16) & 0xFFu;
+                s            = i < medium.size() ? &medium[i] : &self;
+            }
+            else
+            {
+                s = hi < full.size() ? &full[hi] : &self;
+            }
+            if (!s->valid)
+                return 0;  // unknown master -> unresolvable ref; 0 reads as "absent" on every path
+            switch (s->type)
+            {
+            case Esm::MasterType::kMedium:
+                return 0xFD000000u | (static_cast<std::uint32_t>(s->index) << 16) | (raw & 0xFFFFu);
+            case Esm::MasterType::kSmall:
+                return 0xFE000000u | (static_cast<std::uint32_t>(s->index) << 12) | (raw & 0xFFFu);
+            default:
+                return (static_cast<std::uint32_t>(s->index) << 24) | (raw & 0x00FFFFFFu);
+            }
+        }
+    };
+
+    // Read a plugin's TES4 header from an already-open stream: flags + MAST master names. Leaves the
+    // stream positioned at the first top-level GRUP. Returns false on a malformed file.
+    bool ReadTes4Header(std::ifstream& f, std::uint32_t& flags, std::vector<std::string>& masters)
+    {
+        std::uint8_t hdr[24];
+        if (!f.read(reinterpret_cast<char*>(hdr), 24) || std::memcmp(hdr, "TES4", 4) != 0)
+            return false;
+        std::uint32_t tes4Size;
+        std::memcpy(&tes4Size, hdr + 4, 4);
+        std::memcpy(&flags, hdr + 8, 4);
+        if (tes4Size > kMaxDecompSize)
+            return false;  // corrupt header size
+        std::vector<std::uint8_t> data(tes4Size);
+        if (tes4Size != 0 && !f.read(reinterpret_cast<char*>(data.data()), data.size()))
+            return false;
+        ForEachSubrecord(data.data(), data.size(),
+                         [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
+            if (ssig == kSubMAST && sz > 0)
+            {
+                const auto* s = reinterpret_cast<const char*>(p);
+                masters.emplace_back(s, strnlen(s, sz));
+            }
+        });
+        return true;
+    }
+
+    // Classify a master we could not find in the configured sources by opening its header next to
+    // `dir` — the slot must still land in the correct type-space or later slots misalign.
+    Esm::MasterType ClassifyMasterOnDisk(const std::filesystem::path& dir, const std::string& name)
+    {
+        std::ifstream f(dir / name, std::ios::binary);
+        std::uint32_t flags = 0;
+        std::vector<std::string> unused;
+        if (f && ReadTes4Header(f, flags, unused))
+            return TypeFromFlags(flags);
+        return Esm::MasterType::kFull;
+    }
+
+    Remapper BuildRemapper(const Esm::SourceFile& self, const std::vector<std::string>& masters,
+                           const std::vector<Esm::SourceFile>& sources)
+    {
+        Remapper r;
+        r.self = {self.type, self.runtimeIndex, true};
+        for (const auto& m : masters)
+        {
+            Remapper::Slot slot;  // invalid unless matched
+            for (const auto& s : sources)
+            {
+                if (IEquals(s.path.filename().string(), m))
+                {
+                    slot = {s.type, s.runtimeIndex, true};
+                    break;
+                }
+            }
+            auto space = slot.valid ? slot.type : ClassifyMasterOnDisk(self.path.parent_path(), m);
+            if (!slot.valid)
+                spdlog::warn("EsmReader: {}: master '{}' not in configured load order; its refs are dropped",
+                             self.path.filename().string(), m);
+            switch (space)
+            {
+            case Esm::MasterType::kMedium: r.medium.push_back(slot); break;
+            case Esm::MasterType::kSmall:  r.small.push_back(slot);  break;
+            default:                       r.full.push_back(slot);   break;
+            }
+        }
+        return r;
+    }
+
+    // The files to parse, in load order. Precedence: SetSources (the running game's own load order)
+    // -> CPS_ESM_PATHS (';'-separated offline load order; runtime indices assigned per type-space in
+    // list order, exactly how the engine numbers that same load order) -> CPS_ESM_PATH (single file,
+    // legacy harness) -> <exe>\Data\Starfield.esm.
+    std::vector<Esm::SourceFile> ResolveSources()
+    {
+        {
+            std::lock_guard lock(g_sourcesMtx);
+            if (!g_sources.empty())
+                return g_sources;
+        }
+        constexpr std::size_t kEnvMax = 0x4000;
+        static wchar_t        envbuf[kEnvMax] {};
+        if (const auto en = GetEnvironmentVariableW(L"CPS_ESM_PATHS", envbuf, kEnvMax); en > 0 && en < kEnvMax)
+        {
+            std::vector<Esm::SourceFile> out;
+            std::uint16_t                nFull = 0, nMedium = 0, nSmall = 0;
+            const std::wstring           all {envbuf};
+            for (std::size_t pos = 0; pos < all.size();)
+            {
+                const auto semi = all.find(L';', pos);
+                const auto one  = all.substr(pos, semi == std::wstring::npos ? std::wstring::npos : semi - pos);
+                pos             = (semi == std::wstring::npos) ? all.size() : semi + 1;
+                if (one.empty())
+                    continue;
+                const std::filesystem::path path {one};
+                std::ifstream            f(path, std::ios::binary);
+                std::uint32_t            flags = 0;
+                std::vector<std::string> unused;
+                if (!f || !ReadTes4Header(f, flags, unused))
+                {
+                    spdlog::warn("EsmReader: CPS_ESM_PATHS entry unreadable, skipped: {}", path.string());
+                    continue;
+                }
+                const auto type = TypeFromFlags(flags);
+                const auto idx  = (type == Esm::MasterType::kMedium) ? nMedium++
+                                : (type == Esm::MasterType::kSmall)  ? nSmall++
+                                                                     : nFull++;
+                out.push_back({path, type, idx});
+            }
+            if (!out.empty())
+                return out;
+        }
+        if (const auto en = GetEnvironmentVariableW(L"CPS_ESM_PATH", envbuf, MAX_PATH); en > 0 && en < MAX_PATH)
+            return {{std::filesystem::path {envbuf}, Esm::MasterType::kFull, 0}};
+        wchar_t buf[MAX_PATH] {};
+        const auto n = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+        if (n == 0 || n >= MAX_PATH)
+            return {};
+        return {{std::filesystem::path {buf}.parent_path() / L"Data" / L"Starfield.esm",
+                 Esm::MasterType::kFull, 0}};
+    }
+
+    // Parse one PPBD payload (a single biome) and append its flora + fauna FormIDs (remapped).
+    //   u32 biome | u32 chance | u32 unk | u32 RSGD
+    //   u32 nFauna | nFauna x u32 (NPC_)
+    //   u32 nKw    | nKw    x u32 (KYWD)
+    //   u32 nFlora | u32 entrySize(>=9) | nFlora x { u32 FLOR, u32 MISC, u8 freq, pad to entrySize }
+    void ParsePpbd(const std::uint8_t* data, std::size_t size, const Remapper& remap,
+                   std::vector<std::uint32_t>& out)
+    {
+        Cursor c {data, size};
+        if (!c.can(16))
+            return;
+        c.off += 16;  // biome, chance, unk, resource-gen
+
+        if (!c.can(4))
+            return;
+        const auto nFauna = c.u32();
+        if (nFauna > kMaxListLen || !c.can(static_cast<std::size_t>(nFauna) * 4))
+            return;
+        for (std::uint32_t i = 0; i < nFauna; ++i)
+            if (const auto f = remap(c.u32()); f != 0)
+                out.push_back(f);
+
+        if (!c.can(4))
+            return;
+        const auto nKw = c.u32();
+        if (nKw > kMaxListLen || !c.can(static_cast<std::size_t>(nKw) * 4))
+            return;
+        c.off += static_cast<std::size_t>(nKw) * 4;  // skip keywords
+
+        if (!c.can(8))
+            return;
+        const auto nFlora    = c.u32();
+        auto       entrySize = c.u32();
+        if (entrySize < 9)
+            entrySize = 9;
+        if (nFlora > kMaxListLen || !c.can(static_cast<std::size_t>(nFlora) * entrySize))
+            return;
+        for (std::uint32_t i = 0; i < nFlora; ++i)
+        {
+            std::uint32_t flor;
+            std::memcpy(&flor, c.p + c.off, sizeof flor);  // first FormID in the entry
+            if (const auto f = remap(flor); f != 0)
+                out.push_back(f);
+            c.off += entrySize;
         }
     }
 
@@ -265,9 +463,7 @@ namespace
         std::unordered_map<std::int32_t, std::vector<Ctda>> condByIdx;  // lnam index -> condition list
     };
 
-    // All one-time lookup tables for marker derivation. The per-species result + the two catalogs +
-    // the CNDF map + the per-planet trait sets persist (consumed at GetSpeciesMarkers time); the
-    // heavy OMOD NKEY map stays local to BuildMarkers.
+    // The lookup tables consumed at GetSpeciesMarkers time. Built once across ALL source files.
     struct MarkerTables
     {
         std::unordered_map<std::uint32_t, SpeciesMarkerInfo>          species;
@@ -277,10 +473,30 @@ namespace
         std::unordered_map<std::uint32_t, std::vector<std::uint32_t>> planetTraits;  // planet -> KWDA traits
     };
 
+    // Cross-file intermediates, keyed by RUNTIME FormID. A species' OBTS can reference OMODs from an
+    // EARLIER master (a Shattered Space creature grants base-game temperament OMODs), and any link of
+    // the func-699 chain (MGEF/SPEL/PERK/OMOD) can live in — or be overridden by — a different file
+    // than its consumer. So each file's parse only COLLECTS remapped raw links (last file wins), and
+    // the chains are resolved globally after every file has been read.
+    struct RawTables
+    {
+        struct OmodRaw
+        {
+            std::vector<std::uint32_t> nkey;  // granted keywords (func-560 input)
+            std::vector<std::uint32_t> nprk;  // granted perks (func-699 ability chain)
+        };
+        std::unordered_map<std::uint32_t, std::uint8_t>                mgefMask;   // MGEF -> scanner-kw mask
+        std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>  spelEfids;  // SPEL -> [MGEF]
+        std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>  perkSpels;  // PERK -> [type-1 SPEL]
+        std::unordered_map<std::uint32_t, OmodRaw>                     omod;       // OMOD -> raw grants
+        std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>  npcObts;    // NPC_ -> [OBTS OMOD]
+        std::unordered_map<std::uint32_t, std::int32_t>                florRepro;  // FLOR -> PRPS repro N
+    };
+
     // Walk every record in a top-level group body (records + nested GRUPs), decompressing as needed,
     // calling fn(sig, formid, decompressedData, dataSize). The record body is borrowed from either
     // `group` (uncompressed) or `decomp` (a caller-owned scratch buffer reused per record) — do not
-    // retain the pointer past the callback.
+    // retain the pointer past the callback. `formid` is passed RAW (file-local); callers remap.
     template <typename Fn>
     void ForEachRecordInGroup(const std::uint8_t* group, std::size_t groupSize,
                               std::vector<std::uint8_t>& decomp, Fn&& fn)
@@ -329,14 +545,18 @@ namespace
         }
     }
 
-    // Parse a 32-byte CTDA payload.
-    Ctda ParseCtda(const std::uint8_t* p)
+    // Parse a 32-byte CTDA payload. param1 is remapped when the function's parameter is a FormID
+    // (858 planet-trait keyword / 560 granted keyword / 837 CNDF); other funcs either ignore param1
+    // (882, 14) or drop the marker entirely (perk/display gated), so their raw value is kept.
+    Ctda ParseCtda(const std::uint8_t* p, const Remapper& remap)
     {
         Ctda c;
         c.op = p[kCtdaOpOff];
         std::memcpy(&c.comp, p + kCtdaCompOff, 4);
         std::memcpy(&c.func, p + kCtdaFuncOff, 2);
         std::memcpy(&c.param1, p + kCtdaParam1Off, 4);
+        if (c.func == kFuncGetPlanetTrait || c.func == kFuncHasKeyword || c.func == kFuncEvalCondForm)
+            c.param1 = remap(c.param1);
         return c;
     }
 
@@ -344,7 +564,8 @@ namespace
     // appends a marker id (in catalog order); each INAM opens a conditioned block for the LNAM index
     // it carries; CTDA payloads accumulate into the currently-open block until the next INAM/end.
     // (Mirrors parse_flst in esm_derive_markers.py; CITC and other subrecords are ignored.)
-    void ParseCatalogRecord(const std::uint8_t* data, std::size_t dataSize, Catalog& out)
+    void ParseCatalogRecord(const std::uint8_t* data, std::size_t dataSize, const Remapper& remap,
+                            Catalog& out)
     {
         std::int32_t      curIdx = -1;
         std::vector<Ctda> cur;
@@ -358,7 +579,7 @@ namespace
             {
                 std::uint32_t m;
                 std::memcpy(&m, p, 4);
-                out.lnam.push_back(m);
+                out.lnam.push_back(remap(m));
             }
             else if (ssig == kSubINAM && sz >= 4)
             {
@@ -369,31 +590,39 @@ namespace
             }
             else if (ssig == kSubCTDA && sz >= kCtdaSize)
             {
-                cur.push_back(ParseCtda(p));
+                cur.push_back(ParseCtda(p, remap));
             }
         });
         flush();
     }
 
-    // Find + parse the flora (0x00160C96) and fauna (0x00160C97) catalog FLSTs from the FLST group.
+    // Find + parse the flora (0x00160C96) and fauna (0x00160C97) catalog FLSTs from a FLST group.
+    // An override in a later file REPLACES the earlier catalog wholesale (records replace, not merge).
     void BuildCatalogs(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
-                       Catalog& flora, Catalog& fauna)
+                       const Remapper& remap, Catalog& flora, Catalog& fauna)
     {
         ForEachRecordInGroup(group, groupSize, decomp,
                              [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
                                  std::size_t dataSize) {
             if (sig != kSigFLST)
                 return;
-            if (formid == kCatalogFlora)
-                ParseCatalogRecord(data, dataSize, flora);
-            else if (formid == kCatalogFauna)
-                ParseCatalogRecord(data, dataSize, fauna);
+            const auto rt = remap(formid);
+            if (rt == kCatalogFlora)
+            {
+                flora = Catalog {};
+                ParseCatalogRecord(data, dataSize, remap, flora);
+            }
+            else if (rt == kCatalogFauna)
+            {
+                fauna = Catalog {};
+                ParseCatalogRecord(data, dataSize, remap, fauna);
+            }
         });
     }
 
     // Parse every CNDF record's CTDA list into the map (func-837 EvaluateConditionForm targets).
     void BuildCndf(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
-                   std::unordered_map<std::uint32_t, std::vector<Ctda>>& cndf)
+                   const Remapper& remap, std::unordered_map<std::uint32_t, std::vector<Ctda>>& cndf)
     {
         ForEachRecordInGroup(group, groupSize, decomp,
                              [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
@@ -403,28 +632,24 @@ namespace
             std::vector<Ctda> items;
             ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
                 if (ssig == kSubCTDA && sz >= kCtdaSize)
-                    items.push_back(ParseCtda(p));
+                    items.push_back(ParseCtda(p, remap));
             });
-            cndf[formid] = std::move(items);
+            cndf[remap(formid)] = std::move(items);
         });
     }
 
-    // One pass over OMOD: build (a) omod -> [NKEY keyword ids] (func-560 grants: temperament + enviro)
-    // and (b) omod -> ability mask (func-699: NPRK -> perk -> ability mask, via the prebuilt perkMask).
-    // NKEY and NPRK are inline 4CC tags inside the DATA blob, each followed by a u32 (keyword / perk id).
-    // (Mirrors EsmDB.omod_nkey + omod_nprk.)
-    void BuildOmodTables(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
-                         const std::unordered_map<std::uint32_t, std::uint8_t>&          perkMask,
-                         std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>&  omodNkey,
-                         std::unordered_map<std::uint32_t, std::uint8_t>&                omodAbilityMask)
+    // One pass over OMOD: collect the raw remapped NKEY keyword grants (func-560) and NPRK perk
+    // grants (func-699) per OMOD. NKEY and NPRK are inline 4CC tags inside the DATA blob, each
+    // followed by a u32 (keyword / perk id). (Mirrors EsmDB.omod_nkey + omod_nprk.)
+    void CollectOmodRaw(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
+                        const Remapper& remap, std::unordered_map<std::uint32_t, RawTables::OmodRaw>& omod)
     {
         ForEachRecordInGroup(group, groupSize, decomp,
                              [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
                                  std::size_t dataSize) {
             if (sig != kSigOMOD)
                 return;
-            std::vector<std::uint32_t> nk;
-            std::uint8_t               mask = 0;
+            RawTables::OmodRaw raw;
             ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
                 if (ssig != kSubDATA)
                     return;
@@ -432,39 +657,28 @@ namespace
                 {
                     std::uint32_t tag;
                     std::memcpy(&tag, p + off, 4);
-                    if (tag == kSubNKEY)
+                    if (tag == kSubNKEY || tag == kSubNPRK)
                     {
-                        std::uint32_t kw;
-                        std::memcpy(&kw, p + off + 4, 4);
-                        nk.push_back(kw);
-                        off += 8;
-                    }
-                    else if (tag == kSubNPRK)
-                    {
-                        std::uint32_t perk;
-                        std::memcpy(&perk, p + off + 4, 4);
-                        if (const auto it = perkMask.find(perk); it != perkMask.end())
-                            mask |= it->second;
+                        std::uint32_t id;
+                        std::memcpy(&id, p + off + 4, 4);
+                        if (const auto rt = remap(id); rt != 0)
+                            (tag == kSubNKEY ? raw.nkey : raw.nprk).push_back(rt);
                         off += 8;
                     }
                     else
                         off += 1;
                 }
             });
-            if (!nk.empty())
-                omodNkey.emplace(formid, std::move(nk));
-            if (mask)
-                omodAbilityMask.emplace(formid, mask);
+            omod.insert_or_assign(remap(formid), std::move(raw));
         });
     }
 
-    // The keyword set the engine GRANTS one NPC_ at build time, via OBTS -> OMOD -> DATA 'NKEY'. This
-    // is exactly what func-560 HasKeyword(species) tests against in the fauna catalog. (Mirrors
-    // npc_granted_keywords.)
-    std::vector<std::uint32_t> NpcGranted(const std::uint8_t* data, std::size_t dataSize,
-                                          const std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& omodNkey)
+    // The remapped OMOD ids one NPC_ attaches via OBTS. Resolved to keyword grants + ability masks
+    // AFTER all files are parsed (the OMODs can live in any master).
+    std::vector<std::uint32_t> NpcObtsOmods(const std::uint8_t* data, std::size_t dataSize,
+                                            const Remapper& remap)
     {
-        std::vector<std::uint32_t> granted;
+        std::vector<std::uint32_t> omods;
         ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
             if (ssig != kSubOBTS || sz < kObtsEntriesOff)
                 return;
@@ -472,20 +686,16 @@ namespace
             {
                 std::uint32_t omodId;
                 std::memcpy(&omodId, p + off, 4);
-                const auto it = omodNkey.find(omodId);
-                if (it == omodNkey.end())
-                    continue;
-                for (const auto kw : it->second)
-                    if (std::find(granted.begin(), granted.end(), kw) == granted.end())
-                        granted.push_back(kw);
+                if (const auto rt = remap(omodId); rt != 0)
+                    omods.push_back(rt);
             }
         });
-        return granted;
+        return omods;
     }
 
     // The FLOR's reproduction value N from the first PRPS triple with AVIF == 0x0023E905 (func-14
     // input). 0 if none (which is also what func 14 yields for an absent value). (Mirrors flor_prps_n.)
-    std::int32_t FloraReproN(const std::uint8_t* data, std::size_t dataSize)
+    std::int32_t FloraReproN(const std::uint8_t* data, std::size_t dataSize, const Remapper& remap)
     {
         std::int32_t n     = 0;
         bool         found = false;
@@ -498,7 +708,7 @@ namespace
                 float         value;
                 std::memcpy(&avif, p + off, 4);
                 std::memcpy(&value, p + off + 4, 4);
-                if (avif == kAvifPlantReproduction)
+                if (remap(avif) == kAvifPlantReproduction)
                 {
                     n     = static_cast<std::int32_t>(std::lround(value));
                     found = true;
@@ -515,7 +725,8 @@ namespace
     // These are NOT in the per-species slot+0x08 dump (no live actor), but ARE resolvable offline from
     // the creature's static ability attachments and ARE part of the full in-game scan display, so the mod
     // writes them too. Chain: NPC_ OBTS -> OMOD 'NPRK' -> PERK type-1 Ability entry -> SPEL EFID -> MGEF
-    // KWDA scanner keyword. Built bottom-up as a 3-bit mask. (Mirrors esm_derive_markers.py actor path.)
+    // KWDA scanner keyword. Each link is COLLECTED per file (last override wins) and the mask is built
+    // bottom-up once all files are in. (Mirrors esm_derive_markers.py actor path.)
 
     std::uint8_t KwToAbilityBit(std::uint32_t kw)
     {
@@ -534,9 +745,10 @@ namespace
         return out;
     }
 
-    // MGEF form id -> ability mask (from the scanner keywords in its KWDA).
-    void BuildMgefMask(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
-                       std::unordered_map<std::uint32_t, std::uint8_t>& mgefMask)
+    // MGEF form id -> ability mask (from the scanner keywords in its KWDA). Stored even when 0 so a
+    // later override that REMOVES the keywords also removes the mask.
+    void CollectMgefMask(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
+                         const Remapper& remap, std::unordered_map<std::uint32_t, std::uint8_t>& mgefMask)
     {
         ForEachRecordInGroup(group, groupSize, decomp,
                              [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
@@ -551,51 +763,49 @@ namespace
                 {
                     std::uint32_t kw;
                     std::memcpy(&kw, p + off, 4);
-                    mask |= KwToAbilityBit(kw);
+                    mask |= KwToAbilityBit(remap(kw));
                 }
             });
-            if (mask)
-                mgefMask.emplace(formid, mask);
+            mgefMask.insert_or_assign(remap(formid), mask);
         });
     }
 
-    // SPEL form id -> ability mask (OR over its EFID effect MGEFs).
-    void BuildSpelMask(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
-                       const std::unordered_map<std::uint32_t, std::uint8_t>& mgefMask,
-                       std::unordered_map<std::uint32_t, std::uint8_t>&       spelMask)
+    // SPEL form id -> its EFID effect MGEF ids (mask resolved after all files).
+    void CollectSpelEfids(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
+                          const Remapper& remap,
+                          std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& spelEfids)
     {
         ForEachRecordInGroup(group, groupSize, decomp,
                              [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
                                  std::size_t dataSize) {
             if (sig != kSigSPEL)
                 return;
-            std::uint8_t mask = 0;
+            std::vector<std::uint32_t> efids;
             ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
                 if (ssig != kSubEFID || sz < 4)
                     return;
                 std::uint32_t mgef;
                 std::memcpy(&mgef, p, 4);
-                if (const auto it = mgefMask.find(mgef); it != mgefMask.end())
-                    mask |= it->second;
+                if (const auto rt = remap(mgef); rt != 0)
+                    efids.push_back(rt);
             });
-            if (mask)
-                spelMask.emplace(formid, mask);
+            spelEfids.insert_or_assign(remap(formid), std::move(efids));
         });
     }
 
-    // PERK form id -> ability mask. A PRKE entry whose first byte == 1 is an Ability entry whose
-    // following DATA's first u32 is a SPEL added to the perk OWNER (the creature). OR that spell's mask.
-    void BuildPerkMask(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
-                       const std::unordered_map<std::uint32_t, std::uint8_t>& spelMask,
-                       std::unordered_map<std::uint32_t, std::uint8_t>&       perkMask)
+    // PERK form id -> its type-1 Ability entry SPEL ids. A PRKE entry whose first byte == 1 is an
+    // Ability entry whose following DATA's first u32 is a SPEL added to the perk OWNER (the creature).
+    void CollectPerkSpels(const std::uint8_t* group, std::size_t groupSize, std::vector<std::uint8_t>& decomp,
+                          const Remapper& remap,
+                          std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& perkSpels)
     {
         ForEachRecordInGroup(group, groupSize, decomp,
                              [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
                                  std::size_t dataSize) {
             if (sig != kSigPERK)
                 return;
-            std::uint8_t mask = 0;
-            int          cur  = -1;  // current PRKE entry type byte (-1 = none / already consumed)
+            std::vector<std::uint32_t> spels;
+            int                        cur = -1;  // current PRKE entry type byte (-1 = none / consumed)
             ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
                 if (ssig == kSubPRKE && sz >= 1)
                     cur = p[0];
@@ -603,33 +813,13 @@ namespace
                 {
                     std::uint32_t spel;
                     std::memcpy(&spel, p, 4);
-                    if (const auto it = spelMask.find(spel); it != spelMask.end())
-                        mask |= it->second;
+                    if (const auto rt = remap(spel); rt != 0)
+                        spels.push_back(rt);
                     cur = -1;  // consume this entry's DATA
                 }
             });
-            if (mask)
-                perkMask.emplace(formid, mask);
+            perkSpels.insert_or_assign(remap(formid), std::move(spels));
         });
-    }
-
-    // One NPC_'s ability mask: OBTS -> OMOD -> (omodAbilityMask). (Mirrors npc_actor_magfx_keywords.)
-    std::uint8_t NpcAbilityMask(const std::uint8_t* data, std::size_t dataSize,
-                                const std::unordered_map<std::uint32_t, std::uint8_t>& omodAbilityMask)
-    {
-        std::uint8_t mask = 0;
-        ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
-            if (ssig != kSubOBTS || sz < kObtsEntriesOff)
-                return;
-            for (std::size_t off = kObtsEntriesOff; off + kObtsEntryStride <= sz; off += kObtsEntryStride)
-            {
-                std::uint32_t omodId;
-                std::memcpy(&omodId, p + off, 4);
-                if (const auto it = omodAbilityMask.find(omodId); it != omodAbilityMask.end())
-                    mask |= it->second;
-            }
-        });
-        return mask;
     }
 
     // ---- The CTDA evaluator (engine TESCondition::IsTrue: ID_71422 list-walk / ID_71429 per-item) --
@@ -756,9 +946,11 @@ namespace
         return out;
     }
 
-    // Parse the PNDT top-level group's records into the species map + per-planet trait keyword
-    // sets from KWDA.
-    void ParsePndtGroup(const std::vector<std::uint8_t>& group, Esm::PlanetSpeciesMap& map,
+    // Parse a PNDT top-level group's records into the species map + per-planet trait keyword sets
+    // from KWDA. Override semantics: a record REPLACES any earlier file's version wholesale — an
+    // override whose species/trait lists come out empty ERASES the earlier entry.
+    void ParsePndtGroup(const std::vector<std::uint8_t>& group, const Remapper& remap,
+                        Esm::PlanetSpeciesMap& map,
                         std::unordered_map<std::uint32_t, std::vector<std::uint32_t>>& planetTraits)
     {
         std::vector<std::uint8_t> decomp;
@@ -806,135 +998,63 @@ namespace
                 dataSize = destLen;
             }
 
+            const auto rtId = remap(formid);
+            if (rtId == 0)
+                continue;
+
             std::vector<std::uint32_t> species;
             std::vector<std::uint32_t> traitKwds;
             ForEachSubrecord(data, dataSize, [&](std::uint32_t ssig, const std::uint8_t* p, std::size_t sz) {
                 if (ssig == kSigPPBD)
-                    ParsePpbd(p, sz, species);
+                    ParsePpbd(p, sz, remap, species);
                 else if (ssig == kSubKWDA && traitKwds.empty())  // first KWDA only (matches pndt_traits)
                     for (std::size_t off = 0; off + 4 <= sz; off += 4)
                     {
                         std::uint32_t kw;
                         std::memcpy(&kw, p + off, 4);
-                        traitKwds.push_back(kw);
+                        if (const auto rt = remap(kw); rt != 0)
+                            traitKwds.push_back(rt);
                     }
             });
             // Planet traits gate flora genetics/reproduction (func 858) regardless of species presence.
             if (!traitKwds.empty())
-                planetTraits.emplace(formid, std::move(traitKwds));
+                planetTraits.insert_or_assign(rtId, std::move(traitKwds));
+            else
+                planetTraits.erase(rtId);
             if (species.empty())
-                continue;  // barren / resource-only body — nothing to add to the species map
+            {
+                map.erase(rtId);  // barren / resource-only body (or an override that emptied it)
+                continue;
+            }
             std::sort(species.begin(), species.end());
             species.erase(std::unique(species.begin(), species.end()), species.end());
-            map.emplace(formid, std::move(species));
+            map.insert_or_assign(rtId, std::move(species));
         }
     }
 
-    // Build the per-species marker tables from the in-memory group bodies. Order: catalogs (FLST) +
-    // CNDF first, then OMOD NKEY (local), then the NPC_/FLOR per-species inputs that the catalog
-    // evaluation consumes. The OMOD NKEY map is local — only the per-species inputs + catalogs + CNDF
-    // outlive this function (kept in `tables`). All inputs are owned by the caller's group buffers.
-    void BuildMarkers(const std::vector<std::uint8_t>& flstGroup, const std::vector<std::uint8_t>& cndfGroup,
-                      const std::vector<std::uint8_t>& omodGroup, const std::vector<std::uint8_t>& npcGroup,
-                      const std::vector<std::uint8_t>& florGroup, const std::vector<std::uint8_t>& mgefGroup,
-                      const std::vector<std::uint8_t>& spelGroup, const std::vector<std::uint8_t>& perkGroup,
-                      MarkerTables& tables)
+    // Parse ONE source file: read its header + remapper, scan its top-level groups, and merge every
+    // relevant record into the global tables (later files override earlier ones — insert_or_assign /
+    // erase throughout). Returns false if the file could not be read at all.
+    bool ParseSourceFile(const Esm::SourceFile& spec, const std::vector<Esm::SourceFile>& sources,
+                         Esm::PlanetSpeciesMap& map, MarkerTables& tables, RawTables& raw)
     {
-        std::vector<std::uint8_t> decomp;  // reused per-record scratch buffer
-
-        // 1) The two HandScanner catalogs (flora 0x00160C96 / fauna 0x00160C97).
-        if (!flstGroup.empty())
-            BuildCatalogs(flstGroup.data(), flstGroup.size(), decomp, tables.floraCatalog, tables.faunaCatalog);
-
-        // 2) CNDF condition forms (func-837 targets: the genetics + reproduction sub-trees).
-        if (!cndfGroup.empty())
-            BuildCndf(cndfGroup.data(), cndfGroup.size(), decomp, tables.cndf);
-
-        // 3) func-699 ability chain, bottom-up: MGEF -> SPEL -> PERK -> (OMOD NPRK) ability masks.
-        std::unordered_map<std::uint32_t, std::uint8_t> mgefMask, spelMask, perkMask, omodAbilityMask;
-        if (!mgefGroup.empty())
-            BuildMgefMask(mgefGroup.data(), mgefGroup.size(), decomp, mgefMask);
-        if (!spelGroup.empty())
-            BuildSpelMask(spelGroup.data(), spelGroup.size(), decomp, mgefMask, spelMask);
-        if (!perkGroup.empty())
-            BuildPerkMask(perkGroup.data(), perkGroup.size(), decomp, spelMask, perkMask);
-
-        // 4) OMOD -> NKEY keyword grants (func-560) + NPRK ability masks (func-699), in one pass.
-        std::unordered_map<std::uint32_t, std::vector<std::uint32_t>> omodNkey;
-        if (!omodGroup.empty())
-            BuildOmodTables(omodGroup.data(), omodGroup.size(), decomp, perkMask, omodNkey, omodAbilityMask);
-
-        // 5) Per-NPC_: granted keyword set (func-560) + ability mask (func-699).
-        std::size_t faunaTotal = 0, faunaWithAbility = 0;
-        if (!npcGroup.empty())
-        {
-            ForEachRecordInGroup(npcGroup.data(), npcGroup.size(), decomp,
-                                 [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
-                                     std::size_t dataSize) {
-                if (sig != kSigNPC_)
-                    return;
-                auto& info       = tables.species[formid];
-                info.kingdom     = Kingdom::kFauna;
-                info.grantedKw   = NpcGranted(data, dataSize, omodNkey);
-                info.abilityMask = NpcAbilityMask(data, dataSize, omodAbilityMask);
-                ++faunaTotal;
-                if (info.abilityMask)
-                    ++faunaWithAbility;
-            });
-        }
-
-        // 6) Per-FLOR reproduction value N (FLOR PRPS) for func-14.
-        std::size_t floraTotal = 0;
-        if (!florGroup.empty())
-        {
-            ForEachRecordInGroup(florGroup.data(), florGroup.size(), decomp,
-                                 [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
-                                     std::size_t dataSize) {
-                if (sig != kSigFLOR)
-                    return;
-                auto& info   = tables.species[formid];
-                info.kingdom = Kingdom::kFlora;
-                info.reproAv = FloraReproN(data, dataSize);
-                ++floraTotal;
-            });
-        }
-
-        spdlog::info("EsmReader: markers built — floraCatalog={} faunaCatalog={} cndf={} omodNkey={} "
-                     "mgef={} spel={} perk={} | NPC_ {} ({} with ability) FLOR {}",
-                     tables.floraCatalog.lnam.size(), tables.faunaCatalog.lnam.size(), tables.cndf.size(),
-                     omodNkey.size(), mgefMask.size(), spelMask.size(), perkMask.size(), faunaTotal,
-                     faunaWithAbility, floraTotal);
-    }
-
-    void BuildMap(Esm::PlanetSpeciesMap& map, MarkerTables& tables)
-    {
-        const auto path = ResolveEsmPath();
-        if (path.empty())
-        {
-            spdlog::warn("EsmReader: could not resolve Starfield.esm path");
-            return;
-        }
-        std::ifstream f(path, std::ios::binary);
+        std::ifstream f(spec.path, std::ios::binary);
         if (!f)
         {
-            spdlog::warn("EsmReader: failed to open {}", path.string());
-            return;
+            spdlog::warn("EsmReader: failed to open {}", spec.path.string());
+            return false;
         }
-
-        std::uint8_t hdr[24];
-        f.read(reinterpret_cast<char*>(hdr), 24);
-        if (!f || std::memcmp(hdr, "TES4", 4) != 0)
+        std::uint32_t            hdrFlags = 0;
+        std::vector<std::string> masters;
+        if (!ReadTes4Header(f, hdrFlags, masters))
         {
-            spdlog::warn("EsmReader: not a TES4 plugin");
-            return;
+            spdlog::warn("EsmReader: not a TES4 plugin: {}", spec.path.string());
+            return false;
         }
-        std::uint32_t tes4Size;
-        std::memcpy(&tes4Size, hdr + 4, 4);
-        f.seekg(tes4Size, std::ios::cur);  // skip TES4 record data
+        const auto remap = BuildRemapper(spec, masters, sources);
 
         // One pass over the top-level type-groups: capture the bodies the PNDT parse + the marker
-        // derivation need (PNDT, FLST, CNDF, OMOD, NPC_, FLOR, + MGEF/SPEL/PERK for the func-699 ability
-        // chain). Each is read once into its own buffer.
+        // derivation need. Each is read once into its own buffer.
         std::vector<std::uint8_t> pndtGroup, flstGroup, cndfGroup, omodGroup, npcGroup, florGroup,
             mgefGroup, spelGroup, perkGroup;
         auto readGroupBody = [&](std::uint32_t gsize, std::vector<std::uint8_t>& dst) {
@@ -943,6 +1063,7 @@ namespace
                 dst.clear();
         };
 
+        std::uint8_t hdr[24];
         while (f.read(reinterpret_cast<char*>(hdr), 24))
         {
             if (std::memcmp(hdr, "GRUP", 4) != 0)
@@ -975,17 +1096,146 @@ namespace
                 f.seekg(gsize - 24, std::ios::cur);
         }
 
-        if (!pndtGroup.empty())
-            ParsePndtGroup(pndtGroup, map, tables.planetTraits);
+        std::vector<std::uint8_t> decomp;  // reused per-record scratch buffer
 
-        BuildMarkers(flstGroup, cndfGroup, omodGroup, npcGroup, florGroup, mgefGroup, spelGroup, perkGroup,
-                     tables);
+        if (!pndtGroup.empty())
+            ParsePndtGroup(pndtGroup, remap, map, tables.planetTraits);
+        if (!flstGroup.empty())
+            BuildCatalogs(flstGroup.data(), flstGroup.size(), decomp, remap,
+                          tables.floraCatalog, tables.faunaCatalog);
+        if (!cndfGroup.empty())
+            BuildCndf(cndfGroup.data(), cndfGroup.size(), decomp, remap, tables.cndf);
+        if (!mgefGroup.empty())
+            CollectMgefMask(mgefGroup.data(), mgefGroup.size(), decomp, remap, raw.mgefMask);
+        if (!spelGroup.empty())
+            CollectSpelEfids(spelGroup.data(), spelGroup.size(), decomp, remap, raw.spelEfids);
+        if (!perkGroup.empty())
+            CollectPerkSpels(perkGroup.data(), perkGroup.size(), decomp, remap, raw.perkSpels);
+        if (!omodGroup.empty())
+            CollectOmodRaw(omodGroup.data(), omodGroup.size(), decomp, remap, raw.omod);
+        if (!npcGroup.empty())
+        {
+            ForEachRecordInGroup(npcGroup.data(), npcGroup.size(), decomp,
+                                 [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
+                                     std::size_t dataSize) {
+                if (sig != kSigNPC_)
+                    return;
+                if (const auto rt = remap(formid); rt != 0)
+                    raw.npcObts.insert_or_assign(rt, NpcObtsOmods(data, dataSize, remap));
+            });
+        }
+        if (!florGroup.empty())
+        {
+            ForEachRecordInGroup(florGroup.data(), florGroup.size(), decomp,
+                                 [&](std::uint32_t sig, std::uint32_t formid, const std::uint8_t* data,
+                                     std::size_t dataSize) {
+                if (sig != kSigFLOR)
+                    return;
+                if (const auto rt = remap(formid); rt != 0)
+                    raw.florRepro.insert_or_assign(rt, FloraReproN(data, dataSize, remap));
+            });
+        }
+
+        spdlog::debug("EsmReader: parsed {} (type={}, index={}): PNDT={}B FLST={}B CNDF={}B OMOD={}B "
+                      "NPC_={}B FLOR={}B MGEF={}B SPEL={}B PERK={}B",
+                      spec.path.filename().string(), static_cast<int>(spec.type), spec.runtimeIndex,
+                      pndtGroup.size(), flstGroup.size(), cndfGroup.size(), omodGroup.size(),
+                      npcGroup.size(), florGroup.size(), mgefGroup.size(), spelGroup.size(),
+                      perkGroup.size());
+        return true;
+    }
+
+    // Resolve the cross-file chains once every source file has been merged: MGEF -> SPEL -> PERK ->
+    // OMOD ability masks, then per-species granted keywords + ability mask (fauna) / repro N (flora).
+    void ResolveMarkerChains(const RawTables& raw, MarkerTables& tables)
+    {
+        std::unordered_map<std::uint32_t, std::uint8_t> spelMask;
+        for (const auto& [spel, efids] : raw.spelEfids)
+        {
+            std::uint8_t mask = 0;
+            for (const auto mgef : efids)
+                if (const auto it = raw.mgefMask.find(mgef); it != raw.mgefMask.end())
+                    mask |= it->second;
+            if (mask)
+                spelMask.emplace(spel, mask);
+        }
+        std::unordered_map<std::uint32_t, std::uint8_t> perkMask;
+        for (const auto& [perk, spels] : raw.perkSpels)
+        {
+            std::uint8_t mask = 0;
+            for (const auto spel : spels)
+                if (const auto it = spelMask.find(spel); it != spelMask.end())
+                    mask |= it->second;
+            if (mask)
+                perkMask.emplace(perk, mask);
+        }
+        std::unordered_map<std::uint32_t, std::uint8_t> omodMask;
+        for (const auto& [omodId, entry] : raw.omod)
+        {
+            std::uint8_t mask = 0;
+            for (const auto perk : entry.nprk)
+                if (const auto it = perkMask.find(perk); it != perkMask.end())
+                    mask |= it->second;
+            if (mask)
+                omodMask.emplace(omodId, mask);
+        }
+
+        std::size_t faunaWithAbility = 0;
+        for (const auto& [npc, omods] : raw.npcObts)
+        {
+            auto& info   = tables.species[npc];
+            info.kingdom = Kingdom::kFauna;
+            info.grantedKw.clear();
+            info.abilityMask = 0;
+            for (const auto omodId : omods)
+            {
+                if (const auto it = raw.omod.find(omodId); it != raw.omod.end())
+                    for (const auto kw : it->second.nkey)
+                        if (std::find(info.grantedKw.begin(), info.grantedKw.end(), kw) ==
+                            info.grantedKw.end())
+                            info.grantedKw.push_back(kw);
+                if (const auto it = omodMask.find(omodId); it != omodMask.end())
+                    info.abilityMask |= it->second;
+            }
+            if (info.abilityMask)
+                ++faunaWithAbility;
+        }
+        for (const auto& [flor, repro] : raw.florRepro)
+        {
+            auto& info   = tables.species[flor];
+            info.kingdom = Kingdom::kFlora;
+            info.reproAv = repro;
+        }
+
+        spdlog::info("EsmReader: markers resolved — floraCatalog={} faunaCatalog={} cndf={} omod={} "
+                     "mgef={} spel={} perk={} | NPC_ {} ({} with ability) FLOR {}",
+                     tables.floraCatalog.lnam.size(), tables.faunaCatalog.lnam.size(),
+                     tables.cndf.size(), raw.omod.size(), raw.mgefMask.size(), raw.spelEfids.size(),
+                     raw.perkSpels.size(), raw.npcObts.size(), faunaWithAbility, raw.florRepro.size());
+    }
+
+    void BuildMap(Esm::PlanetSpeciesMap& map, MarkerTables& tables)
+    {
+        const auto sources = ResolveSources();
+        if (sources.empty())
+        {
+            spdlog::warn("EsmReader: no source files resolved");
+            return;
+        }
+
+        RawTables   raw;
+        std::size_t parsed = 0;
+        for (const auto& spec : sources)
+            parsed += ParseSourceFile(spec, sources, map, tables, raw) ? 1 : 0;
+
+        ResolveMarkerChains(raw, tables);
 
         std::size_t speciesCount = 0;
         for (const auto& [_, v] : map)
             speciesCount += v.size();
-        spdlog::info("EsmReader: loaded {} biome planets, {} species refs, {} planet-trait sets from Starfield.esm",
-                     map.size(), speciesCount, tables.planetTraits.size());
+        spdlog::info("EsmReader: loaded {} biome planets, {} species refs, {} planet-trait sets "
+                     "from {}/{} source files",
+                     map.size(), speciesCount, tables.planetTraits.size(), parsed, sources.size());
     }
 }
 
@@ -1017,6 +1267,12 @@ namespace Esm
                 }
             });
         }
+    }
+
+    void SetSources(std::vector<SourceFile> sources)
+    {
+        std::lock_guard lock(g_sourcesMtx);
+        g_sources = std::move(sources);
     }
 
     const PlanetSpeciesMap& GetPlanetSpecies()
