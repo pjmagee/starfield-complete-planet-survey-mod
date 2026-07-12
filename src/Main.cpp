@@ -10,10 +10,15 @@
 #endif
 #include <windows.h>  // GetModuleFileNameW, MAX_PATH (for ConfigureEsmSources)
 
+#include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <format>
+#include <fstream>
+#include <thread>
 #include <type_traits>
 #include <unordered_map>
 
@@ -45,14 +50,7 @@ namespace Engine
     //   NOTE: param_3 is a BYTE — pass a literal 0..100, never a float.
     using fn_set_percent_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t percent, std::uint64_t zero);
 
-    inline REL::Relocation<fn_get_manager_t>     GetKnowledgeManager {REL::ID(126578)};
-    inline REL::Relocation<fn_set_trait_known_t> SetTraitKnownNative {REL::ID(52155)};
-    inline REL::Relocation<fn_db_lookup_t>       DbLookup {REL::ID(126806)};
-    inline REL::Relocation<fn_incr_flag_t>       IncrementScanFlag {REL::ID(124898)};
-    inline REL::Relocation<fn_set_percent_t>     SetPercentByte {REL::ID(124899)};
-    inline REL::Relocation<std::uint16_t*>       TraitDiscriminator {REL::ID(938333)};
-
-    // === Character "Statistics" (Data menu) counters ===
+    // === Character "Statistics" (Data menu) counters (StatEntryCount .. StatNameUniqueCreatures) ===
     // The game keeps Flora/Fauna Fully Scanned + Unique Creatures Scanned in a global
     // "misc stats" table. A natural scan bumps them via the ID_100393 scan-event handler;
     // our ref-free green bypasses that event, so we replicate the increment ourselves.
@@ -60,12 +58,6 @@ namespace Engine
     // *StatTableBase, count = *StatEntryCount, stride 0x20, entry+0x00 = interned stat-name
     // ptr, entry+0x10 = int32 value (exactly what the Stats menu ID_88202 displays and the
     // save stores). The Stat*Name globals each hold the interned pointer used as the key.
-    inline REL::Relocation<std::uint32_t*>  StatEntryCount            {REL::ID(889375)};  // *ptr = table entry count
-    inline REL::Relocation<std::uintptr_t*> StatTableBase             {REL::ID(889377)};  // *ptr = table base pointer
-    inline REL::Relocation<std::uint8_t*>   StatTrackingEnabled       {REL::ID(894532)};  // *ptr = stats-enabled gate
-    inline REL::Relocation<std::uintptr_t*> StatNameFloraFullyScanned {REL::ID(923219)};  // *ptr = "Flora Fully Scanned"
-    inline REL::Relocation<std::uintptr_t*> StatNameFaunaFullyScanned {REL::ID(923220)};  // *ptr = "Fauna Fully Scanned"
-    inline REL::Relocation<std::uintptr_t*> StatNameUniqueCreatures   {REL::ID(923223)};  // *ptr = "Unique Creatures Scanned"
 
     // ID_1016657: per-planet survey aggregator constructor.
     //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
@@ -75,16 +67,12 @@ namespace Engine
     // ID_65318: cleanup for the aggregator buffer.
     using fn_buffer_free_t = void (*)(void* buffer);
 
-    inline REL::Relocation<fn_aggregator_t>  SurveyAggregator {REL::ID(1016657)};
-    inline REL::Relocation<fn_buffer_free_t> SurveyBufferFree {REL::ID(65318)};
-
     // ID_97853: survey check-and-dispatch. Called by SetTraitKnown/SetScanned flows after a write.
     //   Signature: (struct*) where the struct starts with { uint32 planet_id, float prev_pct, u8 flag, u8 skip }.
     //   Fires PlayerPlanetSurveyProgressEvent (conditional) and PlayerPlanetSurveyCompleteEvent
     //   if the planet's survey is now 100%. The Complete event is what generates the in-world
     //   "<Planet> Survey Data" slate in the player's inventory.
     using fn_survey_notify_t = void (*)(void* ctx);
-    inline REL::Relocation<fn_survey_notify_t> SurveyCheckNotify {REL::ID(97853)};
 
     // ID_102650: the engine's ref-free "scan & fully survey a planet" entry point —
     // what a starmap/orbital scan ultimately drives. It resolves the knowledge DB
@@ -93,7 +81,159 @@ namespace Engine
     // reward), and recurses over the planet's moons. Self-contained: no spawn, no
     // teleport, no async two-phase. Args: (unused-context, planetId, fullFlag=1).
     using fn_scan_complete_t = void (*)(std::int64_t context, std::uint32_t planetId, std::uint8_t fullFlag);
-    inline REL::Relocation<fn_scan_complete_t> ScanCompletePlanet {REL::ID(102650)};
+
+    // ID_124901: the engine's species-slot hash (FNV-1a of the 4-byte species id) -> slot index in a
+    // subobj's species hashmap. Used to dump the RAW per-species slot bytes so we can DIFF a full
+    // scan (green+info+XP) vs a +0x21 byte-poke (half) and find the missing "species catalogued/known"
+    // field the real scan writes and we don't.
+    using fn_species_slot_hash_t = std::uint64_t (*)(std::uintptr_t hashmap, const void* key4);
+
+    // ID_35755: BSTArray<u32>::push_back grow path — (header{begin,end,cap}, pos, &value). Allocates
+    // via the engine allocator and updates the header + frees the old buffer, so the array is
+    // engine-OWNED and safe to free on teardown. This is how the real scan fills slot+0x08; we use
+    // it to build that array ref-free — the GREEN fix.
+    using fn_bstarray_grow_t = std::uint32_t* (*)(std::int64_t* header, std::uint32_t* pos, const std::uint32_t* value);
+
+    // ID_83006: resolve a species base FORM to its CANONICAL form (detailed rationale at
+    // CanonicalFormId below — the green outline keys on this canonical id, not the raw ESM id).
+    using fn_resolve_canonical_form_t = std::uintptr_t (*)(void* form);
+
+    // ID_883341 (AllFormsMapHolder): the engine's global form registry — a BSTScatterTable<FormID,
+    // TESForm*>. It's what TESForm::LookupByID (ID_47401) reads. Starfield does NOT keep planets in
+    // TESDataHandler::formArrays (those are empty for galaxy types like PNDT), so this registry is
+    // the only place to enumerate all planet forms (see ForEachFormOfType below).
+
+    // ID_93988 (RefreshStarMapPanelData): repopulate the StarMap selected-planet info panel from the
+    // knowledge DB — (panel controller, planet id). Full RE notes at the StarMap repaint logic below.
+    using fn_refresh_starmap_t = void (*)(void* controller, std::uint32_t planetId);
+
+    // === Address-library ids (single source of truth) ===
+    // ONE X-macro table names every address-library id the plugin depends on. The load-time
+    // self-check (CheckOffsets), the Relocation-global DECLARATIONS, the resolver (ResolveOffsets)
+    // and the hook installers all derive from it, so the probe list, the declarations, the
+    // assignments and the logged counts can never drift (static_assert'd below) — and a new global
+    // CANNOT be added without appearing in the probe.
+    //
+    // Why this machinery exists: an unresolved REL::ID routes through CommonLibSF's IDDB → REX::FAIL
+    // → MessageBox + TerminateProcess — a hard crash that does NOT throw and cannot be caught. So:
+    //  (a) the Relocation globals (generated below) are DEFAULT-constructed (address 0), never
+    //      resolved at DLL-load static-init;
+    //  (b) CheckOffsets() parses the versionlib file ITSELF and records each id's RVA;
+    //  (c) ResolveOffsets() assigns the globals directly from moduleBase + parsedRva — OUR
+    //      Relocation globals and hook sites never go through REL::ID / the IDDB.
+    // CommonLibSF-INTERNAL calls we make on the enabled path (VM/UI/data-handler singletons,
+    // BSFixedString's string pool, TESForm::LookupByID, GameSettingCollection) DO still resolve
+    // through the IDDB inside CommonLibSF — those ids are listed as PROBE-ONLY entries so a
+    // versionlib that lacks any of them disables the mod up front instead of REX::FAILing at first
+    // use. (Real case: BSStringPool::GetEntry id 1186742 exists in the 1.16.244 versionlib but is
+    // beyond the END of the 1.16.236/242 tables — a green probe of only our own ids would still
+    // have died in the first BSFixedString there.)
+    //
+    // CPS_RELOC_IDS: ids with a same-named, table-GENERATED REL::Relocation<type> global.
+    // CPS_HOOKSITE_IDS: ids resolved ad hoc inside the Hook::Install* trampoline patchers.
+    // CPS_PROBEONLY_IDS: CommonLibSF-internal ids — verified present, resolved by CommonLibSF itself.
+#define CPS_RELOC_IDS(X)                                            \
+    X(GetKnowledgeManager, 126578, fn_get_manager_t)                \
+    X(SetTraitKnownNative, 52155, fn_set_trait_known_t)             \
+    X(DbLookup, 126806, fn_db_lookup_t)                             \
+    X(IncrementScanFlag, 124898, fn_incr_flag_t)                    \
+    X(SetPercentByte, 124899, fn_set_percent_t)                     \
+    X(TraitDiscriminator, 938333, std::uint16_t*)                   \
+    X(StatEntryCount, 889375, std::uint32_t*)                       \
+    X(StatTableBase, 889377, std::uintptr_t*)                       \
+    X(StatTrackingEnabled, 894532, std::uint8_t*)                   \
+    X(StatNameFloraFullyScanned, 923219, std::uintptr_t*)           \
+    X(StatNameFaunaFullyScanned, 923220, std::uintptr_t*)           \
+    X(StatNameUniqueCreatures, 923223, std::uintptr_t*)             \
+    X(SurveyAggregator, 1016657, fn_aggregator_t)                   \
+    X(SurveyBufferFree, 65318, fn_buffer_free_t)                    \
+    X(SurveyCheckNotify, 97853, fn_survey_notify_t)                 \
+    X(ScanCompletePlanet, 102650, fn_scan_complete_t)               \
+    X(SpeciesSlotHash, 124901, fn_species_slot_hash_t)              \
+    X(BSTArrayU32Grow, 35755, fn_bstarray_grow_t)                   \
+    X(ResolveCanonicalForm, 83006, fn_resolve_canonical_form_t)     \
+    X(AllFormsMapHolder, 883341, std::uintptr_t*)                   \
+    X(RefreshStarMapPanelData, 93988, fn_refresh_starmap_t)
+
+#define CPS_HOOKSITE_IDS(X)               \
+    X(ScanHookOuter, 52157)               \
+    X(StarMapScanHookOuter, 52173)        \
+    X(StarMapRefreshHookOuter, 94011)
+
+    // CommonLibSF-internal ids reachable from OUR enabled-path calls (enumerated from the CommonLibSF
+    // source at the pinned submodule commit; re-audit when bumping the submodule):
+    //   VirtualMachine::GetSingleton → RE::ID::GameVM::Singleton   (Papyrus::Register, DispatchPapyrusStatic)
+    //   RE::UI::GetSingleton / IsMenuOpen                          (both pollers, RefreshStarMapPanelIfOpen)
+    //   TESDataHandler::GetSingleton                               (ConfigureEsmSources)
+    //   GameSettingCollection::GetSingleton / GetSetting           (ApplyInstantScanGameSettings)
+    //   TESForm::LookupByID                                        (native completion paths)
+    //   BSStringPool GetEntry / Entry::Release / BucketTable       (every RE::BSFixedString ctor/dtor)
+#define CPS_PROBEONLY_IDS(X)                     \
+    X(ClSF_GameVM_Singleton, 937585)             \
+    X(ClSF_UI_Singleton, 937580)                 \
+    X(ClSF_UI_IsMenuOpen, 130475)                \
+    X(ClSF_TESDataHandler_Singleton, 937572)     \
+    X(ClSF_GameSettings_Singleton, 938225)       \
+    X(ClSF_GameSettings_GetSetting, 49324)       \
+    X(ClSF_TESForm_LookupByID, 47401)            \
+    X(ClSF_StringPool_GetEntry, 1186742)         \
+    X(ClSF_StringPool_Release, 139340)           \
+    X(ClSF_StringPool_BucketTable, 139337)
+
+#define CPS_CRITICAL_IDS(X3, X2) CPS_RELOC_IDS(X3) CPS_HOOKSITE_IDS(X2) CPS_PROBEONLY_IDS(X2)
+
+    namespace Ids
+    {
+        // Index of each id inside kCriticalOffsetIds / g_criticalRva (same order as the table).
+        enum class Idx : std::size_t
+        {
+#define CPS_X3(name, id, type) name,
+#define CPS_X2(name, id) name,
+            CPS_CRITICAL_IDS(CPS_X3, CPS_X2)
+#undef CPS_X3
+#undef CPS_X2
+                kCount
+        };
+    }  // namespace Ids
+
+    // Every critical id, in table order, for the non-fatal load-time probe (CheckOffsets).
+    inline constexpr std::uint64_t kCriticalOffsetIds[] = {
+#define CPS_X3(name, id, type) id##ull,
+#define CPS_X2(name, id) id##ull,
+        CPS_CRITICAL_IDS(CPS_X3, CPS_X2)
+#undef CPS_X3
+#undef CPS_X2
+    };
+    inline constexpr std::size_t kCriticalIdCount = std::size(kCriticalOffsetIds);
+    inline constexpr std::size_t kRelocIdCount    = [] {
+        std::size_t n = 0;
+#define CPS_X3(name, id, type) ++n;
+        CPS_RELOC_IDS(CPS_X3)
+#undef CPS_X3
+        return n;
+    }();
+    static_assert(kCriticalIdCount == static_cast<std::size_t>(Ids::Idx::kCount),
+                  "critical-id array out of sync with the Idx enum");
+
+    // The engine-binding Relocation globals, GENERATED from the table (declared lazy / address 0;
+    // assigned by ResolveOffsets once the probe has verified + parsed every RVA). Their per-id
+    // documentation lives with the type aliases above and at the usage sites.
+#define CPS_X3(name, id, type) inline REL::Relocation<type> name;
+    CPS_RELOC_IDS(CPS_X3)
+#undef CPS_X3
+
+    // Filled by CheckOffsets() on success: the running exe's base address and each critical id's
+    // RVA parsed straight from the versionlib (bounds-checked against the module's SizeOfImage).
+    // ResolveOffsets()/Hook::Install* read addresses from HERE — never from REL::ID/IDDB — so OUR
+    // resolution cannot hit REX::FAIL (no TOCTOU either: the probe's parse IS the resolution source).
+    inline std::uintptr_t                              g_moduleBase {0};
+    inline std::array<std::uint32_t, kCriticalIdCount> g_criticalRva {};
+
+    // Absolute address of a probed id. Only meaningful after CheckOffsets() returned true.
+    inline std::uintptr_t CriticalAddress(Ids::Idx idx)
+    {
+        return g_moduleBase + g_criticalRva[static_cast<std::size_t>(idx)];
+    }
 
     // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0–1.16.244.0, Ghidra-derived).
     constexpr std::size_t  kPlanetIdOffset       = 0x54;   // uint32 knowledge key at planetForm+0x54
@@ -151,21 +291,8 @@ namespace Engine
                                                        kPlanetIdOffset);
     }
 
-    // ID_124901: the engine's species-slot hash (FNV-1a of the 4-byte species id) -> slot index in a
-    // subobj's species hashmap. Used to dump the RAW per-species slot bytes so we can DIFF a full
-    // scan (green+info+XP) vs a +0x21 byte-poke (half) and find the missing "species catalogued/known"
-    // field the real scan writes and we don't.
-    using fn_species_slot_hash_t = std::uint64_t (*)(std::uintptr_t hashmap, const void* key4);
-    inline REL::Relocation<fn_species_slot_hash_t> SpeciesSlotHash {REL::ID(124901)};
-
-    // ID_35755: BSTArray<u32>::push_back grow path — (header{begin,end,cap}, pos, &value). Allocates
-    // via the engine allocator and updates the header + frees the old buffer, so the array is
-    // engine-OWNED and safe to free on teardown. This is how the real scan fills slot+0x08; we use
-    // it to build that array ref-free — the GREEN fix.
-    using fn_bstarray_grow_t = std::uint32_t* (*)(std::int64_t* header, std::uint32_t* pos, const std::uint32_t* value);
-    inline REL::Relocation<fn_bstarray_grow_t> BSTArrayU32Grow {REL::ID(35755)};
-
     // push_back one u32 onto a species slot's +0x08 BSTArray, matching the engine's inline push_back
+    // (BSTArrayU32Grow = ID_35755, the engine grow path — see the type alias docs above).
     // (grow via ID_35755 when full, else in-place). slotAddr = the slot base (subobj+0x40 + idx*0x30);
     // header {begin@+0x08, end@+0x10, cap@+0x18}. Engine-owned alloc -> safe teardown.
     void PushSpeciesAttr(std::uintptr_t slotAddr, std::uint32_t id)
@@ -202,9 +329,6 @@ namespace Engine
     // OFF-PLANET from the ESM species form with NO live instance. If the canonical is
     // species-stable (shared across a species' biome variants), writing +0x21 under it greens the
     // wild creatures galaxy-wide. Returns 0 when the form isn't scannable / has no canonical.
-    using fn_resolve_canonical_form_t = std::uintptr_t (*)(void* form);
-    inline REL::Relocation<fn_resolve_canonical_form_t> ResolveCanonicalForm {REL::ID(83006)};
-
     std::uint32_t CanonicalFormId(RE::TESForm* form)
     {
         if (!form)
@@ -632,8 +756,7 @@ namespace Engine
     // ID_883341 is the global that holds the map pointer; it's what
     // TESForm::LookupByID (ID_47401) reads. Starfield does NOT keep planets in
     // TESDataHandler::formArrays (those are empty for galaxy types like PNDT), so
-    // this registry is the only place to enumerate all planet forms.
-    inline REL::Relocation<std::uintptr_t*> AllFormsMapHolder {REL::ID(883341)};
+    // this registry is the only place to enumerate all planet forms. (AllFormsMapHolder = ID_883341.)
 
     // Iterate every loaded form of a given type. Layout derived from the
     // LookupByID disassembly + CommonLibSF's BSTScatterTable iterator:
@@ -823,8 +946,7 @@ namespace Engine
     // planetId)`, and internally `ID_94888(buf, planetId)`→`ID_94906(db, buf)` reads the DB for that
     // planet). Passing the wrong planetId (or omitting it) populates the panel for a garbage planet →
     // it renders EMPTY. (RE 2026-07-11: re/ghidra/output/starmap-{refresh,select-refresh}-decomp.)
-    using fn_refresh_starmap_t = void (*)(void* controller, std::uint32_t planetId);
-    inline REL::Relocation<fn_refresh_starmap_t> RefreshStarMapPanelData {REL::ID(93988)};
+    // (RefreshStarMapPanelData = ID_93988, declared via the id table above.)
 
     // Repaint the StarMap selected-planet panel (ID_93988) after our completion, so it shows 100% in
     // place. ID_93988's arg is the star map's internal panel CONTROLLER (param_1 of ID_94011), NOT the
@@ -890,6 +1012,300 @@ namespace Engine
     // of re-faulting on the same bad offset every call. Cleared only by a game restart.
     inline std::atomic<bool> g_degraded {false};
 
+    // Set true ONCE at kPostDataLoad, only after CheckOffsets() has proven every critical id
+    // resolves against the on-disk address library. While false (address library missing / stale for
+    // the running runtime — the routine post-patch "SFSE ships before versionlib" case) the feature
+    // is disabled: NOTHING is bound or installed (natives, hooks, pollers, ESM, GMSTs — even
+    // Papyrus::Register is skipped, because CommonLibSF's VM/UI singletons resolve via REL::ID and
+    // would REX::FAIL on the failed versionlib), and no address is ever resolved. The gate in
+    // GuardedNative and the hook thunks is defense-in-depth on top of that. Cleared only by restart.
+    inline std::atomic<bool> g_offsetsValid {false};
+
+    // One-shot flag for the "native call ignored" WARN in GuardedNative — shared across ALL natives
+    // so the disabled/degraded state logs exactly once per process, not once per native.
+    inline std::once_flag g_disabledNoticeOnce;
+
+    // === Load-time offset self-check (non-fatal address-library probe) ==========================
+    //
+    // CommonLibSF resolves a REL::ID through IDDB, which calls REX::FAIL — a MessageBox +
+    // TerminateProcess — the instant an id is missing or the versionlib's game version doesn't match
+    // the running exe. REX::FAIL does NOT throw, so it can't be caught; the game just dies. After a
+    // Starfield patch this is routine: SFSE updates first and the Address Library lags a few days, so
+    // the versionlib .bin for the new runtime is absent and every player crashes on launch.
+    //
+    // To degrade gracefully we validate every id OURSELVES, reading the same versionlib file IDDB
+    // would load but never going through REX::FAIL. Starfield's versionlib is format 5 (verified
+    // against 1.16.236/242/244): a fixed 96-byte header followed by a little-endian u32[] indexed by
+    // address-library id; entry 0 means "no offset for this id in this build".
+    //   byte 0  : u32 format (== 5)
+    //   byte 4  : u32 gameVersion[4]   (major, minor, patch, build)
+    //   byte 20 : char name[64]        ("Starfield.exe")
+    //   byte 84 : i32 pointerSize
+    //   byte 88 : i32 dataFormat
+    //   byte 92 : i32 offsetCount
+    //   byte 96 : u32 offset[offsetCount]
+    // The header's gameVersion[4] sits at byte 4 for formats 1/2 as well, so the version check is
+    // format-independent; only the per-id offset table is format-5-specific.
+
+    // Directory of THIS plugin DLL (…/Data/SFSE/Plugins) — where the versionlib lives, exactly as
+    // CommonLibSF's IDDB locates it. Returns empty on failure (→ feature disabled). No engine derefs.
+    inline std::filesystem::path GetPluginDirectory()
+    {
+        HMODULE self = nullptr;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                reinterpret_cast<LPCWSTR>(&GetPluginDirectory), &self) ||
+            !self)
+            return {};
+        wchar_t buf[MAX_PATH] {};
+        const auto n = GetModuleFileNameW(self, buf, MAX_PATH);
+        if (n == 0 || n >= MAX_PATH)
+            return {};
+        return std::filesystem::path {buf}.parent_path();
+    }
+
+    // Why the probe failed — enumerated so the single ERROR line says exactly what is wrong
+    // (a wrong-version file renamed to the runtime name reads very differently from a missing one).
+    enum class ProbeResult
+    {
+        kOk,
+        kFileMissing,        // no versionlib-<runtime>.bin next to the plugin (the patch-lag case)
+        kBadHeader,          // unreadable / truncated / implausible header
+        kVersionMismatch,    // header's game version != the running exe's version
+        kUnsupportedFormat,  // header format != 5 — we can't verify ids, so FAIL CLOSED
+        kIdMissing,          // an id is past the table or has a zero offset entry
+    };
+
+    inline const char* ProbeResultName(ProbeResult r)
+    {
+        switch (r)
+        {
+            case ProbeResult::kOk:                return "ok";
+            case ProbeResult::kFileMissing:       return "version library file missing";
+            case ProbeResult::kBadHeader:         return "version library header unreadable";
+            case ProbeResult::kVersionMismatch:   return "version library is for a different game version";
+            case ProbeResult::kUnsupportedFormat: return "version library format unsupported";
+            case ProbeResult::kIdMissing:         return "id missing from the version library";
+        }
+        return "unknown";
+    }
+
+    // Parse the versionlib at `path`, verify it matches `exeVer`, and read the RVA of every critical
+    // id into `rvasOut` (same order as kCriticalOffsetIds). Pure file I/O — never touches the engine,
+    // never calls REX::FAIL. ANY problem fails closed: format != 5 is a failure too (we cannot verify
+    // ids in a format we can't decode; trusting it would reintroduce the exact REX::FAIL crash this
+    // probe exists to prevent). On kIdMissing, `missingId` receives the offending id. The parsed RVAs
+    // double as the RESOLUTION source (ResolveOffsets), so there is no probe-then-resolve TOCTOU.
+    inline ProbeResult ProbeVersionLib(const std::filesystem::path& path, const REL::Version& exeVer,
+                                       std::array<std::uint32_t, kCriticalIdCount>& rvasOut,
+                                       std::uint64_t& missingId, std::uint32_t& formatOut)
+    {
+        missingId = 0;
+        formatOut = 0;
+        rvasOut.fill(0);
+        std::error_code ec;
+        if (!std::filesystem::exists(path, ec))
+            return ProbeResult::kFileMissing;
+
+        std::ifstream in(path, std::ios::binary);
+        if (!in)
+            return ProbeResult::kBadHeader;
+
+        std::uint32_t format  = 0;
+        std::uint32_t gv[4]   = {0, 0, 0, 0};
+        in.read(reinterpret_cast<char*>(&format), sizeof format);
+        in.read(reinterpret_cast<char*>(gv), sizeof gv);
+        if (!in)
+            return ProbeResult::kBadHeader;
+        formatOut = format;
+
+        // The gameVersion[4] dwords sit at byte 4 for formats 1/2/5 alike, so check version first —
+        // a mismatch is the more precise diagnosis even when the format is also unexpected.
+        if (gv[0] != exeVer[0] || gv[1] != exeVer[1] || gv[2] != exeVer[2] || gv[3] != exeVer[3])
+            return ProbeResult::kVersionMismatch;
+
+        // FAIL CLOSED on any format we can't decode. Every shipped Starfield versionlib is format 5;
+        // if that ever changes, this branch disables the mod (one clear ERROR) instead of letting an
+        // unverified REL::ID resolve later and REX::FAIL-kill the game.
+        if (format != 5)
+            return ProbeResult::kUnsupportedFormat;
+
+        char         name[64] {};
+        std::int32_t ptrSize = 0, dataFormat = 0, count = 0;
+        in.read(name, sizeof name);
+        in.read(reinterpret_cast<char*>(&ptrSize), sizeof ptrSize);
+        in.read(reinterpret_cast<char*>(&dataFormat), sizeof dataFormat);
+        in.read(reinterpret_cast<char*>(&count), sizeof count);
+        if (!in || count <= 0 || static_cast<std::uint64_t>(count) > 0x0800'0000ull)  // sane upper bound
+            return ProbeResult::kBadHeader;
+
+        const auto               entryCount = static_cast<std::uint64_t>(count);
+        constexpr std::streamoff kDataStart = 96;  // == sizeof(HEADER_V5)
+        for (std::size_t k = 0; k < kCriticalIdCount; ++k)
+        {
+            const auto id = kCriticalOffsetIds[k];
+            if (id >= entryCount)
+            {
+                missingId = id;
+                return ProbeResult::kIdMissing;
+            }
+            in.seekg(kDataStart + static_cast<std::streamoff>(id) * 4, std::ios::beg);
+            std::uint32_t offset = 0;
+            in.read(reinterpret_cast<char*>(&offset), sizeof offset);
+            if (!in || offset == 0)
+            {
+                missingId = id;
+                return ProbeResult::kIdMissing;
+            }
+            rvasOut[k] = offset;
+        }
+        return ProbeResult::kOk;
+    }
+
+    // Show a non-fatal, NON-BLOCKING notice so a player who never reads the SFSE log still learns why
+    // the mod is inert (detached thread: the game's load thread is not held up; the game keeps
+    // running). This is the only honest player-visible channel when disabled — the Papyrus/UI path
+    // needs engine singletons that resolve via REL::ID, which is exactly what we can't touch.
+    inline void ShowDisabledNotice(const std::string& text)
+    {
+        try
+        {
+            std::thread([text] {
+                MessageBoxA(nullptr, text.c_str(), "Complete Planet Survey", MB_OK | MB_ICONWARNING);
+            }).detach();
+        }
+        catch (const std::exception& e)
+        {
+            // Worst case the notice doesn't show; the ERROR log line still exists.
+            spdlog::warn("ShowDisabledNotice: could not spawn the notice thread ({})", e.what());
+        }
+        catch (...)
+        {
+            spdlog::warn("ShowDisabledNotice: could not spawn the notice thread (unknown error)");
+        }
+    }
+
+    // Log the single disable ERROR line AND show the player notice with the SAME reason text, then
+    // return false — used by EVERY disable path in CheckOffsets so no failure is log-only.
+    inline bool DisableWithReason(const std::string& runtime, const std::string& reason)
+    {
+        spdlog::error("CompletePlanetSurvey disabled: {} (runtime {})", reason, runtime);
+        ShowDisabledNotice(std::format(
+            "Complete Planet Survey is DISABLED for this game version ({}).\n\n"
+            "Reason: {}.\n\n"
+            "The game will run normally; the mod does nothing until an updated "
+            "Address Library (version library) for this runtime is installed.",
+            runtime.empty() ? "unknown" : runtime, reason));
+        return false;
+    }
+
+    // SizeOfImage of the module at `base`, read from its in-memory PE headers (all guarded).
+    // Returns 0 on any inconsistency.
+    inline std::uint32_t ModuleSizeOfImage(std::uintptr_t base)
+    {
+        if (!base)
+            return 0;
+        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+        if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew <= 0 || dos->e_lfanew > 0x1000)
+            return 0;
+        const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS64*>(base + dos->e_lfanew);
+        if (nt->Signature != IMAGE_NT_SIGNATURE)
+            return 0;
+        return nt->OptionalHeader.SizeOfImage;
+    }
+
+    // Non-fatal load-time gate. True IFF every critical id resolves against the on-disk versionlib
+    // for the running runtime; on success it also stashes moduleBase + each id's RVA (the resolution
+    // source for ResolveOffsets / Hook::Install*). On failure it logs ONE clear ERROR line naming the
+    // cause and returns false; the caller then binds nothing and never resolves an id, so REX::FAIL
+    // can never fire. The exe version is read via REL::GetFileVersion (returns nullopt on failure) —
+    // NOT REX::FModule::GetFileVersion(), which dereferences that optional unchecked (UB, uncatchable).
+    inline bool CheckOffsets()
+    {
+        std::string runtime;  // best-known runtime version string, for the disable messages
+        try
+        {
+            // Running exe path + version, all failure-checked (no REX helpers that FAIL or deref
+            // an empty optional).
+            wchar_t exeBuf[MAX_PATH] {};
+            const auto exeLen = GetModuleFileNameW(nullptr, exeBuf, MAX_PATH);
+            if (exeLen == 0 || exeLen >= MAX_PATH)
+                return DisableWithReason(runtime, "could not determine the game executable path");
+            const auto exeVerOpt = REL::GetFileVersion(std::wstring_view {exeBuf, exeLen});
+            if (!exeVerOpt)
+                return DisableWithReason(runtime, "could not read the game executable's version info");
+            const auto exeVer = *exeVerOpt;
+            runtime           = exeVer.string();
+
+            const auto dir = GetPluginDirectory();
+            if (dir.empty())
+                return DisableWithReason(runtime, "could not locate the plugin directory to verify the address library");
+            const auto file = dir / (L"versionlib-" + exeVer.wstring(L"-") + L".bin");
+
+            std::array<std::uint32_t, kCriticalIdCount> rvas {};
+            std::uint64_t missingId = 0;
+            std::uint32_t format    = 0;
+            const auto    result    = ProbeVersionLib(file, exeVer, rvas, missingId, format);
+            if (result != ProbeResult::kOk)
+            {
+                std::string detail = ProbeResultName(result);
+                if (result == ProbeResult::kIdMissing)
+                    detail += std::format(" (id {})", missingId);
+                else if (result == ProbeResult::kUnsupportedFormat)
+                    detail += std::format(" (format {})", format);
+                return DisableWithReason(runtime,
+                                         std::format("address library has no offsets for this runtime — waiting for an "
+                                                     "updated version library [{}: {}]",
+                                                     file.filename().string(), detail));
+            }
+
+            const auto base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+            if (!base)
+                return DisableWithReason(runtime, "could not determine the game module base address");
+
+            // Sanity: every parsed RVA must fall inside the loaded module image. A corrupt/mismatched
+            // versionlib could otherwise hand us addresses outside Starfield.exe entirely.
+            const auto imageSize = ModuleSizeOfImage(base);
+            if (imageSize == 0)
+                return DisableWithReason(runtime, "could not read the game module's PE headers");
+            for (std::size_t k = 0; k < kCriticalIdCount; ++k)
+            {
+                if (rvas[k] >= imageSize)
+                    return DisableWithReason(runtime,
+                                             std::format("version library entry for id {} points outside the game "
+                                                         "module (rva 0x{:X} >= image size 0x{:X}) — corrupt file?",
+                                                         kCriticalOffsetIds[k], rvas[k], imageSize));
+            }
+
+            g_moduleBase  = base;
+            g_criticalRva = rvas;
+            spdlog::info("CheckOffsets: all {} critical address-library ids resolve for runtime {} ({})",
+                         kCriticalIdCount, runtime, file.filename().string());
+            return true;
+        }
+        catch (const std::exception& e)
+        {
+            return DisableWithReason(runtime, std::format("address-library self-check failed ({})", e.what()));
+        }
+        catch (...)
+        {
+            return DisableWithReason(runtime, "address-library self-check failed (unknown)");
+        }
+    }
+
+    // Bind every Relocation global directly from moduleBase + the RVA the probe parsed. Called ONCE
+    // at kPostDataLoad, ONLY after CheckOffsets() returned true. OUR globals never go through
+    // REL::ID / the IDDB, so THIS resolution cannot reach REX::FAIL (no TOCTOU: the probe's parse is
+    // the source). CommonLibSF-internal ids still resolve via IDDB inside CommonLibSF — that set is
+    // covered by the CPS_PROBEONLY_IDS probe entries. The assignment list is GENERATED from the same
+    // CPS_RELOC_IDS table as the declarations and the probe list, so it cannot drift.
+    inline void ResolveOffsets()
+    {
+#define CPS_X3(name, id, type) name = CriticalAddress(Ids::Idx::name);
+        CPS_RELOC_IDS(CPS_X3)
+#undef CPS_X3
+        spdlog::info("ResolveOffsets: bound {} address-library relocations (direct RVA, no IDDB)", kRelocIdCount);
+    }
+
     // Patch the scanner's per-species required-count GMSTs so each individual scan
     // counts as a full completion. Matches the "Instant Scan" mod's approach (Nexus
     // mods/759) — just two SetGS calls, no ESM, no CCR dependency.
@@ -916,26 +1332,48 @@ namespace Engine
 
 namespace Papyrus
 {
-    // Every bound native is registered through GuardedNative<>::call (see the CPS_GUARDED macro
-    // used in Register) rather than bound directly. This traps any C++ exception OR — because
-    // src/ is compiled /EHa — any structured fault such as an access violation, logs it, and
-    // returns a safe default. An uncaught fault crossing into the Papyrus VM's C call frame is
-    // undefined behaviour / a silent CTD with no log line. After the first fault we latch
-    // Engine::g_degraded so later natives bail to defaults instead of re-faulting on a bad offset.
-    template <class T, T fn>
+    // Every bound native is registered through GuardedNative<>::call (see the CPS_GUARDED /
+    // CPS_GUARDED_PURE macros used in Register) rather than bound directly. This traps any C++
+    // exception OR — because src/ is compiled /EHa — any structured fault such as an access
+    // violation, logs it, and returns a safe default. An uncaught fault crossing into the Papyrus
+    // VM's C call frame is undefined behaviour / a silent CTD with no log line. After the first
+    // fault we latch Engine::g_degraded so later natives bail to defaults instead of re-faulting
+    // on a bad offset.
+    //
+    // RequiresEngine=false (CPS_GUARDED_PURE) marks natives that are PURE — string parsing /
+    // logging only, no engine pointers, no offsets — so they stay live in a DEGRADED session
+    // (g_degraded latched after a caught fault). Gating those would make the console UX lie
+    // (e.g. CategoriesValid returning false for a valid "all" reads as "unknown category").
+    // Note the offsets-invalid state can't reach any native in practice: when CheckOffsets fails,
+    // Papyrus::Register is never called, so nothing is bound — the g_offsetsValid check below is
+    // defense-in-depth only.
+    template <class T, T fn, bool RequiresEngine = true>
     struct GuardedNative;
 
-    template <class Ret, class... Args, Ret (*fn)(std::monostate, Args...)>
-    struct GuardedNative<Ret (*)(std::monostate, Args...), fn>
+    template <class Ret, class... Args, Ret (*fn)(std::monostate, Args...), bool RequiresEngine>
+    struct GuardedNative<Ret (*)(std::monostate, Args...), fn, RequiresEngine>
     {
         static Ret call(std::monostate self, Args... args)
         {
-            if (Engine::g_degraded.load(std::memory_order_acquire))
+            // Feature-disabled (no valid offsets for this runtime) OR latched-degraded (a prior
+            // fault): no-op to a neutral default without touching a single engine pointer. Logged
+            // ONCE per process (not per call — a galaxy sweep would spam thousands of lines).
+            if constexpr (RequiresEngine)
             {
-                if constexpr (!std::is_void_v<Ret>)
-                    return Ret {};
-                else
-                    return;
+                if (!Engine::g_offsetsValid.load(std::memory_order_acquire) ||
+                    Engine::g_degraded.load(std::memory_order_acquire))
+                {
+                    std::call_once(Engine::g_disabledNoticeOnce, [] {
+                        spdlog::warn("[native] call ignored — CompletePlanetSurvey is {} (further ignored calls are not logged)",
+                                     Engine::g_offsetsValid.load(std::memory_order_acquire)
+                                         ? "degraded after a caught fault"
+                                         : "disabled (address library offsets unavailable)");
+                    });
+                    if constexpr (!std::is_void_v<Ret>)
+                        return Ret {};
+                    else
+                        return;
+                }
             }
             try
             {
@@ -957,6 +1395,7 @@ namespace Papyrus
     };
 
 #define CPS_GUARDED(FN) (&GuardedNative<decltype(&FN), &FN>::call)
+#define CPS_GUARDED_PURE(FN) (&GuardedNative<decltype(&FN), &FN, false>::call)
 
     // Mark a trait keyword as known on the planet. Fires the trait progress event
     // (so UI notifications behave like a natural scan discovery).
@@ -1407,8 +1846,11 @@ namespace Papyrus
         }
         auto* ivm = static_cast<RE::BSScript::IVirtualMachine*>(vm);
 
+        // DebugLog / CategoryEnabled / CategoriesValid are PURE (string parse / logging, no engine
+        // pointers) — bound un-gated so a DEGRADED session (fault latch) still parses categories
+        // honestly. (When offsets are invalid, Register is never called at all — nothing is bound.)
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "DebugLog"sv, CPS_GUARDED(DebugLog), std::optional<bool> {true}, false);
+            "CompletePlanetSurveyNative"sv, "DebugLog"sv, CPS_GUARDED_PURE(DebugLog), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, CPS_GUARDED(MarkTraitKnownForPlanet),
@@ -1439,11 +1881,11 @@ namespace Papyrus
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "CategoryEnabled"sv, CPS_GUARDED(CategoryEnabled),
+            "CompletePlanetSurveyNative"sv, "CategoryEnabled"sv, CPS_GUARDED_PURE(CategoryEnabled),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
-            "CompletePlanetSurveyNative"sv, "CategoriesValid"sv, CPS_GUARDED(CategoriesValid),
+            "CompletePlanetSurveyNative"sv, "CategoriesValid"sv, CPS_GUARDED_PURE(CategoriesValid),
             std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
@@ -1482,6 +1924,7 @@ namespace Papyrus
     }
 
 #undef CPS_GUARDED
+#undef CPS_GUARDED_PURE
 }  // namespace Papyrus
 
 namespace Hook
@@ -1524,6 +1967,8 @@ namespace Hook
         static void thunk(void* ctx)
         {
             func(ctx);  // call original SurveyCheckNotify (ID_97853)
+            if (!Engine::g_offsetsValid.load(std::memory_order_acquire))
+                return;  // feature disabled (bad offsets) — pass through, queue nothing
             DispatchPapyrusStatic("CompleteSurveyIfEnabled");
         }
 
@@ -1562,8 +2007,8 @@ namespace Hook
         static void thunk(void* ctx)
         {
             func(ctx);  // call original SurveyCheckNotify (ID_97853) first
-            if (!ctx)
-                return;
+            if (!ctx || !Engine::g_offsetsValid.load(std::memory_order_acquire))
+                return;  // no ctx, or feature disabled (bad offsets) — pass through, capture nothing
             const auto* c        = reinterpret_cast<const std::uint8_t*>(ctx);
             const auto  planetId = *reinterpret_cast<const std::uint32_t*>(c);
             const auto  reason   = *(c + kSurveyCtxReasonOffset);
@@ -1629,20 +2074,33 @@ namespace Hook
 
     void Install()
     {
-        REL::Relocation<std::uintptr_t> outer {REL::ID(52157)};  // planet-progress updater
-        REL::Relocation<std::uintptr_t> inner {REL::ID(97853)};  // survey check/notify
-
-        const auto call_site = FindCallSite(outer.address(), inner.address());
-        if (!call_site)
+        // Whole body fault-guarded (/EHa): a bad probe RVA would make the FindCallSite byte scan read
+        // unmapped memory, and the caller (MessageCallback) is noexcept — catch, log, and skip the
+        // hook (auto-complete-on-scan degrades; nothing is half-armed because ScanHook::func is only
+        // set by a successful write_call).
+        try
         {
-            spdlog::error("ScanHook: CALL to ID_97853 not found inside ID_52157 — hook skipped");
-            return;
+            // Addresses come from the verified probe table (CriticalAddress), NOT REL::ID — a REL::ID
+            // on a stale versionlib would REX::FAIL (TerminateProcess). Same for the installers below.
+            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::ScanHookOuter);      // ID_52157 planet-progress updater
+            const auto inner = Engine::CriticalAddress(Engine::Ids::Idx::SurveyCheckNotify);  // ID_97853 survey check/notify
+
+            const auto call_site = FindCallSite(outer, inner);
+            if (!call_site)
+            {
+                spdlog::error("ScanHook: CALL to ID_97853 not found inside ID_52157 — hook skipped");
+                return;
+            }
+
+            ScanHook::func = reinterpret_cast<ScanHook::fn_t>(
+                REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
+
+            spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)", call_site);
         }
-
-        ScanHook::func = reinterpret_cast<ScanHook::fn_t>(
-            REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(ScanHook::thunk)));
-
-        spdlog::info("ScanHook: installed at call-site 0x{:016X} (ID_52157 → ID_97853)", call_site);
+        catch (...)
+        {
+            spdlog::error("ScanHook: caught fault during install — hand-scanner auto-complete disabled");
+        }
     }
 
     // Install the star-map scan hook: patch the ID_97853 CALL inside ID_52173 (the scan-level
@@ -1651,20 +2109,27 @@ namespace Hook
     // ID_52157, the on-surface path), so the two coexist.
     void InstallStarMapScanHook()
     {
-        REL::Relocation<std::uintptr_t> outer {REL::ID(52173)};  // scan-level survey writer (space scan)
-        REL::Relocation<std::uintptr_t> inner {REL::ID(97853)};  // survey check/notify
-
-        const auto call_site = FindCallSite(outer.address(), inner.address(), kStarMapScanSearchWindow);
-        if (!call_site)
+        try  // fault-guarded like Install() — log + skip, never fault the noexcept message callback
         {
-            spdlog::error("StarMapScanHook: CALL to ID_97853 not found inside ID_52173 — galaxy-map scan hook skipped");
-            return;
+            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::StarMapScanHookOuter);  // ID_52173 scan-level survey writer (space scan)
+            const auto inner = Engine::CriticalAddress(Engine::Ids::Idx::SurveyCheckNotify);     // ID_97853 survey check/notify
+
+            const auto call_site = FindCallSite(outer, inner, kStarMapScanSearchWindow);
+            if (!call_site)
+            {
+                spdlog::error("StarMapScanHook: CALL to ID_97853 not found inside ID_52173 — galaxy-map scan hook skipped");
+                return;
+            }
+
+            StarMapScanHook::func = reinterpret_cast<StarMapScanHook::fn_t>(
+                REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapScanHook::thunk)));
+
+            spdlog::info("StarMapScanHook: installed at call-site 0x{:016X} (ID_52173 → ID_97853)", call_site);
         }
-
-        StarMapScanHook::func = reinterpret_cast<StarMapScanHook::fn_t>(
-            REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapScanHook::thunk)));
-
-        spdlog::info("StarMapScanHook: installed at call-site 0x{:016X} (ID_52173 → ID_97853)", call_site);
+        catch (...)
+        {
+            spdlog::error("StarMapScanHook: caught fault during install — galaxy-map scan auto-complete disabled");
+        }
     }
 
     // Install the panel-refresh capture hook: patch ID_94011's CALL to ID_93988 so we stash the live
@@ -1672,20 +2137,27 @@ namespace Hook
     // (via RefreshStarMapPanelIfOpen) to repaint the info panel to 100% without a manual reselect.
     void InstallStarMapRefreshHook()
     {
-        REL::Relocation<std::uintptr_t> outer {REL::ID(94011)};  // star-map scan handler
-        REL::Relocation<std::uintptr_t> inner {REL::ID(93988)};  // selected-planet panel populate
-
-        const auto call_site = FindCallSite(outer.address(), inner.address(), kScanHookSearchWindow);
-        if (!call_site)
+        try  // fault-guarded like Install() — log + skip, never fault the noexcept message callback
         {
-            spdlog::error("StarMapRefreshCaptureHook: CALL to ID_93988 not found inside ID_94011 — panel refresh disabled");
-            return;
+            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::StarMapRefreshHookOuter);  // ID_94011 star-map scan handler
+            const auto inner = Engine::CriticalAddress(Engine::Ids::Idx::RefreshStarMapPanelData);  // ID_93988 selected-planet panel populate
+
+            const auto call_site = FindCallSite(outer, inner, kScanHookSearchWindow);
+            if (!call_site)
+            {
+                spdlog::error("StarMapRefreshCaptureHook: CALL to ID_93988 not found inside ID_94011 — panel refresh disabled");
+                return;
+            }
+
+            StarMapRefreshCaptureHook::func = reinterpret_cast<StarMapRefreshCaptureHook::fn_t>(
+                REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapRefreshCaptureHook::thunk)));
+
+            spdlog::info("StarMapRefreshCaptureHook: installed at call-site 0x{:016X} (ID_94011 → ID_93988)", call_site);
         }
-
-        StarMapRefreshCaptureHook::func = reinterpret_cast<StarMapRefreshCaptureHook::fn_t>(
-            REL::GetTrampoline().write_call<5>(call_site, reinterpret_cast<std::uintptr_t>(StarMapRefreshCaptureHook::thunk)));
-
-        spdlog::info("StarMapRefreshCaptureHook: installed at call-site 0x{:016X} (ID_94011 → ID_93988)", call_site);
+        catch (...)
+        {
+            spdlog::error("StarMapRefreshCaptureHook: caught fault during install — star-map panel repaint disabled");
+        }
     }
 
     // Per-frame poll: waits for the pending CompleteSurvey flag + scanner menu closed,
@@ -1972,6 +2444,30 @@ namespace
     {
         if (a_msg->type == SFSE::MessagingInterface::kPostDataLoad)
         {
+            // Load-time offset self-check FIRST. If the address library has no offsets for this
+            // runtime (the routine post-patch "SFSE ships before versionlib" case), degrade gracefully
+            // instead of letting the first address-library resolution route through REX::FAIL and
+            // hard-kill the game.
+            //
+            // When disabled we must do NOTHING that touches the engine — including binding the
+            // natives: Papyrus::Register needs VirtualMachine::GetSingleton, and the re-bind poller's
+            // task calls RE::UI::GetSingleton, BOTH of which CommonLibSF resolves internally via
+            // REL::ID (e.g. RE::ID::GameVM::Singleton = 937585) → IDDB → REX::FAIL on the very
+            // versionlib that just failed the probe. So the disabled path binds no natives (console
+            // commands will report the script as unrecognised — unavoidable without the VM), installs
+            // no hooks/pollers, loads no ESM, writes no GMSTs. CheckOffsets() already logged the one
+            // ERROR line naming the cause and showed the player a non-blocking notice.
+            if (!Engine::CheckOffsets())
+            {
+                spdlog::info("CompletePlanetSurvey initialized DISABLED: no natives bound, no hooks installed; "
+                             "the game runs normally and console commands are unavailable until an updated "
+                             "address library is installed");
+                return;
+            }
+
+            Engine::ResolveOffsets();  // direct RVA binding from the probe's parse — no IDDB, no REX::FAIL
+            Engine::g_offsetsValid.store(true, std::memory_order_release);
+
             ConfigureEsmSources();  // must precede any Esm:: query (the parse is one-shot)
             Papyrus::Register();
             Hook::Install();
