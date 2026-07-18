@@ -14,7 +14,6 @@
 #include <array>
 #include <atomic>
 #include <chrono>
-#include <cmath>
 #include <exception>
 #include <filesystem>
 #include <format>
@@ -23,169 +22,75 @@
 #include <type_traits>
 #include <unordered_map>
 
-// Address Library IDs for Starfield 1.16.236.0–1.16.244.0 — discovered via Ghidra.
-// See memory/re_progress.md for the derivation and the knowledge-DB architecture.
+// Engine bindings: Address Library IDs live in CommonLibSF (RE::ID::…).
+// This table seeds the versionlib PROBE only — numbers come from RE::ID::*.id(), never magic
+// literals. After CheckOffsets succeeds, ResolveOffsets assigns REL::Relocation globals from
+// moduleBase+RVA so OUR paths never hit IDDB/REX::FAIL. ClSF free helpers that resolve via
+// REL::Relocation{ RE::ID } are only safe AFTER the same probe (same ids).
 //
-// ID_126578: getter for the per-save knowledge-manager singleton.
-//            The knowledge DB pointer lives at manager+0x8B0.
-// ID_52155 : SetTraitKnown inner impl. (uint32 planet_id, BGSKeyword*, bool known).
-//            Internally calls ID_52156 + fires a progress event. Safe for trait forms.
-//
-// Planet form's knowledge key is a uint32 at offset 0x54 on the planet form.
+// Layouts: RE::BSGalaxy::PlayerKnowledge, RE::MiscStatManager, RE::BGSPlanet (see CommonLibSF).
 namespace Engine
 {
     using fn_get_manager_t     = std::uintptr_t (*)();
     using fn_set_trait_known_t = void (*)(std::uint32_t planetId, std::uintptr_t keyword, bool known);
-    // ID_126806: BSTHashMap lookup. Signature (container, out_buf[4 ulongs], &key_u64)
-    //   out_buf layout on success: out[2] = entry base ptr, out[3] = entry index.
-    //   Failure sentinel: out[3] == 0xfe0 and out[2] == 0.
     using fn_db_lookup_t = void* (*)(std::uintptr_t* container, std::uintptr_t out[4], const std::uint64_t* key);
-    // ID_124898: per-species flag increment on a "subobj" (value + 0x20).
-    //   Signature (subobj*, species_id, delta_byte, ?).
-    //   Finds/creates entry for species_id and increments the scan-flag byte at entry+0x21.
-    using fn_incr_flag_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t delta, std::uint64_t zero);
-    // ID_124899: per-species PERCENT-byte writer on the same subobj as IncrementScanFlag.
-    //   Signature (subobj*, species_id, percent_byte, ?). Writes the scanned-% byte at the
-    //   entry's +0x20 (sibling of the scan-flag at +0x21). The real scan (ID_52158) sets BOTH;
-    //   GetSurveyPercent counts on +0x21, but the UI/other categories read +0x20, so we set both.
-    //   NOTE: param_3 is a BYTE — pass a literal 0..100, never a float.
+    using fn_set_scan_flag_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t delta, std::uint64_t zero);
     using fn_set_percent_t = void (*)(void* subobj, std::uint32_t species_id, std::uint8_t percent, std::uint64_t zero);
-
-    // === Character "Statistics" (Data menu) counters (StatEntryCount .. StatNameUniqueCreatures) ===
-    // The game keeps Flora/Fauna Fully Scanned + Unique Creatures Scanned in a global
-    // "misc stats" table. A natural scan bumps them via the ID_100393 scan-event handler;
-    // our ref-free green bypasses that event, so we replicate the increment ourselves.
-    // Table layout (RE: re/ghidra/output/misc-stats-increment-2026-07-01.md): base =
-    // *StatTableBase, count = *StatEntryCount, stride 0x20, entry+0x00 = interned stat-name
-    // ptr, entry+0x10 = int32 value (exactly what the Stats menu ID_88202 displays and the
-    // save stores). The Stat*Name globals each hold the interned pointer used as the key.
-
-    // ID_1016657: per-planet survey aggregator constructor.
-    //   (buffer, planet_id) — populates buffer with all tracked form IDs for the planet
-    //   across four arrays (two uint-arrays for flora/trait ids, two ptr-arrays for resource/other).
-    //   Buffer size seen in callers: >= 0x250 bytes. We allocate 0x400 to be safe.
     using fn_aggregator_t = void (*)(void* buffer, std::uint32_t planet_id);
-    // ID_65318: cleanup for the aggregator buffer.
     using fn_buffer_free_t = void (*)(void* buffer);
-
-    // ID_97853: survey check-and-dispatch. Called by SetTraitKnown/SetScanned flows after a write.
-    //   Signature: (struct*) where the struct starts with { uint32 planet_id, float prev_pct, u8 flag, u8 skip }.
-    //   Fires PlayerPlanetSurveyProgressEvent (conditional) and PlayerPlanetSurveyCompleteEvent
-    //   if the planet's survey is now 100%. The Complete event is what generates the in-world
-    //   "<Planet> Survey Data" slate in the player's inventory.
     using fn_survey_notify_t = void (*)(void* ctx);
-
-    // ID_102650: the engine's ref-free "scan & fully survey a planet" entry point —
-    // what a starmap/orbital scan ultimately drives. It resolves the knowledge DB
-    // itself, then (via ID_102651) sets the surveyed bit, CREATES the entry if
-    // missing (ID_52204), fires the survey-complete event (→ the Survey Data slate
-    // reward), and recurses over the planet's moons. Self-contained: no spawn, no
-    // teleport, no async two-phase. Args: (unused-context, planetId, fullFlag=1).
     using fn_scan_complete_t = void (*)(std::int64_t context, std::uint32_t planetId, std::uint8_t fullFlag);
-
-    // ID_124901: the engine's species-slot hash (FNV-1a of the 4-byte species id) -> slot index in a
-    // subobj's species hashmap. Used to dump the RAW per-species slot bytes so we can DIFF a full
-    // scan (green+info+XP) vs a +0x21 byte-poke (half) and find the missing "species catalogued/known"
-    // field the real scan writes and we don't.
     using fn_species_slot_hash_t = std::uint64_t (*)(std::uintptr_t hashmap, const void* key4);
-
-    // ID_35755: BSTArray<u32>::push_back grow path — (header{begin,end,cap}, pos, &value). Allocates
-    // via the engine allocator and updates the header + frees the old buffer, so the array is
-    // engine-OWNED and safe to free on teardown. This is how the real scan fills slot+0x08; we use
-    // it to build that array ref-free — the GREEN fix.
     using fn_bstarray_grow_t = std::uint32_t* (*)(std::int64_t* header, std::uint32_t* pos, const std::uint32_t* value);
-
-    // ID_83006: resolve a species base FORM to its CANONICAL form (detailed rationale at
-    // CanonicalFormId below — the green outline keys on this canonical id, not the raw ESM id).
     using fn_resolve_canonical_form_t = std::uintptr_t (*)(void* form);
-
-    // ID_883341 (AllFormsMapHolder): the engine's global form registry — a BSTScatterTable<FormID,
-    // TESForm*>. It's what TESForm::LookupByID (ID_47401) reads. Starfield does NOT keep planets in
-    // TESDataHandler::formArrays (those are empty for galaxy types like PNDT), so this registry is
-    // the only place to enumerate all planet forms (see ForEachFormOfType below).
-
-    // ID_93988 (RefreshStarMapPanelData): repopulate the StarMap selected-planet info panel from the
-    // knowledge DB — (panel controller, planet id). Full RE notes at the StarMap repaint logic below.
     using fn_refresh_starmap_t = void (*)(void* controller, std::uint32_t planetId);
 
-    // === Address-library ids (single source of truth) ===
-    // ONE X-macro table names every address-library id the plugin depends on. The load-time
-    // self-check (CheckOffsets), the Relocation-global DECLARATIONS, the resolver (ResolveOffsets)
-    // and the hook installers all derive from it, so the probe list, the declarations, the
-    // assignments and the logged counts can never drift (static_assert'd below) — and a new global
-    // CANNOT be added without appearing in the probe.
-    //
-    // Why this machinery exists: an unresolved REL::ID routes through CommonLibSF's IDDB → REX::FAIL
-    // → MessageBox + TerminateProcess — a hard crash that does NOT throw and cannot be caught. So:
-    //  (a) the Relocation globals (generated below) are DEFAULT-constructed (address 0), never
-    //      resolved at DLL-load static-init;
-    //  (b) CheckOffsets() parses the versionlib file ITSELF and records each id's RVA;
-    //  (c) ResolveOffsets() assigns the globals directly from moduleBase + parsedRva — OUR
-    //      Relocation globals and hook sites never go through REL::ID / the IDDB.
-    // CommonLibSF-INTERNAL calls we make on the enabled path (VM/UI/data-handler singletons,
-    // BSFixedString's string pool, TESForm::LookupByID, GameSettingCollection) DO still resolve
-    // through the IDDB inside CommonLibSF — those ids are listed as PROBE-ONLY entries so a
-    // versionlib that lacks any of them disables the mod up front instead of REX::FAILing at first
-    // use. (Real case: BSStringPool::GetEntry id 1186742 exists in the 1.16.244 versionlib but is
-    // beyond the END of the 1.16.236/242 tables — a green probe of only our own ids would still
-    // have died in the first BSFixedString there.)
-    //
-    // CPS_RELOC_IDS: ids with a same-named, table-GENERATED REL::Relocation<type> global.
-    // CPS_HOOKSITE_IDS: ids resolved ad hoc inside the Hook::Install* trampoline patchers.
-    // CPS_PROBEONLY_IDS: CommonLibSF-internal ids — verified present, resolved by CommonLibSF itself.
-#define CPS_RELOC_IDS(X)                                            \
-    X(GetKnowledgeManager, 126578, fn_get_manager_t)                \
-    X(SetTraitKnownNative, 52155, fn_set_trait_known_t)             \
-    X(DbLookup, 126806, fn_db_lookup_t)                             \
-    X(IncrementScanFlag, 124898, fn_incr_flag_t)                    \
-    X(SetPercentByte, 124899, fn_set_percent_t)                     \
-    X(TraitDiscriminator, 938333, std::uint16_t*)                   \
-    X(StatEntryCount, 889375, std::uint32_t*)                       \
-    X(StatTableBase, 889377, std::uintptr_t*)                       \
-    X(StatTrackingEnabled, 894532, std::uint8_t*)                   \
-    X(StatNameFloraFullyScanned, 923219, std::uintptr_t*)           \
-    X(StatNameFaunaFullyScanned, 923220, std::uintptr_t*)           \
-    X(StatNameUniqueCreatures, 923223, std::uintptr_t*)             \
-    X(SurveyAggregator, 1016657, fn_aggregator_t)                   \
-    X(SurveyBufferFree, 65318, fn_buffer_free_t)                    \
-    X(SurveyCheckNotify, 97853, fn_survey_notify_t)                 \
-    X(ScanCompletePlanet, 102650, fn_scan_complete_t)               \
-    X(SpeciesSlotHash, 124901, fn_species_slot_hash_t)              \
-    X(BSTArrayU32Grow, 35755, fn_bstarray_grow_t)                   \
-    X(ResolveCanonicalForm, 83006, fn_resolve_canonical_form_t)     \
-    X(AllFormsMapHolder, 883341, std::uintptr_t*)                   \
-    X(RefreshStarMapPanelData, 93988, fn_refresh_starmap_t)
+    // === Address-library ids (single source of truth = CommonLibSF RE::ID::…) ===
+    // Probe + direct RVA assign (never IDDB for our bindings — avoids REX::FAIL).
+#define CPS_RELOC_IDS(X)                                                                                      \
+    X(GetKnowledgeManager, RE::ID::BSGalaxy::GetKnowledgeManager.id(), fn_get_manager_t)                      \
+    X(MarkTraitKnownFn, RE::ID::BSGalaxy::PlayerKnowledge::MarkTraitKnown.id(), fn_set_trait_known_t)         \
+    X(DbLookup, RE::ID::BSComponentDB2::Lookup.id(), fn_db_lookup_t)                                          \
+    X(SetScanFlag, RE::ID::BSGalaxy::PlayerKnowledge::SetScanFlag.id(), fn_set_scan_flag_t)                   \
+    X(SetScanPercent, RE::ID::BSGalaxy::PlayerKnowledge::SetScanPercent.id(), fn_set_percent_t)               \
+    X(DiscriminatorId, RE::ID::BSGalaxy::PlayerKnowledge::DiscriminatorId.id(), std::uint16_t*)               \
+    X(MiscStatEntryCount, RE::ID::MiscStatManager::EntryCount.id(), std::uint32_t*)                           \
+    X(MiscStatTableBase, RE::ID::MiscStatManager::TableBase.id(), std::uintptr_t*)                            \
+    X(MiscStatTrackingEnabled, RE::ID::MiscStatManager::TrackingEnabled.id(), std::uint8_t*)                  \
+    X(MiscStatNameFloraFullyScanned, RE::ID::MiscStatManager::NameFloraFullyScanned.id(), std::uintptr_t*)    \
+    X(MiscStatNameFaunaFullyScanned, RE::ID::MiscStatManager::NameFaunaFullyScanned.id(), std::uintptr_t*)    \
+    X(MiscStatNameUniqueCreatures, RE::ID::MiscStatManager::NameUniqueCreatures.id(), std::uintptr_t*)        \
+    X(SurveyAggregator, RE::ID::Survey::Aggregator.id(), fn_aggregator_t)                                     \
+    X(SurveyBufferFree, RE::ID::Survey::AggregatorBufferFree.id(), fn_buffer_free_t)                          \
+    X(SurveyCheckNotify, RE::ID::Survey::CheckNotify.id(), fn_survey_notify_t)                                \
+    X(ScanCompletePlanet, RE::ID::Survey::ScanCompletePlanet.id(), fn_scan_complete_t)                        \
+    X(HashSpeciesSlot, RE::ID::BSGalaxy::PlayerKnowledge::HashSpeciesSlot.id(), fn_species_slot_hash_t)       \
+    X(BSTArrayU32Grow, RE::ID::BSTArray::U32PushGrow.id(), fn_bstarray_grow_t)                                \
+    X(ResolveCanonicalForm, RE::ID::ScannableComponent::ResolveCanonicalForm.id(), fn_resolve_canonical_form_t) \
+    X(AllFormsMap, RE::ID::TESForm::AllFormsMap.id(), std::uintptr_t*)                                        \
+    X(RefreshStarMapPanelData, RE::ID::StarMap::RefreshPanelData.id(), fn_refresh_starmap_t)
 
-#define CPS_HOOKSITE_IDS(X)               \
-    X(ScanHookOuter, 52157)               \
-    X(StarMapScanHookOuter, 52173)        \
-    X(StarMapRefreshHookOuter, 94011)
+#define CPS_HOOKSITE_IDS(X)                                                            \
+    X(ProgressUpdater, RE::ID::BGSPlanet::ProgressUpdater.id())                        \
+    X(ScanLevelWriter, RE::ID::BGSPlanet::ScanLevelWriter.id())                        \
+    X(StarMapScanHandler, RE::ID::StarMap::ScanHandler.id())
 
-    // CommonLibSF-internal ids reachable from OUR enabled-path calls (enumerated from the CommonLibSF
-    // source at the pinned submodule commit; re-audit when bumping the submodule):
-    //   VirtualMachine::GetSingleton → RE::ID::GameVM::Singleton   (Papyrus::Register, DispatchPapyrusStatic)
-    //   RE::UI::GetSingleton / IsMenuOpen                          (both pollers, RefreshStarMapPanelIfOpen)
-    //   TESDataHandler::GetSingleton                               (ConfigureEsmSources)
-    //   GameSettingCollection::GetSingleton / GetSetting           (ApplyInstantScanGameSettings)
-    //   TESForm::LookupByID                                        (native completion paths)
-    //   BSStringPool GetEntry / Entry::Release / BucketTable       (every RE::BSFixedString ctor/dtor)
-#define CPS_PROBEONLY_IDS(X)                     \
-    X(ClSF_GameVM_Singleton, 937585)             \
-    X(ClSF_UI_Singleton, 937580)                 \
-    X(ClSF_UI_IsMenuOpen, 130475)                \
-    X(ClSF_TESDataHandler_Singleton, 937572)     \
-    X(ClSF_GameSettings_Singleton, 938225)       \
-    X(ClSF_GameSettings_GetSetting, 49324)       \
-    X(ClSF_TESForm_LookupByID, 47401)            \
-    X(ClSF_StringPool_GetEntry, 1186742)         \
-    X(ClSF_StringPool_Release, 139340)           \
-    X(ClSF_StringPool_BucketTable, 139337)
+#define CPS_PROBEONLY_IDS(X)                                                          \
+    X(GameVM_Singleton, RE::ID::GameVM::Singleton.id())                               \
+    X(UI_Singleton, RE::ID::UI::Singleton.id())                                       \
+    X(UI_IsMenuOpen, RE::ID::UI::IsMenuOpen.id())                                     \
+    X(TESDataHandler_Singleton, RE::ID::TESDataHandler::Singleton.id())               \
+    X(GameSettings_Singleton, RE::ID::GameSettingCollection::Singleton.id())          \
+    X(GameSettings_GetSetting, RE::ID::GameSettingCollection::GetSetting.id())        \
+    X(TESForm_LookupByID, RE::ID::TESForm::LookupByID.id())                           \
+    X(StringPool_GetEntry, RE::ID::BSStringPool::GetEntry.id())                       \
+    X(StringPool_Release, RE::ID::BSStringPool::Entry::Release.id())                  \
+    X(StringPool_BucketTable, RE::ID::BSStringPool::BucketTable::GetSingleton.id())
 
 #define CPS_CRITICAL_IDS(X3, X2) CPS_RELOC_IDS(X3) CPS_HOOKSITE_IDS(X2) CPS_PROBEONLY_IDS(X2)
 
     namespace Ids
     {
-        // Index of each id inside kCriticalOffsetIds / g_criticalRva (same order as the table).
         enum class Idx : std::size_t
         {
 #define CPS_X3(name, id, type) name,
@@ -197,10 +102,9 @@ namespace Engine
         };
     }  // namespace Ids
 
-    // Every critical id, in table order, for the non-fatal load-time probe (CheckOffsets).
     inline constexpr std::uint64_t kCriticalOffsetIds[] = {
-#define CPS_X3(name, id, type) id##ull,
-#define CPS_X2(name, id) id##ull,
+#define CPS_X3(name, id, type) id,
+#define CPS_X2(name, id) id,
         CPS_CRITICAL_IDS(CPS_X3, CPS_X2)
 #undef CPS_X3
 #undef CPS_X2
@@ -216,57 +120,70 @@ namespace Engine
     static_assert(kCriticalIdCount == static_cast<std::size_t>(Ids::Idx::kCount),
                   "critical-id array out of sync with the Idx enum");
 
-    // The engine-binding Relocation globals, GENERATED from the table (declared lazy / address 0;
-    // assigned by ResolveOffsets once the probe has verified + parsed every RVA). Their per-id
-    // documentation lives with the type aliases above and at the usage sites.
+    static_assert(RE::ID::BSGalaxy::GetKnowledgeManager.id() == 126578ull);
+    static_assert(RE::ID::BSGalaxy::PlayerKnowledge::MarkTraitKnown.id() == 52155ull);
+    static_assert(RE::ID::BSComponentDB2::Lookup.id() == 126806ull);
+    static_assert(RE::ID::BSGalaxy::PlayerKnowledge::SetScanFlag.id() == 124898ull);
+    static_assert(RE::ID::BSGalaxy::PlayerKnowledge::SetScanPercent.id() == 124899ull);
+    static_assert(RE::ID::BSGalaxy::PlayerKnowledge::DiscriminatorId.id() == 938333ull);
+    static_assert(RE::ID::MiscStatManager::EntryCount.id() == 889375ull);
+    static_assert(RE::ID::MiscStatManager::TableBase.id() == 889377ull);
+    static_assert(RE::ID::MiscStatManager::TrackingEnabled.id() == 894532ull);
+    static_assert(RE::ID::MiscStatManager::NameFloraFullyScanned.id() == 923219ull);
+    static_assert(RE::ID::MiscStatManager::NameFaunaFullyScanned.id() == 923220ull);
+    static_assert(RE::ID::MiscStatManager::NameUniqueCreatures.id() == 923223ull);
+    static_assert(RE::ID::Survey::Aggregator.id() == 1016657ull);
+    static_assert(RE::ID::Survey::AggregatorBufferFree.id() == 65318ull);
+    static_assert(RE::ID::Survey::CheckNotify.id() == 97853ull);
+    static_assert(RE::ID::Survey::ScanCompletePlanet.id() == 102650ull);
+    static_assert(RE::ID::BSGalaxy::PlayerKnowledge::HashSpeciesSlot.id() == 124901ull);
+    static_assert(RE::ID::BSTArray::U32PushGrow.id() == 35755ull);
+    static_assert(RE::ID::ScannableComponent::ResolveCanonicalForm.id() == 83006ull);
+    static_assert(RE::ID::TESForm::AllFormsMap.id() == 883341ull);
+    static_assert(RE::ID::StarMap::RefreshPanelData.id() == 93988ull);
+    static_assert(RE::ID::BGSPlanet::ProgressUpdater.id() == 52157ull);
+    static_assert(RE::ID::BGSPlanet::ScanLevelWriter.id() == 52173ull);
+    static_assert(RE::ID::StarMap::ScanHandler.id() == 94011ull);
+    static_assert(RE::BSGalaxy::kKnowledgeDbOffset == 0x8B0);
+    static_assert(RE::BSGalaxy::PlayerKnowledge::kMapOffset == 0x268);
+    static_assert(RE::BSGalaxy::PlayerKnowledge::kLookupNotFound == 0xfe0);
+    static_assert(RE::BSGalaxy::PlayerKnowledge::kPlanetFormKnowledgeIdOffset == 0x54);
+    static_assert(RE::BGSPlanet::kSurveyNotifyReasonOffset == 0x08);
+    static_assert(RE::MiscStatManager::kEntryStride == 0x20);
+    static_assert(RE::MiscStatManager::kEntryValueOffset == 0x10);
+
 #define CPS_X3(name, id, type) inline REL::Relocation<type> name;
     CPS_RELOC_IDS(CPS_X3)
 #undef CPS_X3
 
-    // Filled by CheckOffsets() on success: the running exe's base address and each critical id's
-    // RVA parsed straight from the versionlib (bounds-checked against the module's SizeOfImage).
-    // ResolveOffsets()/Hook::Install* read addresses from HERE — never from REL::ID/IDDB — so OUR
-    // resolution cannot hit REX::FAIL (no TOCTOU either: the probe's parse IS the resolution source).
     inline std::uintptr_t                              g_moduleBase {0};
     inline std::array<std::uint32_t, kCriticalIdCount> g_criticalRva {};
 
-    // Absolute address of a probed id. Only meaningful after CheckOffsets() returned true.
     inline std::uintptr_t CriticalAddress(Ids::Idx idx)
     {
         return g_moduleBase + g_criticalRva[static_cast<std::size_t>(idx)];
     }
 
-    // Offsets within knowledge-manager / DB structs (Starfield 1.16.236.0–1.16.244.0, Ghidra-derived).
-    constexpr std::size_t  kPlanetIdOffset       = 0x54;   // uint32 knowledge key at planetForm+0x54
-    constexpr std::size_t  kManagerDbOffset      = 0x8B0;  // knowledge DB ptr at manager+0x8B0 (ID_126578 result)
-    constexpr std::size_t  kDbContainerOffset    = 0x268;  // BSTHashMap<> start within the DB object
-    constexpr std::size_t  kBucketOffsetTableOff = 0x12;   // uint16[] offset table start within a bucket base
-    constexpr std::size_t  kEntrySubobjOffset    = 0x20;   // species subobj relative to the resolved entry ptr
-    constexpr std::size_t  kFormPtrFormIdOffset  = 0x28;   // formID field in a TESForm* (aggregator ptr-arrays)
+    using PK = RE::BSGalaxy::PlayerKnowledge;
 
-    // BSTHashMap lookup sentinel: out[3] value when the key is not found.
-    constexpr std::uintptr_t kDbLookupNotFound     = 0xfe0;   // db+0x268 survey-container miss sentinel (ID_126806)
-    // Invalid/sentinel form ID used in aggregator arrays for empty slots.
-    constexpr std::uint32_t  kInvalidFormId         = 0xFFFFFFFFu;
-    // Default delta for scan-flag increment (marks species fully scanned in one pass).
-    constexpr std::uint8_t   kDefaultScanDelta      = 100;
-    // Per-species percent byte value for "fully scanned" (ID_124899). Survey % counts on the
-    // scan-flag byte, but the UI/secondary categories read this percent — set it to complete.
-    constexpr std::uint8_t   kScanPercentComplete   = 100;
-    // Maximum delta value (uint8 ceiling).
-    constexpr std::uint8_t   kMaxScanDelta           = 255;
+    constexpr std::size_t kPlanetIdOffset       = PK::kPlanetFormKnowledgeIdOffset;
+    constexpr std::size_t kManagerDbOffset      = RE::BSGalaxy::kKnowledgeDbOffset;
+    constexpr std::size_t kDbContainerOffset    = PK::kMapOffset;
+    constexpr std::size_t kBucketOffsetTableOff = PK::kBucketOffsetTable;
+    constexpr std::size_t kEntrySubobjOffset    = PK::kEntrySubobjOffset;
+    // TESForm formID field (aggregator ptr-array entries).
+    constexpr std::size_t kFormPtrFormIdOffset  = 0x28;
 
-    // BSTArray header offsets within TESObjectCELL (Starfield 1.16.236.0–1.16.244.0).
-    constexpr std::size_t kCellRefArraySize     = 0x080;
-    constexpr std::size_t kCellRefArrayCapacity = 0x084;
-    constexpr std::size_t kCellRefArrayData     = 0x088;
+    constexpr std::uintptr_t kDbLookupNotFound = PK::kLookupNotFound;
+    constexpr std::uint32_t  kInvalidFormId       = 0xFFFFFFFFu;
+    constexpr std::uint8_t   kDefaultScanDelta    = 100;
+    constexpr std::uint8_t   kScanPercentComplete = 100;
+    constexpr std::uint8_t   kMaxScanDelta        = 255;
 
-    // x86-64 CALL instruction: opcode E8 followed by a 4-byte relative displacement.
-    constexpr std::uint8_t kX86CallOpcode       = 0xE8;
-    constexpr std::size_t  kX86CallInsnLength   = 5;
+    constexpr std::uint8_t kX86CallOpcode     = 0xE8;
+    constexpr std::size_t  kX86CallInsnLength = 5;
 
-    // Aggregator buffer (ID_1016657) layout — four {begin*, end*} span descriptors.
-    // Two uint32[] spans (inline form IDs: traits / flora) and two TESForm*[] spans.
+    // Aggregator buffer spans (Survey::Aggregator) — mod-local until a full engine type exists.
     constexpr std::size_t kAggUintSpan0Begin = 0x218;
     constexpr std::size_t kAggUintSpan0End   = 0x220;
     constexpr std::size_t kAggUintSpan1Begin = 0x230;
@@ -275,6 +192,21 @@ namespace Engine
     constexpr std::size_t kAggPtrSpan0End    = 0x1f0;
     constexpr std::size_t kAggPtrSpan1Begin  = 0x200;
     constexpr std::size_t kAggPtrSpan1End    = 0x208;
+
+    constexpr std::size_t   kSpeciesHashmapOff        = PK::kSpeciesHashmapOff;
+    constexpr std::size_t   kSpeciesSlotsPtrOff       = PK::kSpeciesSlotsPtrOff;
+    constexpr std::size_t   kSpeciesHashEndOff        = PK::kSpeciesHashEndOff;
+    constexpr std::size_t   kSpeciesSlotStride        = PK::kSpeciesSlotStride;
+    constexpr std::size_t   kSpeciesSlotArrBeginOff   = offsetof(PK::SpeciesSlot, arrBegin);
+    constexpr std::size_t   kSpeciesSlotArrEndOff     = offsetof(PK::SpeciesSlot, arrEnd);
+    constexpr std::size_t   kSpeciesSlotArrCapOff     = offsetof(PK::SpeciesSlot, arrCap);
+    constexpr std::size_t   kSpeciesSlotPercentOff    = offsetof(PK::SpeciesSlot, percent);
+    constexpr std::size_t   kSpeciesSlotScanFlagOff   = offsetof(PK::SpeciesSlot, scanFlag);
+    constexpr std::uint32_t kSpeciesSlotAttrKnownBits = PK::kAttributeKnownBitsMask;
+    // Universal marker FormIDs present on every dumped species (fallback when ESM derivation is empty).
+    constexpr std::uint32_t kUniversalMarkerA    = 0x0023E90Du;
+    constexpr std::uint32_t kUniversalMarkerB    = 0x002634BEu;
+    constexpr std::size_t   kMaxSpeciesAttrBytes = 0x400;
 
     std::uintptr_t GetKnowledgeDB()
     {
@@ -292,23 +224,23 @@ namespace Engine
                                                        kPlanetIdOffset);
     }
 
-    // push_back one u32 onto a species slot's +0x08 BSTArray, matching the engine's inline push_back
+    // push_back one u32 onto a species slot's marker BSTArray, matching the engine's inline push_back
     // (BSTArrayU32Grow = ID_35755, the engine grow path — see the type alias docs above).
-    // (grow via ID_35755 when full, else in-place). slotAddr = the slot base (subobj+0x40 + idx*0x30);
-    // header {begin@+0x08, end@+0x10, cap@+0x18}. Engine-owned alloc -> safe teardown.
+    // slotAddr = the slot base (subobj+kSpeciesSlotsPtrOff + idx*kSpeciesSlotStride);
+    // header {begin, end, cap} at the named slot offsets. Engine-owned alloc -> safe teardown.
     void PushSpeciesAttr(std::uintptr_t slotAddr, std::uint32_t id)
     {
-        auto* const end = *reinterpret_cast<std::uint32_t**>(slotAddr + 0x10);
-        auto* const cap = *reinterpret_cast<std::uint32_t**>(slotAddr + 0x18);
+        auto* const end = *reinterpret_cast<std::uint32_t**>(slotAddr + kSpeciesSlotArrEndOff);
+        auto* const cap = *reinterpret_cast<std::uint32_t**>(slotAddr + kSpeciesSlotArrCapOff);
         if (end == cap)  // full (incl. empty 0==0) -> engine grow + insert
         {
             std::uint32_t v = id;
-            BSTArrayU32Grow(reinterpret_cast<std::int64_t*>(slotAddr + 0x08), end, &v);
+            BSTArrayU32Grow(reinterpret_cast<std::int64_t*>(slotAddr + kSpeciesSlotArrBeginOff), end, &v);
         }
         else  // spare capacity -> in-place append
         {
-            *end                                                = id;
-            *reinterpret_cast<std::uint32_t**>(slotAddr + 0x10) = end + 1;
+            *end = id;
+            *reinterpret_cast<std::uint32_t**>(slotAddr + kSpeciesSlotArrEndOff) = end + 1;
         }
     }
 
@@ -316,7 +248,8 @@ namespace Engine
     {
         if (!planetId || !keyword)
             return false;
-        SetTraitKnownNative(planetId, reinterpret_cast<std::uintptr_t>(keyword), true);
+        // RE::ID::BSGalaxy::PlayerKnowledge::MarkTraitKnown — reloc must not share this wrapper's name.
+        MarkTraitKnownFn(planetId, reinterpret_cast<std::uintptr_t>(keyword), true);
         return true;
     }
 
@@ -343,7 +276,7 @@ namespace Engine
             const auto canonForm = ResolveCanonicalForm(form);
             if (!canonForm)
                 return 0;
-            return *reinterpret_cast<std::uint32_t*>(canonForm + 0x28);
+            return *reinterpret_cast<std::uint32_t*>(canonForm + kFormPtrFormIdOffset);
         }
         catch (...)
         {
@@ -367,7 +300,7 @@ namespace Engine
         if (!db || !planetId)
             return nullptr;
         // 64-bit key: (survey_discriminator << 48) | (planet_id << 16).
-        const std::uint16_t disc = *TraitDiscriminator.get();
+        const std::uint16_t disc = *DiscriminatorId.get();
         const std::uint64_t key =
             (static_cast<std::uint64_t>(disc) << 48) | (static_cast<std::uint64_t>(planetId) << 16);
 
@@ -396,7 +329,7 @@ namespace Engine
         if (!subobj)
             return false;
         // subobj+0x00 is the attribute bitmask. OR in the low 3 "known" bits. Idempotent.
-        *reinterpret_cast<std::uint32_t*>(subobj) |= 0x7u;
+        *reinterpret_cast<std::uint32_t*>(subobj) |= static_cast<std::uint32_t>(kSpeciesSlotAttrKnownBits);
         return true;
     }
 
@@ -422,8 +355,8 @@ namespace Engine
 
         // Set BOTH bytes the engine's real scan sets: the scan-flag (+0x21, what
         // GetSurveyPercent counts on) and the percent byte (+0x20, the per-species %).
-        IncrementScanFlag(subobj, speciesFormId, delta, 0);
-        SetPercentByte(subobj, speciesFormId, Engine::kScanPercentComplete, 0);
+        SetScanFlag(subobj, speciesFormId, delta, 0);
+        SetScanPercent(subobj, speciesFormId, Engine::kScanPercentComplete, 0);
         return 1;
     }
 
@@ -575,24 +508,13 @@ namespace Engine
     // sphere / resources / atmosphere / gravity / temperature / water) + every
     // species & resource scan flag the engine tracks. This is the player-independent
     // core of "complete a planet" — no refs, no spawn. It does NOT fire the
-    // completion event; callers choose when (the slate timing matters at scale).
-    // Returns the number of species/resource forms marked.
+    // completion event; callers choose when (MarkResourcesForPlanet / FinalizeSweptPlanet
+    // / SweepBarrenChunk gate NotifySurveyProgress on the not-complete → complete
+    // transition so Planets Fully Surveyed is not inflated). Returns forms marked.
     int WritePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta, bool includeSpecies = true)
     {
         SetPlanetAttributeBits(planetId);
         return MarkEverythingForPlanet(planetId, delta, includeSpecies);
-    }
-
-    // Fully complete one planet's survey ref-free: write the state, then fire the
-    // survey-complete event so the "<Planet> Survey Data" slate drops. This is the
-    // single shared "complete one planet" entry point used by BOTH the on-planet
-    // path (MarkResourcesForPlanet) and the galaxy sweep's per-planet finalize
-    // (FinalizeSweptPlanet). Returns the marked-form count. Idempotent.
-    int CompletePlanetSurveyState(std::uint32_t planetId, std::uint8_t delta = kDefaultScanDelta, bool includeSpecies = true)
-    {
-        const int marked = WritePlanetSurveyState(planetId, delta, includeSpecies);
-        NotifySurveyProgress(planetId);
-        return marked;
     }
 
     // Mark a planet's canonical flora/fauna (authored in Starfield.esm's PNDT PPBD data,
@@ -601,38 +523,55 @@ namespace Engine
     // so we read them from the ESM and pre-write their scan flags. When the player later
     // lands, those species spawn already-scanned (green) and the survey reads a true 100%.
     // planetId == the planet's FormID == the key in the ESM map. Returns species marked.
-    // Species "kind" filter for the green path. 0 = both, 1 = FLORA (FLOR forms), 2 = FAUNA (NPC_ forms).
-    // So "fauna" greens only creatures and "flora" only plants, instead of both (the documented bug).
-    inline bool SpeciesMatchesKind(std::uint32_t speciesFormId, int kind)
+    //
+    // Species "kind" filter for the green path (Papyrus passes the same ints; ToSpeciesKind
+    // maps unknown values to Both so a typo never greys out every species).
+    enum class SpeciesKind : std::int32_t
     {
-        if (kind == 0)
+        Both  = 0,  // flora + fauna
+        Flora = 1,  // FLOR forms only
+        Fauna = 2,  // NPC_ forms only
+    };
+
+    constexpr SpeciesKind ToSpeciesKind(std::int32_t kind) noexcept
+    {
+        switch (kind)
+        {
+        case 1:
+            return SpeciesKind::Flora;
+        case 2:
+            return SpeciesKind::Fauna;
+        default:
+            return SpeciesKind::Both;
+        }
+    }
+
+    inline bool SpeciesMatchesKind(std::uint32_t speciesFormId, SpeciesKind kind)
+    {
+        if (kind == SpeciesKind::Both)
             return true;
         auto* const form = RE::TESForm::LookupByID(speciesFormId);
         if (!form)
             return false;
         const auto ft = form->GetFormType();
-        if (kind == 1)
-            return ft == RE::FormType::kFLOR;  // flora
-        if (kind == 2)
-            return ft == RE::FormType::kNPC_;  // fauna
+        if (kind == SpeciesKind::Flora)
+            return ft == RE::FormType::kFLOR;
+        if (kind == SpeciesKind::Fauna)
+            return ft == RE::FormType::kNPC_;
         return true;
     }
 
-    // Increment a "Miscellaneous Statistics" counter (the Data-menu Statistics list) by
-    // delta, exactly as the scan-event handler (ID_100393) does: find the table entry whose
-    // name matches `internedName`, then entry+0x10 += delta. `internedName` is the value of
-    // one of the Stat*Name globals. Bounded scan + in-place int add on an already-allocated
-    // entry — NOT a BSTArray grow/allocator poke, so the heap-corruption rule doesn't apply.
-    // Fully guarded: a null/absurd table just no-ops (never faults the player's game).
+    // Increment a "Miscellaneous Statistics" counter (Data-menu Statistics list) by delta.
+    // Table layout: RE::MiscStat (CommonLibSF). Bounded scan + in-place int add.
     void IncrementMiscStat(std::uintptr_t internedName, int delta)
     {
         if (delta == 0 || internedName == 0)
             return;
-        const auto* enabled = StatTrackingEnabled.get();
+        const auto* enabled = MiscStatTrackingEnabled.get();
         if (!enabled || *enabled == 0)  // respect the engine's own "stats enabled" gate
             return;
-        const auto* countPtr = StatEntryCount.get();
-        const auto* basePtr  = StatTableBase.get();
+        const auto* countPtr = MiscStatEntryCount.get();
+        const auto* basePtr  = MiscStatTableBase.get();
         if (!countPtr || !basePtr)
             return;
         const std::uint32_t  count = *countPtr;
@@ -641,10 +580,10 @@ namespace Engine
             return;
         for (std::uint32_t i = 0; i < count; ++i)
         {
-            const auto entry = base + static_cast<std::uintptr_t>(i) * 0x20;
-            if (*reinterpret_cast<std::uintptr_t*>(entry) == internedName)
+            const auto entry = base + static_cast<std::uintptr_t>(i) * RE::MiscStatManager::kEntryStride;
+            if (*reinterpret_cast<std::uintptr_t*>(entry + RE::MiscStatManager::kEntryNameOffset) == internedName)
             {
-                *reinterpret_cast<std::int32_t*>(entry + 0x10) += delta;  // the displayed/saved value
+                *reinterpret_cast<std::int32_t*>(entry + RE::MiscStatManager::kEntryValueOffset) += delta;
                 return;  // stat names are unique in the table
             }
         }
@@ -659,16 +598,16 @@ namespace Engine
         if (!subobj)
             return false;
         const auto base    = reinterpret_cast<std::uintptr_t>(subobj);
-        const auto hashmap = base + 0x18;
-        const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
-        const auto slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
+        const auto hashmap = base + kSpeciesHashmapOff;
+        const auto hashEnd = *reinterpret_cast<std::uint64_t*>(base + kSpeciesHashEndOff);
+        const auto slots   = *reinterpret_cast<std::uintptr_t*>(base + kSpeciesSlotsPtrOff);
         if (!slots)
             return false;
-        const auto idx = SpeciesSlotHash(hashmap, &key);
+        const auto idx = HashSpeciesSlot(hashmap, &key);
         if (idx == hashEnd)
             return false;  // no slot yet -> not previously scanned
-        const auto slotAddr = slots + idx * 0x30;
-        return *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21) != 0;
+        const auto slotAddr = slots + idx * kSpeciesSlotStride;
+        return *reinterpret_cast<std::uint8_t*>(slotAddr + kSpeciesSlotScanFlagOff) != 0;
     }
 
     // True if this planet is ALREADY fully marked complete BY US: its attribute "known" bits are all
@@ -684,7 +623,7 @@ namespace Engine
         const auto subobj = db ? ResolvePlanetSubobj(db, planetId) : nullptr;
         if (!subobj)
             return false;  // no entry -> never completed
-        if ((*reinterpret_cast<std::uint32_t*>(subobj) & 0x7u) != 0x7u)
+        if ((*reinterpret_cast<std::uint32_t*>(subobj) & kSpeciesSlotAttrKnownBits) != kSpeciesSlotAttrKnownBits)
             return false;  // attribute "known" bits not fully set -> not complete
         const auto& m  = Esm::GetPlanetSpecies();
         const auto  it = m.find(planetId);
@@ -702,7 +641,7 @@ namespace Engine
         return true;
     }
 
-    int MarkEsmSpeciesForPlanet(std::uint32_t planetId, int kind = 0)
+    int MarkEsmSpeciesForPlanet(std::uint32_t planetId, SpeciesKind kind = SpeciesKind::Both)
     {
         const auto& m  = Esm::GetPlanetSpecies();
         const auto  it = m.find(planetId);
@@ -753,12 +692,19 @@ namespace Engine
         // Replicate the per-species Data-menu Statistics increments a natural scan makes.
         // Flora/Fauna Fully Scanned by newly-completed species of each kind; Unique Creatures
         // Scanned tracks distinct fauna species (one unique creature per species), so += faunaNew.
+        // Null-check the interned-name globals before deref (crash-safety: a missing versionlib
+        // binding must no-op, not fault the player's game).
         if (floraNew)
-            IncrementMiscStat(*StatNameFloraFullyScanned.get(), floraNew);
+        {
+            if (const auto* name = MiscStatNameFloraFullyScanned.get())
+                IncrementMiscStat(*name, floraNew);
+        }
         if (faunaNew)
         {
-            IncrementMiscStat(*StatNameFaunaFullyScanned.get(), faunaNew);
-            IncrementMiscStat(*StatNameUniqueCreatures.get(), faunaNew);
+            if (const auto* name = MiscStatNameFaunaFullyScanned.get())
+                IncrementMiscStat(*name, faunaNew);
+            if (const auto* name = MiscStatNameUniqueCreatures.get())
+                IncrementMiscStat(*name, faunaNew);
         }
         if (floraNew || faunaNew)
             spdlog::debug("MarkEsmSpeciesForPlanet: planet 0x{:08X} stats += flora {}, fauna {} (unique {})",
@@ -770,7 +716,7 @@ namespace Engine
     // ID_883341 is the global that holds the map pointer; it's what
     // TESForm::LookupByID (ID_47401) reads. Starfield does NOT keep planets in
     // TESDataHandler::formArrays (those are empty for galaxy types like PNDT), so
-    // this registry is the only place to enumerate all planet forms. (AllFormsMapHolder = ID_883341.)
+    // this registry is the only place to enumerate all planet forms. (AllFormsMap = ID_883341.)
 
     // Iterate every loaded form of a given type. Layout derived from the
     // LookupByID disassembly + CommonLibSF's BSTScatterTable iterator:
@@ -780,7 +726,7 @@ namespace Engine
     template <typename Fn>
     void ForEachFormOfType(RE::FormType type, Fn&& fn)
     {
-        const auto map = *AllFormsMapHolder.get();
+        const auto map = *AllFormsMap.get();
         if (!map)
         {
             spdlog::warn("ForEachFormOfType: global form map is null");
@@ -1396,31 +1342,68 @@ namespace Engine
     // it renders EMPTY. (RE 2026-07-11: re/ghidra/output/starmap-{refresh,select-refresh}-decomp.)
     // (RefreshStarMapPanelData = ID_93988, declared via the id table above.)
 
-    // Repaint the StarMap selected-planet panel (ID_93988) after our completion, so it shows 100% in
-    // place. ID_93988's arg is the star map's internal panel CONTROLLER (param_1 of ID_94011), NOT the
-    // IMenu — so we must call it on the pointer StarMapRefreshCaptureHook stashed (the exact object
-    // the game itself passes), never on a menu found by name (an IMenu has a different layout — doing
-    // that reads controller offsets off the wrong object and corrupts memory → crash). The captured
-    // controller lives exactly as long as the star-map IMenu is open, so we GATE on that: only repaint
-    // if a live menu whose menuName contains "starmap" is present in RE::UI's menuArray/menuStack. If
-    // the map has closed, the controller may be freed → skip. Fault-guarded (the poller caller is NOT
-    // a GuardedNative). MUST run on the main thread. Returns true if it repainted.
-    bool RefreshStarMapPanelIfOpen()
+    // True when the galaxy star-map IMenu is live. Uses the exact engine menu name
+    // "GalaxyStarMapMenu" (not a loose "starmap" substring — landing UI event names also contain
+    // "StarMap" and previously made a substring check true during land). Fault-safe.
+    bool IsGalaxyStarMapMenuOpen()
     {
         try
         {
-            void* const         controller = g_starMapMenu.exchange(nullptr, std::memory_order_acq_rel);
-            const std::uint32_t planetId   = g_starMapPanelPlanet.load(std::memory_order_acquire);
-            if (!controller || !planetId)
-                return false;  // capture hook never fired (scan routed via ID_94004) — nothing to repaint
             auto* ui = RE::UI::GetSingleton();
             if (!ui)
                 return false;
+            static const RE::BSFixedString kGalaxyStarMapMenu {"GalaxyStarMapMenu"};
+            return ui->IsMenuOpen(kGalaxyStarMapMenu);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
 
-            // Liveness gate: is the star-map menu still open? (Only touch the controller if so.)
-            bool starMapOpen = false;
-            auto check       = [&](const auto& container) {
-                for (std::uint32_t i = 0; i < container.size() && !starMapOpen; ++i)
+    // True when a load screen is up (land/takeoff/system jump transitions often open this).
+    bool IsLoadingMenuOpen()
+    {
+        try
+        {
+            auto* ui = RE::UI::GetSingleton();
+            if (!ui)
+                return false;
+            static const RE::BSFixedString kLoadingMenu {"LoadingMenu"};
+            return ui->IsMenuOpen(kLoadingMenu);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    // Orbital queue allowed only when the player is in the star map (not mid-land / load).
+    // Product rule: GalaxyStarMapMenu open + ScanLevelChanged → may complete; land animation
+    // (map closed / LoadingMenu) → skip.
+    bool ShouldQueueOrbitalFromScanLevelChanged()
+    {
+        if (IsLoadingMenuOpen())
+            return false;
+        if (!IsGalaxyStarMapMenuOpen())
+            return false;
+        return true;
+    }
+
+    // Broader check for panel repaint: any live IMenu whose name contains "starmap" (case-insensitive).
+    // Used only to avoid deref'ing a freed panel controller after the map UI is gone — not for Orbital.
+    bool IsStarMapMenuOpen()
+    {
+        try
+        {
+            auto* ui = RE::UI::GetSingleton();
+            if (!ui)
+                return false;
+            // Prefer the exact galaxy map name first (cheap IsMenuOpen).
+            if (IsGalaxyStarMapMenuOpen())
+                return true;
+            auto check = [](const auto& container) -> bool {
+                for (std::uint32_t i = 0; i < container.size(); ++i)
                 {
                     auto* m = container[i].get();
                     if (!m)
@@ -1433,13 +1416,35 @@ namespace Engine
                         if (ch >= 'A' && ch <= 'Z')
                             ch = static_cast<char>(ch + 32);
                     if (low.find("starmap") != std::string::npos)
-                        starMapOpen = true;
+                        return true;
                 }
+                return false;
             };
-            check(ui->menuArray);
-            if (!starMapOpen)
-                check(ui->menuStack);
-            if (!starMapOpen)
+            return check(ui->menuArray) || check(ui->menuStack);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    // Repaint the StarMap selected-planet panel (ID_93988) after our completion, so it shows 100% in
+    // place. ID_93988's arg is the star map's internal panel CONTROLLER (param_1 of ID_94011), NOT the
+    // IMenu — so we must call it on the pointer StarMapRefreshCaptureHook stashed (the exact object
+    // the game itself passes), never on a menu found by name (an IMenu has a different layout — doing
+    // that reads controller offsets off the wrong object and corrupts memory → crash). The captured
+    // controller lives exactly as long as the star-map IMenu is open, so we GATE on that. Fault-
+    // guarded (the poller caller is NOT a GuardedNative). MUST run on the main thread. Returns true
+    // if it repainted.
+    bool RefreshStarMapPanelIfOpen()
+    {
+        try
+        {
+            void* const         controller = g_starMapMenu.exchange(nullptr, std::memory_order_acq_rel);
+            const std::uint32_t planetId   = g_starMapPanelPlanet.load(std::memory_order_acquire);
+            if (!controller || !planetId)
+                return false;  // capture hook never fired (scan routed via ID_94004) — nothing to repaint
+            if (!IsStarMapMenuOpen())
                 return false;  // star map closed — controller may be gone; do not deref it
 
             // ID_93988(controller, planetId): the exact call the game makes to populate this panel.
@@ -1474,8 +1479,10 @@ namespace Engine
     // write; Papyrus reads these via IsHandScannerHookInstalled/IsOrbitalScannerHookInstalled so the
     // Settings-toggle handlers (CompleteSurveyIfEnabled / _GalaxyMapScanComplete) can no-op sanely
     // instead of assuming the native hook that is SUPPOSED to invoke them is actually armed.
-    inline std::atomic<bool> g_handScannerHookInstalled {false};    // ScanHook       (0x80C toggle)
-    inline std::atomic<bool> g_orbitalScannerHookInstalled {false}; // StarMapScanHook (0x80D toggle)
+    inline std::atomic<bool> g_handScannerHookInstalled {false};    // ScanHook (0x80C toggle)
+    // Orbital (0x80D): true when StarMapMenu_ScanPlanet event sink is registered (Scan-button path).
+    // The ID_52173→ID_97853 observe hook is separate and never queues completion by itself.
+    inline std::atomic<bool> g_orbitalScannerHookInstalled {false};
 
     // === Load-time offset self-check (non-fatal address-library probe) ==========================
     //
@@ -1666,12 +1673,13 @@ namespace Engine
     inline void NotifyHookMissing(const std::string& featureName)
     {
         std::call_once(g_hookMissingNoticeOnce, [&featureName] {
+            // MessageBoxA: ASCII only (em-dashes become mojibake in the player-facing dialog).
             ShowDisabledNotice(std::format(
                 "Complete Planet Survey: the {} scan-hook could not be installed on this game build "
                 "(signature scan miss).\n\n"
                 "Auto-complete-on-scan for that feature is disabled until an updated build restores it "
                 "(any other scan-hook failures are listed in the SFSE log). "
-                "Everything else — including the console completion commands — still works normally.",
+                "Everything else - including the console completion commands - still works normally.",
                 featureName));
         });
     }
@@ -1900,13 +1908,11 @@ namespace Papyrus
         spdlog::error("[papyrus] {}", msg.c_str());
     }
 
-    // PROBE (isolation test): write the +0x21 scan-flag / +0x20 percent DIRECTLY under the ESM
-    // species id for `planetForm` — via MarkEsmSpeciesForPlanet -> MarkSpeciesScannedForPlanet ->
-    // ID_124898/ID_124899. NO spawn, NO SetScanned, NO ID_52157. Run it on the planet you are
-    // STANDING ON (its PlayerKnowledge entry is already loaded) to isolate one variable: does a
-    // pure direct +0x21 write under esmFid green a planet whose entry exists? Returns species
-    // written: n>0 => the writes landed (entry resolved); n==0 => ResolvePlanetSubobj found no
-    // entry (silent no-op — meaning the remote-planet blue is an entry-lifecycle problem).
+    // Production species green step 1 (historical name: was an RE probe that became the real path).
+    // Writes +0x21 scan-flag / +0x20 percent under the canonical species key via
+    // MarkEsmSpeciesForPlanet → MarkSpeciesScannedForPlanet → ID_124898/ID_124899.
+    // No spawn, no SetScanned. Returns species written: n>0 entry resolved; n==0 no knowledge entry.
+    // `kind`: 0=both, 1=flora, 2=fauna (Papyrus contract — see Engine::SpeciesKind).
     std::int32_t TestDirectGreen(std::monostate, RE::TESForm* planetForm, std::int32_t kind)
     {
         if (!planetForm)
@@ -1914,6 +1920,8 @@ namespace Papyrus
         const auto planetId = Engine::ReadPlanetId(planetForm);
         if (!planetId)
             return -1;
+
+        const auto speciesKind = Engine::ToSpeciesKind(kind);
 
         // Diagnostic: log each species' esm id vs the ID_83006 canonical id BEFORE the write, so
         // the result is self-explaining. (REMAPPED) = canonical differs from esm (the case the raw
@@ -1925,6 +1933,8 @@ namespace Papyrus
             int remapped = 0, nocanon = 0;
             for (const auto sf : it->second)
             {
+                if (!Engine::SpeciesMatchesKind(sf, speciesKind))
+                    continue;
                 const auto canon = Engine::CanonicalFormId(RE::TESForm::LookupByID(sf));
                 const char* tag  = (canon == 0) ? " (NO-CANON)" : (canon != sf ? " (REMAPPED)" : "");
                 if (canon == 0)
@@ -1937,17 +1947,16 @@ namespace Papyrus
                          remapped, nocanon, it->second.size(), planetId);
         }
 
-        const auto n = Engine::MarkEsmSpeciesForPlanet(planetId, kind);
-        spdlog::debug("TestDirectGreen: planetId=0x{:08X} kind={} -> +0x21 written (canonical key) for {} species", planetId, kind, n);
+        const auto n = Engine::MarkEsmSpeciesForPlanet(planetId, speciesKind);
+        spdlog::debug("TestDirectGreen: planetId=0x{:08X} kind={} -> +0x21 written (canonical key) for {} species",
+                      planetId, static_cast<std::int32_t>(speciesKind), n);
         return n;
     }
 
-    // THE FIX, validation step: build the slot+0x08 attribute array (engine-allocated) for each of the
-    // current planet's species that currently has an EMPTY +0x08 (i.e. after a TestDirectGreen poke).
-    // Pushes the two universal attribute ids present in EVERY dumped species (0x0023E90D, 0x002634BE) —
-    // enough to make the array non-empty. If the species then render PROPERLY green (outline + info)
-    // after this + a reload, the gate IS slot+0x08 and the engine-allocated build is sound — then we
-    // derive the full per-species attribute ids from the ESM and write them. Returns slots built.
+    // Production species green step 2 (historical name). Builds slot+0x08 marker arrays from
+    // Esm::GetSpeciesMarkers (+ actor markers), with slot-recover, idempotent skip, and universal
+    // fallback. Call after TestDirectGreen so +0x21 and +0x08 land on the same key. Returns slots built.
+    // `kind`: 0=both, 1=flora, 2=fauna (Papyrus contract — see Engine::SpeciesKind).
     std::int32_t TestBuildArray(std::monostate, RE::TESForm* planetForm, std::int32_t kind)
     {
         if (!planetForm)
@@ -1963,13 +1972,15 @@ namespace Papyrus
             return 0;
         }
         const auto base    = reinterpret_cast<std::uintptr_t>(subobj);
-        const auto hashmap = base + 0x18;
-        auto       hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);   // re-read after a slot recreate
-        auto       slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);  // (a recreate can grow/rehash the map)
+        const auto hashmap = base + Engine::kSpeciesHashmapOff;
+        auto       hashEnd = *reinterpret_cast<std::uint64_t*>(base + Engine::kSpeciesHashEndOff);   // re-read after a slot recreate
+        auto       slots   = *reinterpret_cast<std::uintptr_t*>(base + Engine::kSpeciesSlotsPtrOff);  // (a recreate can grow/rehash the map)
         const auto& m  = Esm::GetPlanetSpecies();
         const auto  it = m.find(planetId);
         if (it == m.end())
             return 0;
+
+        const auto speciesKind = Engine::ToSpeciesKind(kind);
 
         // Marker source: Esm::GetSpeciesMarkers — the per-species slot+0x08 set derived PURELY from
         // Starfield.esm (no game, no visiting, no live instance), so fauna greens remotely. Fauna resolves
@@ -1980,7 +1991,7 @@ namespace Papyrus
         int built = 0, slotMiss = 0, fallbackUsed = 0, alreadyComplete = 0;
         for (const auto sf : it->second)
         {
-            if (!Engine::SpeciesMatchesKind(sf, kind))
+            if (!Engine::SpeciesMatchesKind(sf, speciesKind))
                 continue;  // kind filter: flora-only / fauna-only
             auto* const form = RE::TESForm::LookupByID(sf);
             if (!form)
@@ -1990,7 +2001,7 @@ namespace Papyrus
             std::uint32_t key = Engine::CanonicalFormId(form);
             if (key == 0)
                 key = sf;
-            auto idx = Engine::SpeciesSlotHash(hashmap, &key);
+            auto idx = Engine::HashSpeciesSlot(hashmap, &key);
             if (idx == hashEnd || !slots)
             {
                 // (a) Slot missing — TestDirectGreen's create for this key did not land, or the map moved.
@@ -1998,9 +2009,9 @@ namespace Papyrus
                 // grown/rehashed slots/hashEnd and re-resolve. Earlier slots' data survives a rehash (the
                 // engine moves entries), and each species re-resolves its own slot, so no stale write.
                 Engine::MarkSpeciesScannedForPlanet(planetId, key, Engine::kDefaultScanDelta, subobj);
-                hashEnd = *reinterpret_cast<std::uint64_t*>(base + 0x48);
-                slots   = *reinterpret_cast<std::uintptr_t*>(base + 0x40);
-                idx     = Engine::SpeciesSlotHash(hashmap, &key);
+                hashEnd = *reinterpret_cast<std::uint64_t*>(base + Engine::kSpeciesHashEndOff);
+                slots   = *reinterpret_cast<std::uintptr_t*>(base + Engine::kSpeciesSlotsPtrOff);
+                idx     = Engine::HashSpeciesSlot(hashmap, &key);
                 if (idx == hashEnd || !slots)
                 {
                     ++slotMiss;
@@ -2008,7 +2019,7 @@ namespace Papyrus
                     continue;
                 }
             }
-            const auto slotAddr = slots + idx * 0x30;
+            const auto slotAddr = slots + idx * Engine::kSpeciesSlotStride;
 
             // Compute the FULL expected marker set for this species FIRST (before touching the slot).
             std::vector<std::uint32_t> markers    = Esm::GetSpeciesMarkers(sf, planetId);
@@ -2019,32 +2030,34 @@ namespace Papyrus
                 // ESM derivation produced nothing for this species. Rather than leave it BLUE, write the
                 // two universal attribute ids present in every dumped species, so the outline still greens
                 // with a non-empty +0x08. Logged so we can see which species the derivation misses.
-                markers = {0x0023E90Du, 0x002634BEu};
+                markers = {Engine::kUniversalMarkerA, Engine::kUniversalMarkerB};
                 ++fallbackUsed;
                 spdlog::info("TestBuildArray: species 0x{:08X} had NO esm-derived markers -> FALLBACK universal set (would have been blue)", sf);
             }
 
-            // IDEMPOTENT GREEN: if this slot is ALREADY complete — scan-flag set (+0x21 != 0) AND its
-            // +0x08 already holds the full expected marker count — leave it untouched. Re-writing a
-            // complete species is the clobber source: the clear below momentarily EMPTIES +0x08, and on a
+            // IDEMPOTENT GREEN: if this slot is ALREADY complete — scan-flag set AND its marker array
+            // already holds the full expected marker count — leave it untouched. Re-writing a
+            // complete species is the clobber source: the clear below momentarily EMPTIES the array, and on a
             // loaded creature the engine can reconcile a marker away (e.g. Abilities) in that window ->
             // green flips to blue. So only (re)build species that are MISSING or INCOMPLETE; never re-touch
             // one that is already correct. (Pairs with skipping DiscoverPlanetEntry on the current planet.)
-            const auto flagByte = *reinterpret_cast<std::uint8_t*>(slotAddr + 0x21);
-            const auto arrBegin = *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08);
-            const auto arrEnd   = *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10);
+            const auto flagByte = *reinterpret_cast<std::uint8_t*>(slotAddr + Engine::kSpeciesSlotScanFlagOff);
+            const auto arrBegin = *reinterpret_cast<std::uintptr_t*>(slotAddr + Engine::kSpeciesSlotArrBeginOff);
+            const auto arrEnd   = *reinterpret_cast<std::uintptr_t*>(slotAddr + Engine::kSpeciesSlotArrEndOff);
             const std::size_t curCount =
-                (arrBegin != 0 && arrEnd > arrBegin && (arrEnd - arrBegin) <= 0x400) ? (arrEnd - arrBegin) / 4 : 0;
+                (arrBegin != 0 && arrEnd > arrBegin && (arrEnd - arrBegin) <= Engine::kMaxSpeciesAttrBytes)
+                    ? (arrEnd - arrBegin) / 4
+                    : 0;
             if (flagByte != 0 && curCount == markers.size())
             {
                 ++alreadyComplete;
                 continue;  // already green with the full set — do NOT re-write it
             }
 
-            // Missing/incomplete -> clear the (stale/partial) +0x08 and write the full set cleanly.
-            *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x08) = 0;
-            *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x10) = 0;
-            *reinterpret_cast<std::uintptr_t*>(slotAddr + 0x18) = 0;
+            // Missing/incomplete -> clear the (stale/partial) marker array and write the full set cleanly.
+            *reinterpret_cast<std::uintptr_t*>(slotAddr + Engine::kSpeciesSlotArrBeginOff) = 0;
+            *reinterpret_cast<std::uintptr_t*>(slotAddr + Engine::kSpeciesSlotArrEndOff)   = 0;
+            *reinterpret_cast<std::uintptr_t*>(slotAddr + Engine::kSpeciesSlotArrCapOff)   = 0;
             for (const auto id : markers)
                 Engine::PushSpeciesAttr(slotAddr, id);
             spdlog::debug("TestBuildArray: 0x{:08X} {} markers ({} actor) (first=0x{:08X})",
@@ -2052,7 +2065,7 @@ namespace Papyrus
             ++built;
         }
         spdlog::info("TestBuildArray: planet 0x{:08X} kind={} -> {} (re)built, {} already-complete (skipped), {} slot-miss, {} marker-fallback",
-                     planetId, kind, built, alreadyComplete, slotMiss, fallbackUsed);
+                     planetId, static_cast<std::int32_t>(speciesKind), built, alreadyComplete, slotMiss, fallbackUsed);
         // Fire the survey recompute (ID_97853) now the planet's +0x21/+0x08 state is written, so its
         // survey %, the star map and the Survey Data slate update — but ONLY if we actually (re)built a
         // slot this call. When nothing changed (all species already green, built == 0), re-firing the
@@ -2910,31 +2923,29 @@ namespace Hook
         static inline fn_t func = nullptr;
     };
 
-    // Star-map ("galaxy map") planet scan → complete-that-planet.
+    // Star-map scan-level notify (ID_52173 → ID_97853).
     //
-    // Every survey mutation in the game converges on ID_97853 (survey check/notify). Pressing SCAN
-    // on the star map / in-space scanner runs ID_94004 / ID_94011, which call ID_52173(planetId,
-    // scanLevel, 0) — the "scan level increased" survey writer. ID_52173 stamps SurveyChangeReason
-    // == 0xc (ScanLevelChanged) when its char arg is 0 (0xf only on the debug arg==1 path), sets
-    // ctx+0x00 = planetId, then calls ID_97853(&ctx). The ctx is {u32 planetId@0x00, f32 pct@0x04,
-    // u8 SurveyChangeReason@0x08, u8 flag@0x09}; planetId == *(u32)(planetForm+0x54) == PNDT FormID
-    // (Game.GetForm resolves it). So hooking the ID_97853 CALL SITE inside ID_52173 and filtering
-    // reason==0xc catches exactly a deliberate space scan and gives us the scanned body's id.
-    // (Verified offline in the local Ghidra project 2026-07-11: xrefs → ID_94004/ID_94011 call
-    // ID_52173; ID_52173 decomp shows reason 0xc + planetId@ctx+0. NOT ID_52153/InitialScan — that
-    // one is driven only by ID_52152/ID_102651, never the star-map Scan. See
-    // re/ghidra/output/starmap-scan-{decomp,xrefs}-2026-07-11.txt.)
-    constexpr std::size_t  kSurveyCtxReasonOffset       = 0x08;  // SurveyChangeReason byte in the ID_97853 ctx
-    constexpr std::uint8_t kSurveyReasonScanLevelChanged = 0xc;  // SurveyChangeReason::ScanLevelChanged (the space scan)
-    // ID_52173 → ID_97853 call is at outer+0x144 — inside the default 0x400 window, but name it.
-    constexpr std::size_t  kStarMapScanSearchWindow      = 0x200;
+    // ID_52173 is the engine "scan level increased" writer. It stamps SurveyChangeReason == 0xc
+    // (ScanLevelChanged) and calls ID_97853. Callers include star-map handlers ID_94004/ID_94011
+    // AND other ship/land paths (ID_52215, ID_89339, ID_102690, …). ctx layout:
+    // {u32 planetId@0x00, f32 pct@0x04, u8 reason@0x08, u8 flag@0x09}.
+    //
+    // Orbital Scanner product rule (player requirement):
+    //   COMPLETE only when GalaxyStarMapMenu is open AND ScanLevelChanged fires (star-map Scan).
+    //   SKIP when the map is closed / LoadingMenu is up (land animation, system jump, etc.).
+    //
+    // Implementation: hook ID_97853 inside ID_52173; gate with ShouldQueueOrbitalFromScanLevelChanged()
+    // at CAPTURE time, and re-check GalaxyStarMapMenu at POLLER DISPATCH time (if the player hit
+    // Land and the map closed during the ~0.5s grace, cancel the pending complete).
+    // Papyrus still honours GPOF 0x80D. Hand Scanner + console Complete* are independent.
+    // (RE: re/ghidra/output/starmap-scan-{decomp,xrefs}-2026-07-11.txt; menu name GalaxyStarMapMenu.)
+    constexpr std::size_t  kSurveyCtxReasonOffset = RE::BGSPlanet::kSurveyNotifyReasonOffset;
+    constexpr std::uint8_t kSurveyReasonScanLevelChanged =
+        static_cast<std::uint8_t>(RE::BGSPlanet::SurveyChangeReason::kScanLevelChanged);
+    // ScanLevelWriter → CheckNotify call is at outer+0x144 — inside the default 0x400 window, but name it.
+    constexpr std::size_t kStarMapScanSearchWindow = 0x200;
 
-    // Intercept the survey-notify (ID_97853) inside the scan-level writer (ID_52173) — the engine's
-    // "player scanned a planet from space" path (the star-map Scan button / in-space scanner). On a
-    // ScanLevelChanged we capture the scanned body's planet id from the ctx and flag a deferred
-    // galaxy-map completion (dispatched by the poller → Papyrus _GalaxyMapScanComplete, which honours
-    // the "Enable Galaxy Map Scan" toggle). The thunk only touches the ctx pointer + two atomics —
-    // no engine derefs beyond ctx — so it's safe on the UI/engine thread that drives the scan.
+    // Star-map scan-level write → optional full-planet complete (Orbital Scanner toggle), gated.
     struct StarMapScanHook
     {
         using fn_t = void (*)(void*);  // ID_97853: void(u32* ctx)
@@ -2943,19 +2954,24 @@ namespace Hook
         {
             func(ctx);  // call original SurveyCheckNotify (ID_97853) first
             if (!ctx || !Engine::g_offsetsValid.load(std::memory_order_acquire))
-                return;  // no ctx, or feature disabled (bad offsets) — pass through, capture nothing
+                return;
             const auto* c        = reinterpret_cast<const std::uint8_t*>(ctx);
             const auto  planetId = *reinterpret_cast<const std::uint32_t*>(c);
             const auto  reason   = *(c + kSurveyCtxReasonOffset);
             spdlog::debug("StarMapScanHook: reason={} planetId=0x{:08X}", reason, planetId);
-            if (reason == kSurveyReasonScanLevelChanged && planetId != 0)
+            if (reason != kSurveyReasonScanLevelChanged || planetId == 0)
+                return;
+            // Gate 1 (capture): star map must be open; load/land transitions must not.
+            if (!Engine::ShouldQueueOrbitalFromScanLevelChanged())
             {
-                Engine::g_galaxyScanPlanetFormId.store(planetId, std::memory_order_release);
-                Engine::g_pendingGalaxyScan.store(true, std::memory_order_release);
-                // INFO (not debug): a scan-level change is an infrequent, deliberate player action,
-                // and this line confirms the galaxy-map hook fired in a release build. Not per-frame spam.
-                spdlog::info("StarMapScanHook: captured space scan (ScanLevelChanged) planetId=0x{:08X} — galaxy-map completion queued", planetId);
+                spdlog::info("StarMapScanHook: ScanLevelChanged planetId=0x{:08X} ignored (GalaxyStarMapMenu closed or LoadingMenu open — land/load, not map Scan)",
+                             planetId);
+                return;
             }
+            Engine::g_galaxyScanPlanetFormId.store(planetId, std::memory_order_release);
+            Engine::g_pendingGalaxyScan.store(true, std::memory_order_release);
+            spdlog::info("StarMapScanHook: ScanLevelChanged planetId=0x{:08X} with GalaxyStarMapMenu open — Orbital completion queued",
+                         planetId);
         }
 
         static inline fn_t func = nullptr;
@@ -3017,7 +3033,7 @@ namespace Hook
         {
             // Addresses come from the verified probe table (CriticalAddress), NOT REL::ID — a REL::ID
             // on a stale versionlib would REX::FAIL (TerminateProcess). Same for the installers below.
-            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::ScanHookOuter);      // ID_52157 planet-progress updater
+            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::ProgressUpdater);      // ID_52157 planet-progress updater
             const auto inner = Engine::CriticalAddress(Engine::Ids::Idx::SurveyCheckNotify);  // ID_97853 survey check/notify
 
             const auto call_site = FindCallSite(outer, inner);
@@ -3052,7 +3068,7 @@ namespace Hook
     {
         try  // fault-guarded like Install() — log + skip, never fault the noexcept message callback
         {
-            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::StarMapScanHookOuter);  // ID_52173 scan-level survey writer (space scan)
+            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::ScanLevelWriter);  // ID_52173 scan-level survey writer (space scan)
             const auto inner = Engine::CriticalAddress(Engine::Ids::Idx::SurveyCheckNotify);     // ID_97853 survey check/notify
 
             const auto call_site = FindCallSite(outer, inner, kStarMapScanSearchWindow);
@@ -3092,7 +3108,7 @@ namespace Hook
     {
         try  // fault-guarded like Install() — log + skip, never fault the noexcept message callback
         {
-            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::StarMapRefreshHookOuter);  // ID_94011 star-map scan handler
+            const auto outer = Engine::CriticalAddress(Engine::Ids::Idx::StarMapScanHandler);  // ID_94011 star-map scan handler
             const auto inner = Engine::CriticalAddress(Engine::Ids::Idx::RefreshStarMapPanelData);  // ID_93988 selected-planet panel populate
 
             const auto call_site = FindCallSite(outer, inner, kScanHookSearchWindow);
@@ -3171,19 +3187,27 @@ namespace Hook
             }
 
             // === Pending galaxy-map scan dispatch ===
-            // Star-map scan hook sets this when the player scans a body on the galaxy map. The
-            // completion is fully ref-free, so we do NOT gate on the menu closing (the star map
-            // updates live) — just a short frame grace to leave the hook's call frame, then dispatch
-            // Papyrus _GalaxyMapScanComplete (which honours the "Enable Galaxy Map Scan" toggle).
+            // StarMapScanHook sets this on gated ScanLevelChanged. Ref-free — short frame grace,
+            // then re-check GalaxyStarMapMenu (if the player started landing and the map closed
+            // during the grace, drop the queue). Papyrus _GalaxyMapScanComplete honours GPOF 0x80D.
             if (Engine::g_pendingGalaxyScan.load(std::memory_order_acquire)) {
                 if (Engine::g_galaxyScanCountdown == 0) {
                     Engine::g_galaxyScanCountdown = kScannerDismissGraceFrames;
                 }
                 else if (--Engine::g_galaxyScanCountdown <= 0) {
                     if (Engine::g_pendingGalaxyScan.exchange(false, std::memory_order_acq_rel)) {
-                        DispatchPapyrusStatic("_GalaxyMapScanComplete");
-                        spdlog::info("Poller: dispatched _GalaxyMapScanComplete (planetFormId=0x{:08X})",
-                                     Engine::g_galaxyScanPlanetFormId.load(std::memory_order_acquire));
+                        // Gate 2 (dispatch): map still open and not loading.
+                        if (!Engine::ShouldQueueOrbitalFromScanLevelChanged())
+                        {
+                            spdlog::info("Poller: dropped pending Orbital complete planetFormId=0x{:08X} (GalaxyStarMapMenu closed or LoadingMenu open — land/load)",
+                                         Engine::g_galaxyScanPlanetFormId.load(std::memory_order_acquire));
+                        }
+                        else
+                        {
+                            DispatchPapyrusStatic("_GalaxyMapScanComplete");
+                            spdlog::info("Poller: dispatched _GalaxyMapScanComplete (planetFormId=0x{:08X})",
+                                         Engine::g_galaxyScanPlanetFormId.load(std::memory_order_acquire));
+                        }
                     }
                 }
             }
@@ -3424,8 +3448,8 @@ namespace
             ConfigureEsmSources();  // must precede any Esm:: query (the parse is one-shot)
             Papyrus::Register();
             Hook::Install();
-            Hook::InstallStarMapScanHook();     // galaxy-map planet scan → complete-that-planet
-            Hook::InstallStarMapRefreshHook();  // capture the StarMap menu for the post-completion repaint
+            Hook::InstallStarMapScanHook();     // ScanLevelChanged → Orbital queue (v1.4 path)
+            Hook::InstallStarMapRefreshHook();  // capture focused planet + panel controller
             Hook::InstallScanSweepPoller();
             Hook::InstallSessionReRegisterPoller();  // re-bind natives after main-menu -> load (formless scripts)
             Engine::ApplyInstantScanGameSettings();
@@ -3436,29 +3460,20 @@ namespace
 
 SFSE_PLUGIN_LOAD(const SFSE::LoadInterface* a_sfse)
 {
-    // trampolineSize covers BOTH call-site hooks (ScanHook + StarMapScanHook); each write_call<5>
-    // consumes ~14 bytes of trampoline. 128 leaves ample headroom.
-    SFSE::Init(a_sfse, {.trampoline = true, .trampolineSize = 128});
-    // Pin a timestamped log format (date + ms) so phase durations read straight from the log,
-    // e.g. "[2026-06-21 14:31:50.598] [tid] [I] …". CommonLibSF already timestamps by default;
-    // this makes the format explicit and adds the date for cross-session clarity.
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%t] [%L] %v");
-    // Flush every logged line straight to disk. Starfield terminates the process abruptly on exit
-    // (no clean spdlog shutdown), so buffered lines written shortly before quit are LOST. Flushing
-    // at the active level guarantees the last diagnostics survive.
-    //
-    // Log level by build mode: a release / releasedbg build (NDEBUG) ships at INFO — the per-planet
-    // and per-species green/resource lines log at DEBUG, so a whole-galaxy completion does NOT spew
-    // ~20k lines into a player's log; only the per-stage summaries (sweep totals, timings, faults)
-    // remain. A debug build (xmake f -m debug) drops to DEBUG for the full per-body trace.
-#ifdef NDEBUG
-    spdlog::set_level(spdlog::level::info);
-    spdlog::flush_on(spdlog::level::info);
-#else
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::flush_on(spdlog::level::debug);
-#endif
-    spdlog::info("{} v{} loading", Plugin::Name, Plugin::Version.string());
+    // SFSE::Init → API.cpp: log, messaging/task/trampoline interfaces, trampoline pool.
+    // hook=false: we use REL::GetTrampoline().write_call, not FHookStore.
+    // trampolineSize: 3× write_call<5> (Hand + Orbital + panel capture) ~14 bytes each.
+    // logLevel defaults (InitInfo): Info under NDEBUG, Debug otherwise — matches our intent.
+    SFSE::Init(a_sfse, {
+        .log         = true,
+        .logPattern  = "[%Y-%m-%d %H:%M:%S.%e] [%t] [%L] %v",
+        .trampoline  = true,
+        .trampolineSize = 128,
+        .hook        = false,
+    });
+    // Flush every line: Starfield kills the process on exit without clean spdlog shutdown.
+    spdlog::flush_on(spdlog::get_level());
+    spdlog::info("{} v{} loading", SFSE::GetPluginName(), SFSE::GetPluginVersion().string());
 
     const auto* messaging = SFSE::GetMessagingInterface();
     if (!messaging || !messaging->RegisterListener(MessageCallback))

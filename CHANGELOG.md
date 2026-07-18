@@ -48,6 +48,26 @@ verified.
   `IsLayoutDependent(true)`, SFSE refused to load on 236/242 despite that verification; the
   manifest now lists all three builds. Update the list on each release when offsets are
   re-verified for a new game version.
+- **SFSE log banner version matches the release.** `Plugin::Version` was still `1.4.0.0`
+  after the v1.5.0 tag (same drift class as the release skill gates against). Bumped to
+  `1.5.0.0` so the load-time SFSE banner matches `xmake.lua` / the git tag.
+- **Null-safe Statistics counter writes.** `MarkEsmSpeciesForPlanet` no longer dereferences
+  the interned stat-name globals without a null check — a missing binding no-ops instead of
+  faulting the session.
+
+### Changed
+
+- **CommonLibSF pin tracks `pjmagee/commonlibsf` `upstream-contributions`.** Engine IDs and
+  layouts for knowledge/survey/scannable/misc-stat come from that branch; the mod seeds its
+  versionlib probe from `RE::ID::*.id()` (still fail-closed, no IDDB for critical bindings).
+- **Orbital Scanner gate is land-safe.** Auto-complete on `ScanLevelChanged` only when
+  `GalaxyStarMapMenu` is open (and not during `LoadingMenu`); re-checked at poller dispatch.
+- **Species-slot / misc-stat / survey-notify layout constants** use ClSF names where available
+  (`PlayerKnowledge`, `MiscStatManager`, `BGSPlanet::SurveyChangeReason`).
+- **ESM cursor reads are bounds-checked.** `EsmReader`'s little-endian `Cursor::u32` refuses
+  OOB reads on corrupt/hostile PPBD payloads (returns 0 without advancing).
+- **SFSE init** uses `InitInfo` for log pattern/trampoline and disables unused FHookStore
+  (`hook = false`).
 
 ## [1.5.0] — 2026-07-12
 

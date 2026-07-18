@@ -884,11 +884,9 @@ Function CompleteSurveyIfEnabled() global
     CompletePlanetSurveyNative.QueueCompleteSurvey()
 EndFunction
 
-; Called by the C++ galaxy-map scan hook (via the per-frame poller) after the player scans a
-; planet/moon on the STAR MAP. Reads the "Enable Galaxy Map Scan" toggle (GPOF 0x80D); if OFF the
-; scan behaves vanilla (this returns). If ON, it completes the scanned body's ENTIRE survey — the
-; same outcome as CompletePlanet "all", but for that specific remote planet (all ref-free, so no
-; landing needed). The target form id is captured natively at scan time. Not a player command.
+; Orbital Scanner completion body (GPOF 0x80D). C++ only queues when GalaxyStarMapMenu is open and
+; ScanLevelChanged fires (map Scan); drops the queue if the map closed / LoadingMenu opened before
+; dispatch (land). Toggle fail-closed. Target FormID captured natively at queue time.
 Function _GalaxyMapScanComplete() global
     ; FAIL-CLOSED (see the PINNED ESM FORMIDS policy block near the top of this file): a missing
     ; toggle form is treated as "off" — logged by ResolveEsmForm, not silent.

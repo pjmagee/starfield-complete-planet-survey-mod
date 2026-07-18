@@ -121,14 +121,23 @@ namespace
     // Bounds-checked little-endian cursor over a byte buffer.
     struct Cursor
     {
-        const std::uint8_t* p;
-        std::size_t         size;
+        const std::uint8_t* p {nullptr};
+        std::size_t         size {0};
         std::size_t         off {0};
 
-        bool          can(std::size_t n) const { return n <= size && off <= size - n; }
-        std::uint32_t u32()
+        [[nodiscard]] bool can(std::size_t n) const noexcept
         {
-            std::uint32_t v;
+            return n <= size && off <= size - n;
+        }
+
+        // Bounds-checked read: callers still pre-check with can(), but a missed
+        // check must never OOB-read (corrupt/hostile PPBD). Returns 0 and does
+        // not advance when fewer than 4 bytes remain.
+        [[nodiscard]] std::uint32_t u32() noexcept
+        {
+            if (!can(sizeof(std::uint32_t)))
+                return 0;
+            std::uint32_t v {};
             std::memcpy(&v, p + off, sizeof v);
             off += sizeof v;
             return v;
@@ -189,7 +198,7 @@ namespace
     std::vector<Esm::SourceFile> g_sources;  // configured load order (SetSources / env fallbacks)
     std::mutex                   g_sourcesMtx;
 
-    Esm::MasterType TypeFromFlags(std::uint32_t flags)
+    [[nodiscard]] Esm::MasterType TypeFromFlags(std::uint32_t flags) noexcept
     {
         if (flags & kFlagMedium)
             return Esm::MasterType::kMedium;
@@ -199,7 +208,7 @@ namespace
     }
 
     // ASCII case-insensitive filename comparison (plugin names are ASCII).
-    bool IEquals(std::string_view a, std::string_view b)
+    [[nodiscard]] bool IEquals(std::string_view a, std::string_view b) noexcept
     {
         if (a.size() != b.size())
             return false;
