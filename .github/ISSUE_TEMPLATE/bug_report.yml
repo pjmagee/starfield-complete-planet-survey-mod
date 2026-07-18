@@ -1,0 +1,48 @@
+name: Bug report
+description: Something does not work as expected in-game or in the build
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Capture `CompletePlanetSurvey.log` **before** the next game launch (it is truncated every run).
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Starfield / SFSE / Address Library / mod version
+      placeholder: e.g. 1.16.244 / SFSE 0.2.21 / AL v22 / CPS 1.5.0
+    validations:
+      required: true
+  - type: dropdown
+    id: path
+    attributes:
+      label: Path that failed
+      options:
+        - Console CompletePlanet / CompleteSystem / galaxy commands
+        - Hand Scanner auto-complete (on surface)
+        - Orbital Scanner auto-complete (star map)
+        - Build / deploy / offline validation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: What you did, toggle states (Hand / Orbital), where you were (land / map).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log excerpt
+      description: Relevant lines from CompletePlanetSurvey.log
+      render: text

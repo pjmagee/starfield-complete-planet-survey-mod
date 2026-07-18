@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement for the mod or build
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do that is awkward or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Optional ideas for how it could work.
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: Player-facing releases ship on [Nexus](https://www.nexusmods.com/starfield/mods/16493); keep requests scoped to this plugin when possible.
