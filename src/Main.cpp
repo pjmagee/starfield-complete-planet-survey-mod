@@ -1908,6 +1908,18 @@ namespace Papyrus
         spdlog::error("[papyrus] {}", msg.c_str());
     }
 
+    // PURE: true only when this DLL was built without NDEBUG (xmake mode.debug). releasedbg/CI/ship
+    // builds define NDEBUG and return false — Papyrus uses this to hide author-facing MessageBox
+    // result dialogs while still logging + toasting a short result for players.
+    bool IsDebugBuild(std::monostate)
+    {
+#ifdef NDEBUG
+        return false;
+#else
+        return true;
+#endif
+    }
+
     // Production species green step 1 (historical name: was an RE probe that became the real path).
     // Writes +0x21 scan-flag / +0x20 percent under the canonical species key via
     // MarkEsmSpeciesForPlanet → MarkSpeciesScannedForPlanet → ID_124898/ID_124899.
@@ -2734,6 +2746,9 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "DebugLogError"sv, CPS_GUARDED_PURE(DebugLogError), std::optional<bool> {true}, false);
 
         ivm->BindNativeMethod(
+            "CompletePlanetSurveyNative"sv, "IsDebugBuild"sv, CPS_GUARDED_PURE(IsDebugBuild), std::optional<bool> {true}, false);
+
+        ivm->BindNativeMethod(
             "CompletePlanetSurveyNative"sv, "MarkTraitKnownForPlanet"sv, CPS_GUARDED(MarkTraitKnownForPlanet),
             std::optional<bool> {true}, false);
 
@@ -2859,7 +2874,7 @@ namespace Papyrus
             "CompletePlanetSurveyNative"sv, "GetSweepNotAttemptedCount"sv, CPS_GUARDED(GetSweepNotAttemptedCount),
             std::optional<bool> {true}, false);
 
-        spdlog::info("Bound Papyrus natives: DebugLog, DebugLogError, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
+        spdlog::info("Bound Papyrus natives: DebugLog, DebugLogError, IsDebugBuild, MarkTraitKnownForPlanet, TestDirectGreen, TestBuildArray, "
                      "MarkResourcesForPlanet, DiscoverPlanetEntry, EnumerateLifePlanets, GetLifePlanetFormIdAt, "
                      "EnumerateBarrenPlanets, GetBarrenPlanetFormIdAt, EnumerateSystemPlanets, GetSystemPlanetFormIdAt, "
                      "CategoryEnabled, CategoriesValid, QueueCompleteSurvey, CancelPendingAutoComplete, "

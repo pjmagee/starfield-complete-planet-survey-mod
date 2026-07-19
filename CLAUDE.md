@@ -12,7 +12,9 @@ CHANGELOG.md** — don't hardcode them in docs (they go stale; the README carrie
   config, the one Address Library + crash triage want). For a verbose dev build: `xmake f -m debug`
   then `xmake`. The DLL gates its spdlog level on `NDEBUG`: **release = INFO** (per-planet/per-species
   green & resource lines are DEBUG, so a galaxy completion doesn't dump ~20k lines), **debug = DEBUG**
-  (full per-body trace). Player-facing Papyrus popups are NOT debug — they always show.
+  (full per-body trace). Completion **result** UI is gated on `IsDebugBuild` (NDEBUG): **debug DLL →
+  MessageBox**, **releasedbg/ship → short Notification + SFSE log only** (no "DEBUG"-titled modal).
+  Error/guard toasts always show.
 - `test\build_validate.bat` — the only automated test: compiles the REAL `src/EsmReader.cpp`
   (stub spdlog) and validates the 17 ground-truth Jemison species markers straight from
   `Starfield.esm` (`CPS_ESM_PATH` overrides the default Steam path). Run it after any

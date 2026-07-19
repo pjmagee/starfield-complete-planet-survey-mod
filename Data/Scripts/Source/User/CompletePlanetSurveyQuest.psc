@@ -134,13 +134,24 @@ int Function _SpeciesKind(string asCategories) global
     Return 0
 EndFunction
 
+; Player-facing result: always log. Debug DLL → modal MessageBox (author). Ship/releasedbg → short
+; toast only (no "DEBUG"-titled modal). Errors/guards use Debug.Notification directly and always show.
+Function _ShowResult(string asMsg) global
+    CompletePlanetSurveyNative.DebugLog("Result: " + asMsg)
+    If CompletePlanetSurveyNative.IsDebugBuild()
+        Debug.MessageBox(asMsg)
+    Else
+        Debug.Notification(asMsg)
+    EndIf
+EndFunction
+
 ; CURRENT planet — pick categories (comma list of resources/traits/fauna/flora, or "all"):
 ;   cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits,fauna,flora"
 ;   cgf "CompletePlanetSurveyQuest.CompletePlanet" "resources,traits"
 Function CompletePlanet(string asCategories) global
     ; Invalid category (typo like "res"/"creature", or empty) -> clean no-op, not a half-run.
     If !CompletePlanetSurveyNative.CategoriesValid(asCategories)
-        Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
+        Debug.Notification("Unknown category. Use: resources, traits, fauna, flora, or all.")
         Return
     EndIf
     ; Issue #13 re-entrancy gate: see the file-header note. Rejected cleanly (no cache touched) if a
@@ -149,7 +160,7 @@ Function CompletePlanet(string asCategories) global
     ; WARN-logs and does not release the thief's).
     int gen = CompletePlanetSurveyNative.TryBeginRun("CompletePlanet")
     If gen == 0
-        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        Debug.Notification("A survey is already running. Wait for it to finish.")
         CompletePlanetSurveyNative.DebugLog("CompletePlanet: rejected — a completion run is already in progress")
         Return
     EndIf
@@ -174,19 +185,19 @@ Function _CompletePlanetCore(string asCategories, int aiGeneration) global
 
     Actor playerRef = Game.GetPlayer()
     If playerRef.IsInInterior()
-        Debug.Notification("Survey: exit your ship first")
+        Debug.Notification("Exit your ship first.")
         Return
     EndIf
     Planet currentPlanet = playerRef.GetCurrentPlanet()
     If currentPlanet == None
-        Debug.Notification("Survey: not on a planet")
+        Debug.Notification("Stand on a planet first.")
         Return
     EndIf
 
     ; abDiscover=false: we're standing on this world, so its knowledge entry already exists and the
     ; async re-discover (ID_102650) would evict freshly written species markers (green -> blue).
     float surveyAfter = _CompletePlanetForm(currentPlanet, asCategories, false)
-    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "% (" + asCategories + ")")
+    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "%")
 EndFunction
 
 ; Complete ONE planet (by Planet object) for the given categories — the shared core of BOTH the
@@ -241,14 +252,14 @@ EndFunction
 ;   cgf "CompletePlanetSurveyQuest.CompleteSystem" "resources,traits"
 Function CompleteSystem(string asCategories) global
     If !CompletePlanetSurveyNative.CategoriesValid(asCategories)   ; typo/empty -> clean no-op
-        Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
+        Debug.Notification("Unknown category. Use: resources, traits, fauna, flora, or all.")
         Return
     EndIf
     ; Issue #13 re-entrancy gate — same wrapper/Core pattern as every other public command (see the
     ; file-header note + TryBeginRun's doc comment for the stuck-gate failsafe and generation token).
     int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteSystem")
     If gen == 0
-        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        Debug.Notification("A survey is already running. Wait for it to finish.")
         CompletePlanetSurveyNative.DebugLog("CompleteSystem: rejected — a completion run is already in progress")
         Return
     EndIf
@@ -270,7 +281,7 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
     ; current planet and therefore no system to resolve — refuse honestly instead of guessing.
     Planet currentPlanet = Game.GetPlayer().GetCurrentPlanet()
     If currentPlanet == None
-        Debug.Notification("Survey: not near a planet — travel to a planet or moon in the system first")
+        Debug.Notification("Travel to a planet or moon in this system first.")
         Return
     EndIf
     ; ENUMERATE-FIRST invariant (issue #13): build this run's own work list before consuming any
@@ -278,7 +289,7 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
     ; map (or the parse degraded) — refuse, don't half-run.
     int n = CompletePlanetSurveyNative.EnumerateSystemPlanets(currentPlanet as Form)
     If n <= 0
-        Debug.Notification("Survey: could not resolve this system's planet list — see the SFSE log")
+        Debug.Notification("Could not find this system's planets. Check the SFSE log.")
         Return
     EndIf
 
@@ -289,7 +300,7 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
     ; Belt-and-braces (mirrors _CompleteLifePlanetsCore): CategoriesValid in the wrapper already
     ; guarantees at least one recognized token, but the guard keeps a future direct caller honest.
     If !doResources && !doTraits && !doSpecies
-        Debug.Notification("CompleteSystem: nothing selected (resources,traits,fauna,flora,all)")
+        Debug.Notification("No categories selected.")
         Return
     EndIf
 
@@ -371,9 +382,9 @@ Function _CompleteSystemCore(string asCategories, int aiGeneration) global
     float secs = Utility.GetCurrentRealTime() - t0
     CompletePlanetSurveyNative.DebugLog("CompleteSystem[" + asCategories + "]: " + n + " system bodies processed, at-100% " + preComplete + " -> " + postComplete + " (" + worlds + " newly completed), " + resolveMisses + " unresolved, in " + secs + "s")
     If worlds > 0
-        Debug.MessageBox("System survey complete.  " + worlds + " of " + n + " bodies newly at 100% (" + asCategories + ").  Done in " + (secs as int) + "s.")
+        _ShowResult("Done. " + worlds + " of " + n + " worlds newly fully surveyed.")
     Else
-        Debug.MessageBox("System processed: " + n + " bodies (" + asCategories + ").  Nothing newly reached 100% — already surveyed, or the chosen categories alone don't finish a world.")
+        _ShowResult("Done. No new full surveys — already complete, or only some categories were requested.")
     EndIf
 EndFunction
 
@@ -389,7 +400,7 @@ EndFunction
 ; pass carried from <100% to 100%) — 0 on a re-run of an already-complete galaxy.
 int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true) global
     If !CompletePlanetSurveyNative.CategoriesValid(asCategories)   ; typo/empty -> clean no-op
-        Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
+        Debug.Notification("Unknown category. Use: resources, traits, fauna, flora, or all.")
         Return 0
     EndIf
     ; Issue #13 re-entrancy gate: acquired BEFORE any work (including the intro popup below) so a
@@ -400,7 +411,7 @@ int Function CompleteBarrenPlanets(string asCategories, bool abShowResult = true
     ; comment (CompletePlanetSurveyNative.psc) for the full stuck-gate failsafe.
     int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteBarrenPlanets")
     If gen == 0
-        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        Debug.Notification("A survey is already running. Wait for it to finish.")
         CompletePlanetSurveyNative.DebugLog("CompleteBarrenPlanets: rejected — a completion run is already in progress")
         Return 0
     EndIf
@@ -619,24 +630,21 @@ int Function _CompleteBarrenPlanetsCore(string asCategories, bool abShowResult, 
     float secTotal    = tEnd - tStart
     CompletePlanetSurveyNative.DebugLog("Timing(s): phase1(sweep)=" + secSweep + " phase2(finalize)=" + secFinalize + " total=" + secTotal)
 
-    ; Unmissable completion signal — a MODAL Debug.MessageBox, NOT a toast (toasts queue behind the
-    ; Survey Data slate cascade and surface buried, minutes later). Honest wording: barren worlds are
-    ; fully done; living worlds need their flora/fauna catalogued. Suppressed when CompleteAllPlanets
-    ; runs us (it shows ONE combined result for the whole galaxy).
+    ; Result UI via _ShowResult: debug DLL → modal; ship/releasedbg → short toast + always log.
+    ; Suppressed when CompleteAllPlanets runs us (it shows ONE combined result for the whole galaxy).
     _ReconcilePlanetsScanned()   ; keep Planets Scanned >= Planets Fully Surveyed after the barren sweep
     If abShowResult
         ; fullyComplete is the THIS-RUN count (newly completed — 0 on a re-run of an already-done
         ; galaxy), so the wording says "newly": the popup never re-claims prior runs' work.
-        string resultMsg = "Survey data catalogued across the galaxy.  " + fullyComplete + " lifeless worlds newly fully surveyed; worlds with flora & fauna are mapped and ready — run CompleteLifePlanets (or land on one) to catalogue their life.  Done in " + (secTotal as int) + "s."
+        string resultMsg = "Done. " + fullyComplete + " barren worlds newly fully surveyed. Worlds with life need Complete Life Planets (or land on them)."
         If failedCount > 0
-            ; Straggler-failure surfacing (issue #6): a non-zero count is visible in the popup, not
-            ; just the log. The SFSE log names each planet (formId + name + failure mode) at ERROR.
-            resultMsg += "  WARNING: " + failedCount + " worlds could not be finalized — see the SFSE log for the list (re-run the command to retry)."
+            ; Straggler-failure surfacing (issue #6): count is visible to the player; SFSE log names each.
+            resultMsg += " Warning: " + failedCount + " worlds failed — run again or check the SFSE log."
         EndIf
         If notAttempted > 0
-            resultMsg += "  WARNING: the sweep aborted early after repeated faults — " + notAttempted + " worlds were not attempted (see the SFSE log; re-run the command to retry)."
+            resultMsg += " Warning: stopped early; " + notAttempted + " worlds not tried — run again."
         EndIf
-        Debug.MessageBox(resultMsg)
+        _ShowResult(resultMsg)
     EndIf
     Return fullyComplete
 EndFunction
@@ -655,14 +663,14 @@ EndFunction
 ; Returns the count of life-bearing worlds processed.
 int Function CompleteLifePlanets(string asCategories, bool abShowResult = true) global
     If !CompletePlanetSurveyNative.CategoriesValid(asCategories)   ; typo/empty -> clean no-op
-        Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
+        Debug.Notification("Unknown category. Use: resources, traits, fauna, flora, or all.")
         Return 0
     EndIf
     ; Issue #13 re-entrancy gate: see the file-header note + TryBeginRun's doc comment
     ; (CompletePlanetSurveyNative.psc) for the stuck-gate failsafe and the generation token.
     int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteLifePlanets")
     If gen == 0
-        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        Debug.Notification("A survey is already running. Wait for it to finish.")
         CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets: rejected — a completion run is already in progress")
         Return 0
     EndIf
@@ -687,7 +695,7 @@ int Function _CompleteLifePlanetsCore(string asCategories, bool abShowResult, in
     bool doTraits    = CompletePlanetSurveyNative.CategoryEnabled(asCategories, "traits")
     bool doSpecies   = _WantsSpecies(asCategories)
     If !doResources && !doTraits && !doSpecies
-        Debug.Notification("CompleteLifePlanets: nothing selected (resources,traits,fauna,flora,all)")
+        Debug.Notification("No categories selected.")
         Return 0
     EndIf
 
@@ -778,7 +786,7 @@ int Function _CompleteLifePlanetsCore(string asCategories, bool abShowResult, in
     CompletePlanetSurveyNative.DebugLog("CompleteLifePlanets[" + asCategories + "]: " + worlds + " life worlds, " + greened + " greened in " + secs + "s")
     _ReconcilePlanetsScanned()   ; keep Planets Scanned >= Planets Fully Surveyed after the life sweep + finalize
     If abShowResult
-        Debug.MessageBox("Life-bearing worlds processed: " + worlds + " (" + asCategories + ").  " + greened + " greened.  Done in " + (secs as int) + "s.")
+        _ShowResult("Done. " + worlds + " life worlds updated.")
     EndIf
     Return worlds
 EndFunction
@@ -793,7 +801,7 @@ EndFunction
 ;   cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "resources,traits"
 Function CompleteAllPlanets(string asCategories) global
     If !CompletePlanetSurveyNative.CategoriesValid(asCategories)   ; typo/empty -> clean no-op (subs not run)
-        Debug.Notification("Survey: unknown category in '" + asCategories + "' — use resources, traits, fauna, flora, or all")
+        Debug.Notification("Unknown category. Use: resources, traits, fauna, flora, or all.")
         Return
     EndIf
     ; Issue #13 re-entrancy gate: ONE acquisition covers BOTH sweeps below, which is why they are
@@ -804,7 +812,7 @@ Function CompleteAllPlanets(string asCategories) global
     ; (CompletePlanetSurveyNative.psc) for the stuck-gate failsafe.
     int gen = CompletePlanetSurveyNative.TryBeginRun("CompleteAllPlanets")
     If gen == 0
-        Debug.Notification("Survey: a completion run is already in progress — wait for it to finish")
+        Debug.Notification("A survey is already running. Wait for it to finish.")
         CompletePlanetSurveyNative.DebugLog("CompleteAllPlanets: rejected — a completion run is already in progress")
         Return
     EndIf
@@ -829,10 +837,10 @@ Function CompleteAllPlanets(string asCategories) global
     EndIf
     string failNote = ""
     If failed > 0
-        failNote = "  WARNING: " + failed + " worlds could not be finalized — see the SFSE log for the list (re-run the command to retry)."
+        failNote = " Warning: " + failed + " worlds failed — run again or check the SFSE log."
     EndIf
     If notAttempted > 0
-        failNote += "  WARNING: the sweep aborted early after repeated faults — " + notAttempted + " worlds were not attempted (see the SFSE log; re-run the command to retry)."
+        failNote += " Warning: stopped early; " + notAttempted + " worlds not tried — run again."
     EndIf
     ; barren/life are NEWLY-completed counts (0 when everything was already done): barren = the
     ; resources sweep's this-run completions, or — traits-only — the worlds the trait pass carried to
@@ -841,11 +849,11 @@ Function CompleteAllPlanets(string asCategories) global
     ; precedence: any failure/abort makes the headline "finished with problems" — never the
     ; contradictory "already fully surveyed ... WARNING: N worlds could not be finalized".
     If failed + notAttempted > 0
-        Debug.MessageBox("Galaxy survey finished with problems.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ")." + failNote)
+        _ShowResult("Finished with problems. Barren: " + barren + ", life: " + life + "." + failNote)
     ElseIf barren + life == 0
-        Debug.MessageBox("Galaxy already fully surveyed — nothing new to catalogue (" + asCategories + ").")
+        _ShowResult("Already fully surveyed — nothing new.")
     Else
-        Debug.MessageBox("Galaxy survey complete.  " + barren + " lifeless and " + life + " living worlds catalogued (" + asCategories + ").")
+        _ShowResult("Galaxy survey complete. Barren: " + barren + ", life: " + life + ".")
     EndIf
     CompletePlanetSurveyNative.EndRun(gen, "CompleteAllPlanets")
 EndFunction
@@ -942,7 +950,7 @@ Function _GalaxyMapScanComplete() global
     ; BEFORE this completion, so without this it only updates on a manual deselect/reselect). The
     ; poller does the actual repaint next frame on the main thread.
     CompletePlanetSurveyNative.QueueStarMapRefresh()
-    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "% (galaxy map scan)")
+    Debug.Notification("Planet survey: " + (surveyAfter * 100) as int + "%")
 EndFunction
 
 ; Mark every trait keyword on a planet KNOWN (the engine's own off-planet path: 938333 PlayerKnowledge).

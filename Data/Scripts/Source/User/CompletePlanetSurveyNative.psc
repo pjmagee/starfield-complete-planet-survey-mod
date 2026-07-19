@@ -9,6 +9,11 @@ Function DebugLog(string asMsg) global native
 ; cap). Use for genuine script-side failures, e.g. ResolveEsmForm's missing / wrong-type pinned form.
 Function DebugLogError(string asMsg) global native
 
+; True only for a debug-mode DLL (xmake mode.debug, no NDEBUG). Ship / CI / releasedbg builds return
+; false. Used to hide author-facing Debug.MessageBox result dialogs in player builds while still
+; logging the outcome and showing a short toast.
+bool Function IsDebugBuild() global native
+
 ; Mark a trait keyword as known for the planet (938333 PlayerKnowledge — the engine's own off-planet
 ; path). Drives survey %, the TRAITS panel and the galaxy map. Fires the trait progress event.
 bool Function MarkTraitKnownForPlanet(Form akPlanet, Keyword akKeyword) global native
