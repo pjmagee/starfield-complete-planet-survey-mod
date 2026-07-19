@@ -1,0 +1,63 @@
+[size=5][b]FAQ[/b][/size]
+
+Answers to the questions that come up in the comments, plus a few things people tend to assume about the mod that aren't true.
+
+[line]
+
+[size=4][b]How does it work, short version?[/b][/size]
+
+Your save already keeps track of everything you've surveyed - which species you've scanned on which planet, which traits you know, and so on. The green outline isn't something on the creature itself. Creatures spawn fresh every time you land, and each one looks up that saved info to decide if it should be blue or green.
+
+So the mod just writes that info, using the same internal engine functions a real scan goes through. For planets you've never visited it gets the species lists from the game's own plugin files (it reads them once at startup). It never has to load or visit anything.
+
+[size=4][b]So it just paints the outlines green?[/b][/size]
+
+It's the opposite, really. The outline colour is a side effect of the actual survey data, and the survey data is what gets written: scan flags, survey %, the scanner panel entries (genetics, reproduction, temperament...), the works. I compared species completed by the mod against ones scanned by hand and the data is identical. The slate and the stats follow from the same data.
+
+[size=4][b]Does it fly to each planet in the background or something?[/b][/size]
+
+No. Nothing is visited, loaded, spawned or teleported anywhere. That's also why the whole galaxy takes seconds rather than hours.
+
+[size=4][b]Does it edit my save file?[/b][/size]
+
+Not on disk, no. It writes into the running game's own bookkeeping, and the next time you save, the game stores it like it stores any other progress.
+
+[size=4][b]What happens if I uninstall it?[/b][/size]
+
+Your surveys stay. Once written, it's normal vanilla save data - the game doesn't know or care that a mod did the scanning. You can complete the galaxy, remove the mod, and everything stays surveyed.
+
+[size=4][b]The XP feels like cheating. Is the mod adding it?[/b][/size]
+
+The mod doesn't add any XP itself. For lifeless worlds it calls the engine's own "fully survey this planet" routine (the same one an orbital scan ends in), and handing out XP and the Survey Data slate is simply what that routine does. Be aware that on a fresh character a full galaxy run will level you a LOT - there's a section about that on the mod page.
+
+[size=4][b]What if I run a command twice?[/b][/size]
+
+Nothing. It checks what's already done and skips it, so there's no double XP and the stats don't inflate.
+
+[size=4][b]Does it work with Shattered Space? Mod-added planets?[/b][/size]
+
+Yes, since 1.5.0. The mod reads your whole load order (base game, DLC, Creations, other mods' masters) using the same load order rules the game uses, so new planets are picked up automatically. No compatibility patches needed.
+
+[size=4][b]Will it conflict with my other mods?[/b][/size]
+
+Shouldn't. The ESM only adds two settings records for the toggles and doesn't touch a single vanilla record, so there's nothing to win or lose a conflict against.
+
+[size=4][b]Is it doing anything when I'm not using it?[/b][/size]
+
+No. Unless you run a command, or you've turned on one of the toggles and you scan something, the mod sits there doing nothing. It doesn't touch quests, NPCs, vendors or anything else.
+
+[size=4][b]Game update broke it?[/b][/size]
+
+Same story as every SFSE mod: the DLL needs an SFSE and Address Library that match your exact game version. After a Bethesda update, hold off until those are updated. Your existing surveys are safe regardless - they're in the save, not in the mod.
+
+[size=4][b]Do the console commands turn off achievements?[/b][/size]
+
+Opening the console flags the save as modded, like with any console command in Starfield. That's the game's rule, not the mod's. An Achievement Enabler sorts it if you want both.
+
+[size=4][b]I ran it and the creatures around me are still blue?[/b][/size]
+
+Stuff that's already spawned around you catches up when the area reloads - hop to orbit and back, or reload the save, and it'll show green. Planets you complete remotely don't have this quirk at all: land there and everything spawns green from the start. The survey itself is at 100% the moment the command finishes either way.
+
+[size=4][b]The command finished but Survey Data items keep appearing?[/b][/size]
+
+That's the game's reward queue draining. Complete a few hundred worlds at once and it hands the slates out over a minute or two. The surveys are already done, it's just the inventory catching up.
