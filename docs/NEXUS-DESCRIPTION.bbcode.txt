@@ -31,16 +31,17 @@ Open the console with the tilde key ([b]~[/b]) and run:
 
 [b]<categories>[/b] is any mix of [b]resources[/b], [b]traits[/b], [b]fauna[/b], [b]flora[/b], separated by commas. Or just [b]all[/b].
 
-[size=3][b]The four commands[/b][/size]
+[size=3][b]The five commands[/b][/size]
 
 [list]
 [*][b]CompletePlanet[/b] - the world you're standing on
+[*][b]CompleteSystem[/b] - every planet and moon around the star you're in (v1.6.0+)
 [*][b]CompleteBarrenPlanets[/b] - every lifeless world (no plants or creatures)
 [*][b]CompleteLifePlanets[/b] - every world with life
 [*][b]CompleteAllPlanets[/b] - the whole galaxy, both at once
 [/list]
 
-The galaxy commands run from anywhere. Orbit, another system, on foot, doesn't matter. CompletePlanet is the one that needs you actually on a world.
+CompleteSystem needs you near a planet or moon in that system (standing on one or in orbit). The galaxy commands run from anywhere. CompletePlanet needs you actually on a world.
 
 [size=3][b]The categories[/b][/size]
 
@@ -67,6 +68,9 @@ Same commands, different stories. Pick whatever fits your character.
 
 [b]🧭 Explorer[/b] - "I survey each world myself as I land."
 [code]cgf "CompletePlanetSurveyQuest.CompletePlanet" "all"[/code]
+
+[b]🛰️ Cartographer[/b] - "This whole system, then on to the next."
+[code]cgf "CompletePlanetSurveyQuest.CompleteSystem" "all"[/code]
 
 [b]🚀 Frontier[/b] - "Chart the whole galaxy. All of it."
 [code]cgf "CompletePlanetSurveyQuest.CompleteAllPlanets" "all"[/code]

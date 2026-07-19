@@ -1,3 +1,17 @@
+[b]Version 1.6.0[/b]
+
+[list]
+[*][b]New command: complete the whole star system.[/b] [font=Courier New]CompleteSystem[/font] finishes every planet and moon around the star you're in, with the same category choices as the other commands (resources, traits, fauna, flora, or all).
+[*][b]Safer on game patches and missing Address Library.[/b] If critical offsets can't be resolved, the mod turns itself off with a clear notice instead of crashing the game.
+[*][b]Safer while a long run is already going.[/b] Starting another completion mid-sweep is refused cleanly — no corrupted half-runs.
+[*][b]Loads on more verified game builds.[/b] Declares Starfield 1.16.236, 1.16.242, and 1.16.244 (same layouts verified for this DLL).
+[*][b]Orbital Scanner only fires from the star map.[/b] Avoids false auto-complete during land/load transitions.
+[*][b]Clearer player messages.[/b] Short plain-English results and errors. Ship builds use a brief toast (not a big DEBUG dialog); full detail stays in the SFSE log.
+[*][b]DLL + scripts update.[/b] ESM and Settings toggle FormIDs unchanged — your saves and toggle choices carry over.
+[/list]
+
+Built and tested on Starfield 1.16.244 / SFSE 0.2.21 (layouts also verified for 1.16.236 and 1.16.242).
+
 [b]Version 1.5.0[/b]
 
 [list]

@@ -39,35 +39,72 @@ verified.
 
 ## [Unreleased]
 
+*No unreleased changes.*
+
+## [1.6.0] — 2026-07-19
+
+Same primary target as v1.5.0 — **Starfield 1.16.244.0 / SFSE 0.2.21**; drop-in for players already
+on that stack. The SFSE plugin now **also declares** verified layouts for **1.16.236.0** and
+**1.16.242.0** (same Address Library IDs / struct offsets). CommonLibSF pin moves to
+`pjmagee/commonlibsf` `upstream-contributions` (`e1e83b3`) for survey/knowledge RE shared with the
+ClSF community fork. **DLL + Papyrus** update — ESM FormIDs and Settings toggles are unchanged, so
+existing saves and toggle settings carry over.
+
+### Added
+
+- **`CompleteSystem`** — complete every planet/moon in the **current star system** with the same
+  category string as the other commands (`resources`, `traits`, `fauna`, `flora`, or `all`). Membership
+  comes from the ESM parent-star id (PNDT GNAM), multi-master aware, with offline star-id validation
+  (Jemison / Akila / Kreet / Earth ground truth). No new engine offsets for the system filter.
+- **Scope × category command grid completed** — system scope plus traits-only barren runs that no
+  longer drive the resources sweep machinery just to list worlds.
+
 ### Fixed
 
-- **SFSE compatible-version list matches verified struct layouts.** The manifest previously
-  declared **1.16.244.0** only (`RUNTIME_LATEST`) while native Address Library IDs and
-  Ghidra-derived struct offsets are verified byte-identical across **1.16.236.0**,
-  **1.16.242.0**, and **1.16.244.0** (`re/ghidra/output/offset-skew-236-vs-244.md`). With
-  `IsLayoutDependent(true)`, SFSE refused to load on 236/242 despite that verification; the
-  manifest now lists all three builds. Update the list on each release when offsets are
-  re-verified for a new game version.
-- **SFSE log banner version matches the release.** `Plugin::Version` was still `1.4.0.0`
-  after the v1.5.0 tag (same drift class as the release skill gates against). Bumped to
-  `1.5.0.0` so the load-time SFSE banner matches `xmake.lua` / the git tag.
-- **Null-safe Statistics counter writes.** `MarkEsmSpeciesForPlanet` no longer dereferences
-  the interned stat-name globals without a null check — a missing binding no-ops instead of
+- **Load-time offset self-check** — if Address Library / versionlib cannot resolve critical IDs for
+  this runtime, the mod **disables cleanly** (Windows notice + log) instead of crashing via REX::FAIL.
+- **Re-entrancy gate** — concurrent completion commands (manual re-run or auto-scan mid-sweep) are
+  rejected with a clear toast instead of corrupting cross-frame work lists. Stuck-run timeout +
+  generation tokens prevent ABA gate bugs.
+- **Barren-sweep stragglers** — async knowledge-entry creates get bounded finalize retries; residual
+  failures are counted and named in the SFSE log (and called out in the result UI).
+- **Survey completion event order** — survey state is written **before** the completion event so
+  statistics / slate paths see finished data.
+- **SFSE loads on 1.16.236 / 1.16.242 / 1.16.244** — CompatibleVersions lists all three verified
+  builds (previously only `RUNTIME_LATEST` / 244, so SFSE refused 236/242 despite identical layouts).
+- **Null-safe Statistics counter writes** — missing interned stat-name bindings no-op instead of
   faulting the session.
+- **Orbital Scanner is land-safe** — auto-complete on `ScanLevelChanged` only when the galaxy star
+  map is open (not during load / land transitions that reuse the same notify path).
+- **SFSE log banner version** matches the release tag (`Plugin::Version` sync — v1.5.0 had briefly
+  shipped a stale banner after the tag).
 
 ### Changed
 
-- **CommonLibSF pin tracks `pjmagee/commonlibsf` `upstream-contributions`.** Engine IDs and
-  layouts for knowledge/survey/scannable/misc-stat come from that branch; the mod seeds its
-  versionlib probe from `RE::ID::*.id()` (still fail-closed, no IDDB for critical bindings).
-- **Orbital Scanner gate is land-safe.** Auto-complete on `ScanLevelChanged` only when
-  `GalaxyStarMapMenu` is open (and not during `LoadingMenu`); re-checked at poller dispatch.
-- **Species-slot / misc-stat / survey-notify layout constants** use ClSF names where available
-  (`PlayerKnowledge`, `MiscStatManager`, `BGSPlanet::SurveyChangeReason`).
-- **ESM cursor reads are bounds-checked.** `EsmReader`'s little-endian `Cursor::u32` refuses
-  OOB reads on corrupt/hostile PPBD payloads (returns 0 without advancing).
-- **SFSE init** uses `InitInfo` for log pattern/trampoline and disables unused FHookStore
-  (`hook = false`).
+- **Player-facing result copy** — short plain-English toasts/errors; no author jargon (“greened”,
+  raw category dumps in success text).
+- **Result MessageBox only on debug DLLs** — ship / `releasedbg` / CI builds show a short
+  notification + always log `Result: …`; `xmake mode.debug` keeps the modal for author testing
+  (`IsDebugBuild` native).
+- **CommonLibSF pin** — `pjmagee/commonlibsf` branch `upstream-contributions` (survey / knowledge /
+  scannable / misc-stat IDs and partial types). Versionlib probe seeds from `RE::ID::*.id()`
+  (fail-closed; no IDDB for critical bindings). This is a **community fork pin** carrying RE intended
+  for CommonLibSF upstream — not a claim that every change is already merged into `libxse/commonlibsf`.
+- **Layout constants** share ClSF names where available (`PlayerKnowledge`, `MiscStatManager`,
+  `BGSPlanet::SurveyChangeReason`).
+- **ESM cursor reads** bounds-checked (`Cursor::u32` refuses OOB on corrupt PPBD).
+- **SFSE init** uses `InitInfo` (log pattern / trampoline); unused FHookStore disabled (`hook = false`).
+
+### Internal (no player-facing change)
+
+- Barren Phase 1 **chunked across frames** + planet-subobj cache (large galaxy sweeps no longer
+  freeze a single frame).
+- Pinned ESM FormIDs centralized in Papyrus with resolve-or-log helpers; scan-hook install miss
+  surfaces once to the player.
+- Offline marker harness: 17/17 Jemison + 7/7 actor markers + 4/4 star-id cases + synthetic GNAM
+  override retention.
+- Repo tooling/docs: release/changelog skills, SECURITY.md, community issue templates, how-it-works /
+  FAQ description updates.
 
 ## [1.5.0] — 2026-07-12
 
@@ -458,7 +495,8 @@ v1.0.6.
 - `cgf "CompletePlanetSurveyQuest.CompleteSurvey"` console entry point.
 - CI builds and ships the DLL + ESM as the release artifact.
 
-[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pjmagee/starfield-complete-planet-survey-mod/compare/v1.2.0...v1.3.0
