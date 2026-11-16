@@ -12,8 +12,10 @@ set_encodings("utf-8")
 -- add rules
 add_rules("mode.debug", "mode.releasedbg")
 
--- zlib: inflate compressed PNDT records when reading Starfield.esm at runtime
-add_requires("zlib")
+-- zlib: inflate compressed PNDT records when reading Starfield.esm at runtime.
+-- Pinned (like CommonLibSF's own spdlog/etc. requires) so a new xmake-repo release can't
+-- silently change the shipped DLL; bump deliberately and re-run test\build_validate.bat.
+add_requires("zlib v1.3.2")
 
 -- include commonlibsf
 includes("extern/CommonLibSF")
